@@ -42,6 +42,12 @@ case class Interface(name: String, inputTypes: List[Type], returnType: Option[Ty
     s"$name($inputStr)" + retStr
   }
 }
-case class Program(rules: Set[Rule], interfaces: Set[Interface]) {
-  override def toString: String = interfaces.mkString("\n") + "\n" + rules.mkString("\n")
+case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[Relation, Int]) {
+  override def toString: String = {
+    var ret: String = s""
+    ret += "Interfaces:\n" + interfaces.mkString("\n") + "\n"
+    ret += "Indices:\n" + relationIndices.mkString("\n") + "\n"
+    ret += "Rules:\n" + rules.mkString("\n")
+    ret
+  }
 }

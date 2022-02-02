@@ -1,13 +1,25 @@
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
-case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces: Set[Interface]) {
+case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces: Set[Interface],
+                         /** The index of column on which the table is indexed by.
+                          *  Assume each row has a unique index value.
+                          *  */
+                          relationIndices: Map[Relation, Int]
+                         ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
-  def getProgram(): Program = Program(rules, interfaces)
-  def addRelation(name: String, schema: List[String]): ParsingContext = {
+  def getProgram(): Program = Program(rules, interfaces, relationIndices)
+  def addRelation(name: String, schema: List[String], optIndexStr: Option[String]): ParsingContext = {
     val types = schema.map(s => Type(s))
     val relation = SimpleRelation(name, types)
-    this.copy(relations=relations+relation)
+    optIndexStr match {
+      case Some(s) => {
+        val index = s.toInt
+        require(!relationIndices.contains(relation))
+        this.copy(relations=relations+relation, relationIndices=relationIndices+(relation->index))
+      }
+      case None => this.copy(relations=relations+relation)
+    }
   }
   def addSingletonRelation(name: String, schema: List[String]): ParsingContext = {
     val types = schema.map(s => Type(s))
@@ -41,7 +53,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(Set(), Set(), Set())
+  def apply(): ParsingContext = ParsingContext(Set(), Set(), Set(), Map())
 }
 
 class Parser extends JavaTokenParsers{
@@ -61,9 +73,9 @@ class Parser extends JavaTokenParsers{
       }
     }
   def relationDecl: Parser[ParsingContext => ParsingContext] =
-    (".decl" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ^^ {
-      case name ~ schema => {
-        pc => pc.addRelation(name, schema)
+    (".decl" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ~ opt("[" ~> wholeNumber <~ "]") ^^ {
+      case name ~ schema ~ optIndex => {
+        pc => pc.addRelation(name, schema, optIndex)
       }
     }
   def interfaceDecl: Parser[ParsingContext => ParsingContext] =
