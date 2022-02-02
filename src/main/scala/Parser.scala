@@ -6,7 +6,12 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   def getProgram(): Program = Program(rules, interfaces)
   def addRelation(name: String, schema: List[String]): ParsingContext = {
     val types = schema.map(s => Type(s))
-    val relation = Relation(name, types)
+    val relation = SimpleRelation(name, types)
+    this.copy(relations=relations+relation)
+  }
+  def addSingletonRelation(name: String, schema: List[String]): ParsingContext = {
+    val types = schema.map(s => Type(s))
+    val relation = SingletonRelation(name, types)
     this.copy(relations=relations+relation)
   }
   def addInterface(name: String, optRetIndexStr: Option[String]): ParsingContext = {
@@ -48,6 +53,13 @@ class Parser extends JavaTokenParsers{
 
   def fieldDecl: Parser[String] = ident ~> ":" ~> ident
   def fieldDeclList: Parser[List[String]] = repsep(fieldDecl, ",")
+
+  def singletonRelationDecl: Parser[ParsingContext => ParsingContext] =
+    (".decl" ~> "*" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ^^ {
+      case name ~ schema => {
+        pc => pc.addSingletonRelation(name, schema)
+      }
+    }
   def relationDecl: Parser[ParsingContext => ParsingContext] =
     (".decl" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ^^ {
       case name ~ schema => {
@@ -82,7 +94,7 @@ class Parser extends JavaTokenParsers{
         }
       }
     }
-  def program: Parser[Program] = (relationDecl | interfaceDecl | ruleDecl ).* ^^ {
+  def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | ruleDecl ).* ^^ {
     fs => {
       val parsingContext = fs.foldLeft(ParsingContext()) {case (pc, f) => f(pc)}
       parsingContext.getProgram()
