@@ -1,4 +1,6 @@
-case class Type(name: String)
+case class Type(name: String) {
+  override def toString: String = name
+}
 
 sealed abstract class Parameter {
   def _type: Type
@@ -22,6 +24,17 @@ case class Rule(head: Literal, body: Set[Literal]) {
     s"$head :- $bodyStr."
   }
 }
-case class Program(rules: Set[Rule]) {
-  override def toString: String = rules.mkString("\n")
+
+case class Interface(name: String, inputTypes: List[Type], returnType: Option[Type]) {
+  override def toString: String = {
+    val inputStr = inputTypes.mkString(",")
+    val retStr = returnType match {
+      case Some(rt) => s": $rt"
+      case None => s""
+    }
+    s"$name($inputStr)" + retStr
+  }
+}
+case class Program(rules: Set[Rule], interfaces: Set[Interface]) {
+  override def toString: String = interfaces.mkString("\n") + "\n" + rules.mkString("\n")
 }
