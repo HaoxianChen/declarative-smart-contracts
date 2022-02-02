@@ -1,6 +1,10 @@
 case class Type(name: String) {
   override def toString: String = name
 }
+object Type {
+  val integerType = Type("Int")
+  val any = Type("Any")
+}
 
 sealed abstract class Parameter {
   def _type: Type
@@ -25,10 +29,20 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
     s"${relation.name}($fieldStr)"
   }
 }
-case class Rule(head: Literal, body: Set[Literal]) {
+
+sealed abstract class Functor
+case class Greater(a: Parameter, b: Parameter) extends Functor {
+  override def toString: String = s"$a>$b"
+}
+case class Lesser(a: Parameter, b: Parameter) extends Functor {
+  override def toString: String = s"$a<$b"
+}
+
+case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor]) {
   override def toString: String = {
-    val bodyStr = body.mkString(s",")
-    s"$head :- $bodyStr."
+    val bodyStr = body.mkString(",")
+    val functorStr = functors.mkString(",")
+    s"$head :- $bodyStr,$functorStr."
   }
 }
 

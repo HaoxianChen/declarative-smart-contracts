@@ -97,15 +97,31 @@ class Parser extends JavaTokenParsers{
         pc => pc.getLiteral(rel, fields)
       }
     }
+
+  def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
+  def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
+  def parameter: Parser[Parameter] = variable | constant
+  def functor: Parser[Functor] = (parameter) ~ (">"|"<") ~ parameter ^^ {
+    case a ~ op ~ b => op match {
+      case ">" => Greater(a,b)
+      case "<" => Lesser(a,b)
+    }
+  }
+
   def ruleDecl: Parser[ParsingContext => ParsingContext] =
-    ((literal <~ ":-") ~ (literalList <~ ".") ) ^^ {
-      case head ~ body => {
+    ((literal <~ ":-") ~ (repsep(literal|functor, ",") <~ ".") ) ^^ {
+      case head ~ terms =>
         pc => {
-          val rule = Rule(head(pc), body(pc).toSet)
+          var body: Set[Literal] = Set()
+          var functors: Set[Functor] = Set()
+          for (t <- terms) t match {
+            case f: (ParsingContext => Literal) => body += f(pc)
+            case ft: Functor => functors += ft
+          }
+          val rule = Rule(head(pc), body, functors)
           pc.addRule(rule)
         }
       }
-    }
   def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | ruleDecl ).* ^^ {
     fs => {
       val parsingContext = fs.foldLeft(ParsingContext()) {case (pc, f) => f(pc)}
