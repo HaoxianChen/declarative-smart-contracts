@@ -1,3 +1,5 @@
+package datalog
+
 case class Type(name: String) {
   override def toString: String = name
 }
@@ -18,6 +20,9 @@ case class Variable(_type: Type, name: String) extends Parameter
 sealed abstract class Relation {
   def name: String
   def sig: List[Type]
+}
+object Relation {
+  val reservedNames: Set[String] = Set("datalog.Greater", "datalog.Lesser", "msgSender")
 }
 
 case class SimpleRelation(name: String, sig: List[Type]) extends Relation
@@ -46,14 +51,14 @@ case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor]) {
   }
 }
 
-case class Interface(name: String, inputTypes: List[Type], returnType: Option[Type]) {
+case class Interface(relation: Relation, inputTypes: List[Type], returnType: Option[Type]) {
   override def toString: String = {
     val inputStr = inputTypes.mkString(",")
     val retStr = returnType match {
       case Some(rt) => s": $rt"
       case None => s""
     }
-    s"$name($inputStr)" + retStr
+    s"${relation.name}($inputStr)" + retStr
   }
 }
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[Relation, Int]) {

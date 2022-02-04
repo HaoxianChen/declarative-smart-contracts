@@ -1,3 +1,5 @@
+package datalog
+
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
@@ -38,7 +40,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
       }
       case None => (sig, None)
     }
-    val interface = Interface(name, inputTypes, optRetType)
+    val interface = Interface(relation, inputTypes, optRetType)
     this.copy(interfaces=interfaces+interface)
   }
   def addRule(rule: Rule) = this.copy(rules=rules+rule)
@@ -117,6 +119,7 @@ class Parser extends JavaTokenParsers{
           for (t <- terms) t match {
             case f: (ParsingContext => Literal) => body += f(pc)
             case ft: Functor => functors += ft
+            case _ => ???
           }
           val rule = Rule(head(pc), body, functors)
           pc.addRule(rule)
