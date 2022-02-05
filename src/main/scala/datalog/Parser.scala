@@ -55,7 +55,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(Set(), Set(), Set(), Map())
+  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Map())
 }
 
 class Parser extends JavaTokenParsers{

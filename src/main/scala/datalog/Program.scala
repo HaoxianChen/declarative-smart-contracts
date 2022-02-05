@@ -4,8 +4,9 @@ case class Type(name: String) {
   override def toString: String = name
 }
 object Type {
-  val integerType = Type("Int")
-  val any = Type("Any")
+  val addressType: Type = Type("address")
+  val integerType: Type = Type("int")
+  val any: Type = Type("any")
 }
 
 sealed abstract class Parameter {
@@ -22,7 +23,9 @@ sealed abstract class Relation {
   def sig: List[Type]
 }
 object Relation {
-  val reservedNames: Set[String] = Set("datalog.Greater", "datalog.Lesser", "msgSender")
+  val reservedRelations: Set[Relation] = Set(
+    SingletonRelation("msgSender", List(Type.addressType))
+  )
 }
 
 case class SimpleRelation(name: String, sig: List[Type]) extends Relation
