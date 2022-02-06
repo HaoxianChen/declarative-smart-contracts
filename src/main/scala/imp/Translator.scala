@@ -53,9 +53,34 @@ case class Translator() {
     On(trigger, updates)
   }
 
+  def getIncrement(rule: Rule): UpdateStatement = {
+    require(rule.aggregators.size == 1)
+    val agg = rule.aggregators.head
+    require(rule.head.fields.contains(agg.aggResult))
+    val resultIndex = rule.head.fields.indexOf(agg.aggResult)
+    val keyIndices = (0 until rule.head.fields.size).toList.filterNot(_==resultIndex)
+    val delta: Expression = agg match {
+      case _: Sum => Param(agg.aggParam)
+    }
+    Increment(rule.head.relation, agg.literal, keyIndices,resultIndex, delta = delta)
+  }
+
   def getInsertStatement(rule: Rule, insert: Literal): Statement = {
+    // Ground the insert tuple
+    val groundLiteralParam: Statement = insert.fields.zipWithIndex.foldLeft[Statement](Empty()) {
+      case (stmt, (f,i)) => f.name match {
+        case "_" => stmt
+        case _ => Statement.makeSeq(stmt, GroundVar(f,insert.relation,i))
+      }
+    }
+
     // Insert / Increment
-    val updateStatement: UpdateStatement = Insert(rule.head)
+    val updateStatement: UpdateStatement = if (rule.aggregators.isEmpty) {
+      Insert(rule.head)
+    }
+    else {
+      getIncrement(rule)
+    }
 
     // Check conditions
     val condition: Condition = getConditionsFromFunctors(rule.functors)
@@ -67,7 +92,9 @@ case class Translator() {
       val rest = rule.body.diff(Set(insert))
       sortJoinLiterals(rest)
     }
-    _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
+    val joinStatements = _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
+
+    Statement.makeSeq(groundLiteralParam, joinStatements)
   }
 
   def sortJoinLiterals(literals: Set[Literal]): List[Literal] = {
@@ -149,6 +176,6 @@ case class Translator() {
     case On(_,s) => getTrigger(s)
     case Insert(lit) => Set(InsertTuple(lit.relation))
     case Search(_, _, stmt) => getTrigger(stmt)
-    case Increment(rel,keys,vid,delta) => ???
+    case Increment(rel, lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
   }
 }

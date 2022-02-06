@@ -28,8 +28,15 @@ sealed abstract class UpdateStatement extends Statement
 case class Insert(literal: Literal) extends UpdateStatement {
   override def toString: String = s"insert $literal"
 }
-case class Increment(relation: Relation, keys: List[Parameter], valueIndex: Int, delta: Int) extends UpdateStatement {
-  override def toString: String = ???
+case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Expression)
+  extends UpdateStatement {
+  override def toString: String = {
+    val keyStr = {
+      val keys = keyIndices.map(i => literal.fields(i))
+      keys.mkString(",")
+    }
+    s"${relation.name}[$keyStr] += $delta"
+  }
 }
 // Join
 case class Search(relation: Relation, condition: Condition, statement: Statement) extends Statement {
@@ -56,8 +63,12 @@ sealed abstract class Trigger {
 case class InsertTuple(relation: Relation) extends Trigger {
   override def toString: String = s"insert ${relation.name}"
 }
-case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Int) extends Trigger {
-  override def toString: String = ???
+case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Expression)
+  extends Trigger {
+  override def toString: String = {
+    val keyStr = keyIndices.mkString(",")
+    s"${relation.name}[$keyStr] += $delta"
+  }
 }
 
 sealed abstract class Condition
