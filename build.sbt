@@ -4,7 +4,7 @@ ThisBuild / scalaVersion := "2.13.8"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "smart-contract-dl"
+    name := "declarative-smart-contract"
 
   )
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
