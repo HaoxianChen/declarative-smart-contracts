@@ -72,6 +72,12 @@ case class Greater(a: Parameter, b: Parameter) extends Condition {
 case class Lesser(a: Parameter, b: Parameter) extends Condition {
   override def toString: String = s"$a<$b"
 }
+case class Geq(a: Parameter, b: Parameter) extends Condition {
+  override def toString: String = s"$a>=$b"
+}
+case class Leq(a: Parameter, b: Parameter) extends Condition {
+  override def toString: String = s"$a<=$b"
+}
 case class And(a: Condition, b: Condition) extends Condition {
   override def toString: String = s"$a && $b"
 }

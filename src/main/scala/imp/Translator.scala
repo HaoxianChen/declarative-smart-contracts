@@ -90,6 +90,8 @@ case class Translator() {
       val nextCond: Condition = f match {
         case g: datalog.Greater =>  imp.Greater(g.a,g.b)
         case l: datalog.Lesser => imp.Lesser(l.a,l.b)
+        case l: datalog.Geq => imp.Geq(l.a,l.b)
+        case l: datalog.Leq => imp.Leq(l.a,l.b)
       }
       cond = Condition.conjunction(cond, nextCond)
     }

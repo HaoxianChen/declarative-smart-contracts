@@ -122,8 +122,10 @@ class Parser extends JavaTokenParsers{
   def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
-  def functor: Parser[ParsingContext => Functor] = (parameter) ~ (">"|"<") ~ parameter ^^ {
+  def functor: Parser[ParsingContext => Functor] = (parameter) ~ (">="|"<="|">"|"<") ~ parameter ^^ {
     case a ~ op ~ b => _ => op match {
+      case ">=" => Geq(a,b)
+      case "<=" => Leq(a,b)
       case ">" => Greater(a,b)
       case "<" => Lesser(a,b)
     }
