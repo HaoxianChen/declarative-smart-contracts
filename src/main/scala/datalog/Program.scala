@@ -39,32 +39,6 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
   }
 }
 
-sealed abstract class Functor
-case class Greater(a: Parameter, b: Parameter) extends Functor {
-  override def toString: String = s"$a>$b"
-}
-case class Lesser(a: Parameter, b: Parameter) extends Functor {
-  override def toString: String = s"$a<$b"
-}
-case class Geq(a: Parameter, b: Parameter) extends Functor {
-  override def toString: String = s"$a>=$b"
-}
-case class Leq(a: Parameter, b: Parameter) extends Functor {
-  override def toString: String = s"$a<=$b"
-}
-
-sealed abstract class Aggregator {
-  def literal: Literal
-  def aggParam: Parameter
-  def aggResult: Parameter
-  require(literal.fields.contains(aggParam))
-  require(!literal.fields.contains(aggResult))
-}
-
-case class Sum(literal: Literal, aggParam: Variable, aggResult: Variable) extends Aggregator {
-  override def toString: String = s"$aggResult = sum $aggParam: $literal"
-}
-
 case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggregators: Set[Aggregator]) {
   override def toString: String = {
     val litStr = body.map(_.toString)
