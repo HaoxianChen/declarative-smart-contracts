@@ -6,6 +6,7 @@ case class Type(name: String) {
 object Type {
   val addressType: Type = Type("address")
   val integerType: Type = Type("int")
+  val uintType: Type = Type("uint")
   val any: Type = Type("any")
 }
 
@@ -46,11 +47,25 @@ case class Lesser(a: Parameter, b: Parameter) extends Functor {
   override def toString: String = s"$a<$b"
 }
 
-case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor]) {
+sealed abstract class Aggregator {
+  def literal: Literal
+  def aggParam: Parameter
+  def aggResult: Parameter
+  require(literal.fields.contains(aggParam))
+  require(!literal.fields.contains(aggResult))
+}
+
+case class Sum(literal: Literal, aggParam: Variable, aggResult: Variable) extends Aggregator {
+  override def toString: String = s"$aggResult = sum $aggParam: $literal"
+}
+
+case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggregators: Set[Aggregator]) {
   override def toString: String = {
-    val bodyStr = body.mkString(",")
-    val functorStr = functors.mkString(",")
-    s"$head :- $bodyStr,$functorStr."
+    val litStr = body.map(_.toString)
+    val functorStr = functors.map(_.toString)
+    val aggStr = aggregators.map(_.toString)
+    val bodyStr = (litStr++functorStr++aggStr).mkString(",")
+    s"$head :- $bodyStr."
   }
 }
 

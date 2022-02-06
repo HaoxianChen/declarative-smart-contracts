@@ -53,6 +53,25 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
       }
     Literal(relation, fields)
   }
+  def getAggregator(opName: String, aggResult: Variable, aggParam: Variable, literal: Literal): Aggregator = {
+    val aggParamTyped: Variable = {
+      val idx = literal.fields.map(_.name).indexOf(aggParam.name)
+      val _type = literal.relation.sig(idx)
+      aggParam.copy(_type=_type)
+    }
+    val aggResultTyped: Variable = {
+      val _type = aggParamTyped._type.name match {
+        case "uint" => Type.uintType
+        case "int" => Type.integerType
+        case _ => ???
+      }
+      aggResult.copy(_type=_type)
+    }
+    opName match {
+      case "sum" => Sum(literal, aggParamTyped, aggResultTyped)
+      case _ => ???
+    }
+  }
 }
 object ParsingContext {
   def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Map())
@@ -103,25 +122,32 @@ class Parser extends JavaTokenParsers{
   def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
-  def functor: Parser[Functor] = (parameter) ~ (">"|"<") ~ parameter ^^ {
-    case a ~ op ~ b => op match {
+  def functor: Parser[ParsingContext => Functor] = (parameter) ~ (">"|"<") ~ parameter ^^ {
+    case a ~ op ~ b => _ => op match {
       case ">" => Greater(a,b)
       case "<" => Lesser(a,b)
     }
   }
+  def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ "sum" ~ (variable <~ ":") ~ literal ^^ {
+    case s ~ op ~ n ~ fLit => pc => {
+      val lit: Literal = fLit(pc)
+      pc.getAggregator(op,s,n,lit)
+    }
+  }
 
   def ruleDecl: Parser[ParsingContext => ParsingContext] =
-    ((literal <~ ":-") ~ (repsep(literal|functor, ",") <~ ".") ) ^^ {
-      case head ~ terms =>
+    ((literal <~ ":-") ~ (repsep(literal|functor|aggregator, ",") <~ ".") ) ^^ {
+      case head ~ fs =>
         pc => {
           var body: Set[Literal] = Set()
           var functors: Set[Functor] = Set()
-          for (t <- terms) t match {
-            case f: (ParsingContext => Literal) => body += f(pc)
-            case ft: Functor => functors += ft
-            case _ => ???
-          }
-          val rule = Rule(head(pc), body, functors)
+          var aggregators: Set[Aggregator] = Set()
+          for (f <- fs) f(pc) match {
+              case l: Literal => body += l
+              case f: Functor => functors += f
+              case a: Aggregator => aggregators += a
+            }
+          val rule = Rule(head(pc), body, functors, aggregators)
           pc.addRule(rule)
         }
       }
