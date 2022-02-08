@@ -77,13 +77,44 @@ object ParsingContext {
   def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Map())
 }
 
-class Parser extends JavaTokenParsers{
+class ArithmeticParser extends JavaTokenParsers {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Comments and identifiers
   // All valid Java identifiers may be used: See documentation for JavaTokenParsers.ident
   // Ignore C and C++-style comments. See: https://stackoverflow.com/a/5954831
   protected override val whiteSpace: Regex = """(\s|//.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
+  private def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
+  private def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
+  private def parameter: Parser[Param] = (variable | constant) ^^ { p => Param(p)}
+
+  private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter
+
+  def expr: Parser[Arithmetic] = term ~ rep("[+-]".r ~ term) ^^ {
+    case t ~ ts => ts.foldLeft(t) {
+      case (t1, "+" ~ t2) => Add(t1, t2)
+      case (t1, "-" ~ t2) => Sub(t1, t2)
+    }
+  }
+
+  def assignment: Parser[Functor] = parameter ~ ":=" ~ expr ^^ {
+    case p ~ op ~ e => Assign(p,e)
+  }
+
+  def comparison: Parser[Functor] = (expr) ~ (">="|"<="|">"|"<") ~ expr ^^ {
+    case a ~ op ~ b => op match {
+      case ">=" => Geq(a,b)
+      case "<=" => Leq(a,b)
+      case ">" => Greater(a,b)
+      case "<" => Lesser(a,b)
+    }
+  }
+
+  def functor: Parser[Functor] = comparison | assignment
+
+}
+
+class Parser extends ArithmeticParser {
   def fieldDecl: Parser[String] = ident ~> ":" ~> ident
   def fieldDeclList: Parser[List[String]] = repsep(fieldDecl, ",")
 
@@ -122,14 +153,7 @@ class Parser extends JavaTokenParsers{
   def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
-  def functor: Parser[ParsingContext => Functor] = (parameter) ~ (">="|"<="|">"|"<") ~ parameter ^^ {
-    case a ~ op ~ b => _ => op match {
-      case ">=" => Geq(a,b)
-      case "<=" => Leq(a,b)
-      case ">" => Greater(a,b)
-      case "<" => Lesser(a,b)
-    }
-  }
+  def functorFromPc: Parser[ParsingContext => Functor] = functor ^^ {f => _:ParsingContext => f}
   def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ "sum" ~ (variable <~ ":") ~ literal ^^ {
     case s ~ op ~ n ~ fLit => pc => {
       val lit: Literal = fLit(pc)
@@ -138,7 +162,7 @@ class Parser extends JavaTokenParsers{
   }
 
   def ruleDecl: Parser[ParsingContext => ParsingContext] =
-    ((literal <~ ":-") ~ (repsep(literal|functor|aggregator, ",") <~ ".") ) ^^ {
+    ((literal <~ ":-") ~ (repsep(literal|functorFromPc|aggregator, ",") <~ ".") ) ^^ {
       case head ~ fs =>
         pc => {
           var body: Set[Literal] = Set()

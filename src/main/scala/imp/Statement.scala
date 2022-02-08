@@ -8,6 +8,9 @@ case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
   override def toString: String = s"$p := ${relation.name}[$index]"
 }
+case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
+  override def toString: String = s"$p := $arithmetic"
+}
 case class Seq(a: Statement, b: Statement) extends Statement {
   override def toString: String = s"$a\n$b"
 }
@@ -28,7 +31,7 @@ sealed abstract class UpdateStatement extends Statement
 case class Insert(literal: Literal) extends UpdateStatement {
   override def toString: String = s"insert $literal"
 }
-case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Expression)
+case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
   override def toString: String = {
     val keyStr = {
@@ -63,7 +66,7 @@ sealed abstract class Trigger {
 case class InsertTuple(relation: Relation) extends Trigger {
   override def toString: String = s"insert ${relation.name}"
 }
-case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Expression)
+case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends Trigger {
   override def toString: String = {
     val keyStr = keyIndices.mkString(",")
@@ -77,16 +80,16 @@ case class False() extends Condition
 case class Match(relation: Relation, index: Int, p: Parameter) extends Condition {
   override def toString: String = s"$p==${relation.name}[$index]"
 }
-case class Greater(a: Parameter, b: Parameter) extends Condition {
+case class Greater(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a>$b"
 }
-case class Lesser(a: Parameter, b: Parameter) extends Condition {
+case class Lesser(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a<$b"
 }
-case class Geq(a: Parameter, b: Parameter) extends Condition {
+case class Geq(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a>=$b"
 }
-case class Leq(a: Parameter, b: Parameter) extends Condition {
+case class Leq(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a<=$b"
 }
 case class And(a: Condition, b: Condition) extends Condition {
