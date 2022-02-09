@@ -4,14 +4,15 @@ import datalog._
 
 /** Generate imperative program from Datalog rules
  * */
-case class Translator() {
-  def translate(program: Program): Statement = {
+case class ImperativeTranslator() {
+  def translate(program: Program): ImperativeAbstractProgram = {
     var triggers: Set[Trigger] = {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith("recv_"))
       val relationsInBodies = program.rules.flatMap(_.body).map(_.relation)
       val toTrigger = relationsInBodies.intersect(relationsToTrigger)
       toTrigger.map(rel => InsertTuple(rel))
     }
+    var dependencies: Set[(Relation, Relation)] = Set()
 
     var triggered: Set[Trigger] = Set()
     var impProgram: Statement = Empty()
@@ -25,7 +26,12 @@ case class Translator() {
         for (rule <- triggeredRules) {
           val updateProgram = getUpdateStatements(rule, trigger)
           impProgram = Statement.makeSeq(impProgram, updateProgram)
-          val nextTriggers = getTrigger(updateProgram).
+          val allNextTriggers = getTrigger(updateProgram)
+          /** Update dependencies */
+          for (nt <- allNextTriggers) {
+            dependencies += Tuple2(trigger.relation, nt.relation)
+          }
+          val nextTriggers = allNextTriggers.
             filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
           assert(nextTriggers.size <= 1)
           /** Check no recursion */
@@ -37,25 +43,48 @@ case class Translator() {
         triggers -= trigger
       }
     }
-    impProgram
-  }
-
-  def getUpdateStatements(rule: Rule, trigger: Trigger): Statement = {
-    val updates = trigger match {
-      case it: InsertTuple => {
-        val insert: Literal = {
-          val lits =  rule.body.filter(_.relation == it.relation)
-          assert(lits.size==1)
-          lits.head
-        }
-        getInsertStatement(rule, insert)
+    val dependencyMap: Map[Relation, Set[Relation]] = {
+      dependencies.groupBy(_._1).map{
+        case (k,v) => k -> v.map(_._2)
       }
-      case iv: IncrementValue => getUpdateNonAgg(rule, iv)
     }
-    On(trigger, updates)
+    ImperativeAbstractProgram(program.relationIndices, impProgram, dependencyMap)
   }
 
-  def getIncrementFromAgg(rule: Rule): UpdateStatement = {
+  private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {
+    def _getInsertStatement(rule: Rule, insertedLiteral: Literal): OnStatement = {
+      val updates = getInsertStatement(rule, insertedLiteral)
+      OnInsert(insertedLiteral, rule.head.relation, updates)
+    }
+    def _getUpdateStatementsFromIncrement(rule: Rule, literal: Literal, incrementValue: IncrementValue): OnStatement = {
+      val updates = getUpdateNonAgg(rule, incrementValue)
+      val keys: List[Parameter] = {
+        incrementValue.keyIndices.map(i => literal.fields(i))
+      }
+      OnIncrement(relation = incrementValue.relation, keys=keys,
+        updateValue = Param(literal.fields(incrementValue.valueIndex)),
+        updateTarget = rule.head.relation, statement = updates)
+    }
+    val literal: Literal = {
+      val aggs = rule.aggregators.filter(_.literal.relation == trigger.relation)
+      assert(aggs.size <= 1)
+      if (aggs.size == 1) {
+        aggs.head.literal
+      }
+      else {
+        val _lits = rule.body.filter(_.relation == trigger.relation)
+        require(_lits.size == 1)
+        _lits.head
+      }
+    }
+    trigger match {
+      case _: InsertTuple => _getInsertStatement(rule, literal)
+      case iv: IncrementValue => _getUpdateStatementsFromIncrement(rule, literal, iv)
+    }
+  }
+
+
+  private def getIncrementFromAgg(rule: Rule): UpdateStatement = {
     require(rule.aggregators.size == 1)
     val agg = rule.aggregators.head
     require(rule.head.fields.contains(agg.aggResult))
@@ -67,7 +96,10 @@ case class Translator() {
     Increment(rule.head.relation, agg.literal, keyIndices,resultIndex, delta = delta)
   }
 
-  def getUpdateNonAgg(rule: Rule, incrementValue: IncrementValue): UpdateStatement = {
+  private def getUpdateNonAgg(rule: Rule, incrementValue: IncrementValue): UpdateStatement = {
+    /** todo: check that the increment value is not matched with other fields.
+     *  Otherwise, fall back to generate update as if a new tuple is inserted.
+     */
     val assignment: datalog.Assign = {
       val assignments: Set[datalog.Assign] = rule.functors.flatMap{
         case a: datalog.Assign => Some(a)
@@ -83,6 +115,7 @@ case class Translator() {
       val p = lit.fields(incrementValue.valueIndex)
       Param(p)
     }
+    // todo: support more general cases, where join exists.
     val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
     val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_==resultIndex)
     /** Apply the chain rule. */
@@ -90,7 +123,7 @@ case class Translator() {
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
-  def getInsertStatement(rule: Rule, insert: Literal): Statement = {
+  private def getInsertStatement(rule: Rule, insert: Literal): Statement = {
     // Ground the insert tuple
     val groundLiteralParam: Statement = insert.fields.zipWithIndex.foldLeft[Statement](Empty()) {
       case (stmt, (f,i)) => f.name match {
@@ -122,7 +155,7 @@ case class Translator() {
     // Join
     val groundedParams: Set[Parameter] = insert.fields.toSet
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.diff(Set(insert))
+      val rest = rule.body.filterNot(_.relation==insert.relation)
       sortJoinLiterals(rest)
     }
     val joinStatements = _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
@@ -130,7 +163,7 @@ case class Translator() {
     Statement.makeSeq(groundLiteralParam, joinStatements)
   }
 
-  def sortJoinLiterals(literals: Set[Literal]): List[Literal] = {
+  private def sortJoinLiterals(literals: Set[Literal]): List[Literal] = {
     /** Sort the list of join literals, by their relations:
      * 1. Singleton relations
      * 2. Other relations ...  */
@@ -144,7 +177,7 @@ case class Translator() {
 
   }
 
-  def getConditionsFromFunctors(functors: Set[Functor]): Condition = {
+  private def getConditionsFromFunctors(functors: Set[Functor]): Condition = {
     var cond: Condition = True()
     for (f <- functors) {
       val nextCond: Condition = f match {
@@ -159,31 +192,30 @@ case class Translator() {
     cond
   }
 
-  def _getJoinStatements(ruleHead: Literal, groundedParams: Set[Parameter], remainingLiterals: List[Literal],
+  private def _getJoinStatements(ruleHead: Literal, groundedParams: Set[Parameter], remainingLiterals: List[Literal],
                          innerStatement: Statement): Statement = {
-    def _getCondition(grounded: Set[Parameter], literal: Literal): Condition = {
-      var cond: Condition = True()
-      for ((p,i) <- literal.fields.zipWithIndex) {
-        val nextCond: Condition = p match {
-          case v: Variable => if (grounded.contains(v)) {
-              Match(literal.relation, i, v)
+    def _getCondition(grounded: Set[Parameter], literal: Literal): Set[Match] = {
+      literal.fields.zipWithIndex.flatMap {
+        case (p, i) => p match {
+            case v: Variable => if (grounded.contains(v)) {
+              Some(Match(literal.relation, i, v))
             }
-            else {
-              True()
-            }
-          case c: Constant => Match(literal.relation, i, c)
-        }
-        cond = Condition.conjunction(cond, nextCond)
-      }
-      cond
+            else None
+            case c: Constant => Some(Match(literal.relation, i, c))
+          }
+      }.toSet
     }
     def _groundVariables(groundVar: Set[Parameter], literal: Literal): Statement = {
       var stmt: Statement = Empty()
       for ((p,i) <- literal.fields.zipWithIndex) {
         if (!groundVar.contains(p)) {
           val newStmt = p match {
-            case v: Variable => GroundVar(v, literal.relation, i)
-            case c: Constant => Empty()
+            case v: Variable => if (v.name != "_") {
+              GroundVar(v, literal.relation, i)
+            } else {
+              Empty()
+            }
+            case _: Constant => Empty()
           }
           stmt = Statement.makeSeq(stmt, newStmt)
         }
@@ -196,21 +228,19 @@ case class Translator() {
         val newGroundedParams = groundedParams ++ head.fields.toSet
         val declareNewVars: Statement = _groundVariables(groundedParams, head)
         val nextStatements = _getJoinStatements(ruleHead, newGroundedParams, tail, innerStatement)
-        val condition: Condition = _getCondition(groundedParams, head)
+        val condition: Set[Match] = _getCondition(groundedParams, head)
         Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))
       }
     }
   }
 
   def getTrigger(statement: Statement): Set[Trigger] = statement match {
-    case _: Empty => Set()
-    case _ :GroundVar => Set()
-    case _: imp.Assign => Set()
+    case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement => Set()
     case Seq(a,b) => getTrigger(a) ++ getTrigger(b)
     case If(_,s) => getTrigger(s)
-    case On(_,s) => getTrigger(s)
+    case o: OnStatement => getTrigger(o.statement)
     case Search(_, _, stmt) => getTrigger(stmt)
     case Insert(lit) => Set(InsertTuple(lit.relation))
-    case Increment(rel, lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
+    case Increment(rel,lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
   }
 }

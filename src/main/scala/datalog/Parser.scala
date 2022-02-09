@@ -7,7 +7,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
-                          relationIndices: Map[Relation, Int]
+                          relationIndices: Map[SimpleRelation, Int]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
   def getProgram(): Program = Program(rules, interfaces, relationIndices)
@@ -84,7 +84,7 @@ class ArithmeticParser extends JavaTokenParsers {
   // Ignore C and C++-style comments. See: https://stackoverflow.com/a/5954831
   protected override val whiteSpace: Regex = """(\s|//.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
-  private def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
+  private def variable: Parser[Variable] = ident ^^ {x => Variable(AnyType(), x)}
   private def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   private def parameter: Parser[Param] = (variable | constant) ^^ { p => Param(p)}
 
@@ -150,7 +150,7 @@ class Parser extends ArithmeticParser {
       }
     }
 
-  def variable: Parser[Variable] = ident ^^ {x => Variable(Type.any, x)}
+  def variable: Parser[Variable] = ident ^^ {x => Variable(AnyType(), x)}
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
   def functorFromPc: Parser[ParsingContext => Functor] = functor ^^ {f => _:ParsingContext => f}

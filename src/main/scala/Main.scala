@@ -1,5 +1,5 @@
 import datalog.Parser
-import imp.Translator
+import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
 
 object Main extends App {
@@ -11,7 +11,9 @@ object Main extends App {
         parser.parseAll(parser.program, inputStr).get
     }
     println(dl)
-    val imperative = Translator().translate(dl)
+    val imperative = ImperativeTranslator().translate(dl)
     println(imperative)
+    val solidity = SolidityTranslator(imperative).translate()
+    println(s"Solidity program:\n${solidity}")
   }
 }

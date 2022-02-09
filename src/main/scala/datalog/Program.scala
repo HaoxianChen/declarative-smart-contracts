@@ -1,13 +1,26 @@
 package datalog
 
-case class Type(name: String) {
+sealed abstract class Type {
+  def name: String
   override def toString: String = name
 }
+case class UnitType() extends Type {
+  val name:String = "Unit"
+}
+case class AnyType() extends Type {
+  val name: String = "Any"
+}
+case class SymbolType(name: String) extends Type
+case class NumberType(name: String) extends Type
 object Type {
-  val addressType: Type = Type("address")
-  val integerType: Type = Type("int")
-  val uintType: Type = Type("uint")
-  val any: Type = Type("any")
+  def apply(name: String): Type = name match {
+    case "int" => integerType
+    case "uint" => uintType
+    case _ => SymbolType(name)
+  }
+  val addressType: Type = SymbolType("address")
+  val integerType: Type = NumberType("int")
+  val uintType: Type = NumberType("uint")
 }
 
 sealed abstract class Parameter {
@@ -59,7 +72,7 @@ case class Interface(relation: Relation, inputTypes: List[Type], returnType: Opt
     s"${relation.name}($inputStr)" + retStr
   }
 }
-case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[Relation, Int]) {
+case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, Int]) {
   override def toString: String = {
     var ret: String = s""
     ret += "Interfaces:\n" + interfaces.mkString("\n") + "\n"

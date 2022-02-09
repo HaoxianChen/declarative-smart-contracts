@@ -6,7 +6,7 @@ sealed abstract class Statement
 
 case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
-  override def toString: String = s"$p := ${relation.name}[$index]"
+  override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
   override def toString: String = s"$p := $arithmetic"
@@ -20,15 +20,33 @@ case class If(condition: Condition, statement: Statement) extends Statement {
   $statement
 }""".stripMargin
 }
-case class On(trigger: Trigger, statement: Statement) extends Statement {
+sealed abstract class OnStatement extends Statement {
+  def updateTarget: Relation
+  def statement: Statement
+}
+
+case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement) extends OnStatement {
   override def toString: String =
-    e"""on $trigger {
+    e"""on insert $literal {
   $statement
 }""".stripMargin
 }
+case class OnIncrement(relation: Relation, keys: List[Parameter], updateValue: Param, updateTarget: Relation,
+                       statement: Statement) extends OnStatement {
+  override def toString: String = {
+    val keyStr = keys.mkString(",")
+    e"""on increment ${relation.name} at $keyStr on $updateValue  {
+  $statement
+}""".stripMargin
+  }
+}
 // Update
-sealed abstract class UpdateStatement extends Statement
+sealed abstract class UpdateStatement extends Statement {
+  def relation: Relation
+  def literal: Literal
+}
 case class Insert(literal: Literal) extends UpdateStatement {
+  val relation = literal.relation
   override def toString: String = s"insert $literal"
 }
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
@@ -42,11 +60,41 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
   }
 }
 // Join
-case class Search(relation: Relation, condition: Condition, statement: Statement) extends Statement {
-  override def toString: String =
-    e"""search ${relation.name} where $condition {
+case class Search(relation: Relation, conditions: Set[Match], statement: Statement) extends Statement {
+  override def toString: String = {
+    val conditionStr = conditions.mkString("&&")
+    e"""search ${relation.name} where $conditionStr {
   $statement
 }""".stripMargin
+  }
+}
+
+/** Statements used in Solidity */
+sealed abstract class SolidityStatement extends Statement
+case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
+  override def toString: String = {
+    val tupleName: String = s"${relation.name}Tuple"
+    s"${tupleName.capitalize} $tupleName = ${relation.name}[$key]"
+  }
+}
+case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement)
+    extends SolidityStatement{
+  override def toString: String = {
+    val paramStr = params.mkString(",")
+    val returnStr: String = returnType match {
+      case _ @ (_:UnitType| _:AnyType) => ""
+      case t @ (_: SymbolType | _: NumberType) => s"returns (${t.name})"
+    }
+    e"""function $name($paramStr) $returnStr {
+  $stmt
+}""".stripMargin
+  }
+}
+case class Call(functionName: String, params: List[Parameter]) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = params.mkString(",")
+    s"$functionName($paramStr);"
+  }
 }
 
 object Statement {
@@ -117,4 +165,9 @@ object Condition {
       case _ => Or(a,b)
     }
   }
+}
+
+case class ImperativeAbstractProgram(indices: Map[SimpleRelation, Int], statement: Statement,
+                                     dependencies: Map[Relation, Set[Relation]]) {
+  override def toString: String = s"$statement"
 }
