@@ -1,16 +1,54 @@
 package imp
 
-import datalog.{Parameter, Relation, SimpleRelation, SingletonRelation, UnitType}
+import datalog.{Interface, MapType, Parameter, Relation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
 
-case class SolidityTranslator(program: ImperativeAbstractProgram) {
+case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
+  private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
   private val dependencies = program.dependencies
 
-  private def getFunName(src: Relation, target: Relation): String = {
-    s"update${target.name.capitalize}On${src.name.capitalize}"
+  private val tupleTypes :Map[Relation, Type] = {
+    relations.filterNot(_.name.startsWith(s"recv_"))
+      .map(rel => rel -> getStructType(rel)).toMap
   }
 
-  def translate(): Statement = translateStatement(program.statement)
+  private def getStructName(relation: Relation): String = s"${relation.name.capitalize}Tuple"
+
+  private def getStructType(relation: Relation) = {
+    val structName = getStructName(relation)
+    val params = relation.sig.zip(relation.memberNames).map{
+      case (t,n)=> Variable(t,n)
+    }
+    StructType(structName, params)
+  }
+
+  def translate(): Statement = {
+    val definitions: Statement = getDefinitions()
+    val declarations: Statement = getRelationDeclartions()
+    val functions = translateStatement(program.statement)
+    Statement.makeSeq(definitions, declarations, functions)
+  }
+
+  private def getRelationDeclartions(): Statement = {
+    var stmt: Statement = Empty()
+    for ((rel, i) <- indices) {
+      val mapType = MapType(rel.sig(i), tupleTypes(rel))
+      val declRelation = DeclRelation(rel, mapType)
+      stmt = Statement.makeSeq(stmt, declRelation)
+    }
+    stmt
+  }
+
+  private def getDefinitions(): Statement = {
+    val allDefs = tupleTypes.map{
+      case (rel, _type)=> _type match {
+        case st: StructType => DefineStruct(getStructName(rel), st)
+        case _ => Empty()
+      }
+    }.toList
+    Statement.makeSeq(allDefs:_*)
+
+  }
 
   /** Translate abstract imperative program into Solidity statements */
   private def translateStatement(statement: Statement): Statement = statement match {
@@ -21,6 +59,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram) {
     case DeclFunction(name,lit,target,stmt) => DeclFunction(name,lit,target,translateStatement(stmt))
     case u: UpdateStatement => translateUpdateStatement(u)
     case _:Empty|_:Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
+  }
+
+  private def getFunName(src: Relation, target: Relation): String = {
+    s"update${target.name.capitalize}On${src.name.capitalize}"
   }
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
@@ -54,7 +96,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram) {
 
   private def translateSearchStatement(search: Search): Statement = {
     search.relation match {
-      case SingletonRelation(_, _) => {
+      case SingletonRelation(_, _, _) => {
         val condition = search.conditions.foldLeft[Condition](True())(Condition.conjunction)
         If(condition, search.statement)
       }

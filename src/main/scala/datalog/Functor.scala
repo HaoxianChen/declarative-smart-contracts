@@ -54,5 +54,10 @@ case class Leq(a: Arithmetic, b: Arithmetic) extends Functor {
 }
 case class Assign(a: Param, b: Arithmetic) extends Functor {
   override def toString: String = s"$a := $b"
+  def updateOutputType(outputType: Type): Assign = {
+    val newP = a.p.setType(outputType)
+    val newA = Param(newP)
+    this.copy(a=newA)
+  }
 }
 

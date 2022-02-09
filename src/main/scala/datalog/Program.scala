@@ -1,49 +1,33 @@
 package datalog
 
-sealed abstract class Type {
-  def name: String
-  override def toString: String = name
-}
-case class UnitType() extends Type {
-  val name:String = "Unit"
-}
-case class AnyType() extends Type {
-  val name: String = "Any"
-}
-case class SymbolType(name: String) extends Type
-case class NumberType(name: String) extends Type
-object Type {
-  def apply(name: String): Type = name match {
-    case "int" => integerType
-    case "uint" => uintType
-    case _ => SymbolType(name)
-  }
-  val addressType: Type = SymbolType("address")
-  val integerType: Type = NumberType("int")
-  val uintType: Type = NumberType("uint")
-}
-
 sealed abstract class Parameter {
   def _type: Type
   def name: String
   override def toString: String = name
+  def setType(newType: Type): Parameter
 }
 
-case class Constant(_type: Type, name: String) extends Parameter
-case class Variable(_type: Type, name: String) extends Parameter
+case class Constant(_type: Type, name: String) extends Parameter {
+  def setType(newType: Type): Constant = this.copy(_type=newType)
+}
+case class Variable(_type: Type, name: String) extends Parameter {
+  def setType(newType: Type): Variable = this.copy(_type=newType)
+}
 
 sealed abstract class Relation {
   def name: String
   def sig: List[Type]
+  def memberNames: List[String]
+  require(sig.size == memberNames.size)
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    SingletonRelation("msgSender", List(Type.addressType))
+    SingletonRelation("msgSender", List(Type.addressType), List("p"))
   )
 }
 
-case class SimpleRelation(name: String, sig: List[Type]) extends Relation
-case class SingletonRelation(name: String, sig: List[Type]) extends Relation
+case class SimpleRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
+case class SingletonRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
   override def toString: String = {
@@ -73,6 +57,7 @@ case class Interface(relation: Relation, inputTypes: List[Type], returnType: Opt
   }
 }
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, Int]) {
+  val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
   override def toString: String = {
     var ret: String = s""
     ret += "Interfaces:\n" + interfaces.mkString("\n") + "\n"

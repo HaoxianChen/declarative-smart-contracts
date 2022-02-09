@@ -48,7 +48,7 @@ case class ImperativeTranslator() {
         case (k,v) => k -> v.map(_._2)
       }
     }
-    ImperativeAbstractProgram(program.relationIndices, impProgram, dependencyMap)
+    ImperativeAbstractProgram(program.relations, program.relationIndices, impProgram, dependencyMap)
   }
 
   private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {

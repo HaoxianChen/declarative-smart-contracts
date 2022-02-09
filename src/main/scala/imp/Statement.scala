@@ -6,7 +6,8 @@ sealed abstract class Statement
 
 case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
-  override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
+  // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
+  override def toString: String = s"${p._type} $p = ${relation.name}[${relation.memberNames(index)}];"
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
   override def toString: String = s"$p := $arithmetic"
@@ -83,7 +84,7 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
     val paramStr = params.mkString(",")
     val returnStr: String = returnType match {
       case _ @ (_:UnitType| _:AnyType) => ""
-      case t @ (_: SymbolType | _: NumberType) => s"returns (${t.name})"
+      case t @ (_: SymbolType | _: NumberType|_:CompoundType) => s"returns (${t.name})"
     }
     e"""function $name($paramStr) $returnStr {
   $stmt
@@ -96,15 +97,27 @@ case class Call(functionName: String, params: List[Parameter]) extends SolidityS
     s"$functionName($paramStr);"
   }
 }
+case class DefineStruct(name: String, _type: StructType) extends SolidityStatement {
+  override def toString: String = {
+    val defineMembers = _type.members.map(p => s"${p._type} ${p.name};").mkString("\n")
+    e"""struct ${_type.name} {
+  $defineMembers
+}"""
+  }
+}
+case class DeclRelation(relation: Relation, mapType: MapType) extends SolidityStatement {
+  override def toString: String = s"$mapType ${relation.name};"
+}
 
 object Statement {
-  def makeSeq(a: Statement, b: Statement): Statement = a match {
+  private def _makeSeq(a: Statement, b: Statement): Statement = a match {
     case _: Empty => b
     case _ => b match {
       case _: Empty => a
       case _ => Seq(a,b)
     }
   }
+  def makeSeq(statementSeq: Statement*): Statement = statementSeq.foldLeft[Statement](Empty())(_makeSeq)
 }
 
 // On insert / increment, do statement
@@ -167,7 +180,8 @@ object Condition {
   }
 }
 
-case class ImperativeAbstractProgram(indices: Map[SimpleRelation, Int], statement: Statement,
+case class ImperativeAbstractProgram(relations: Set[Relation], indices: Map[SimpleRelation, Int],
+                                     statement: Statement,
                                      dependencies: Map[Relation, Set[Relation]]) {
   override def toString: String = s"$statement"
 }

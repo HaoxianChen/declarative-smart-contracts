@@ -11,9 +11,10 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
   def getProgram(): Program = Program(rules, interfaces, relationIndices)
-  def addRelation(name: String, schema: List[String], optIndexStr: Option[String]): ParsingContext = {
-    val types = schema.map(s => Type(s))
-    val relation = SimpleRelation(name, types)
+  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[String]): ParsingContext = {
+    val memberNames = schema.map(_._1)
+    val types = schema.map(s => Type(s._2))
+    val relation = SimpleRelation(name, types, memberNames)
     optIndexStr match {
       case Some(s) => {
         val index = s.toInt
@@ -23,9 +24,10 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
       case None => this.copy(relations=relations+relation)
     }
   }
-  def addSingletonRelation(name: String, schema: List[String]): ParsingContext = {
-    val types = schema.map(s => Type(s))
-    val relation = SingletonRelation(name, types)
+  def addSingletonRelation(name: String, schema: List[(String,String)]): ParsingContext = {
+    val memberNames = schema.map(_._1)
+    val types = schema.map(s => Type(s._2))
+    val relation = SingletonRelation(name, types, memberNames)
     this.copy(relations=relations+relation)
   }
   def addInterface(name: String, optRetIndexStr: Option[String]): ParsingContext = {
@@ -115,8 +117,8 @@ class ArithmeticParser extends JavaTokenParsers {
 }
 
 class Parser extends ArithmeticParser {
-  def fieldDecl: Parser[String] = ident ~> ":" ~> ident
-  def fieldDeclList: Parser[List[String]] = repsep(fieldDecl, ",")
+  def fieldDecl: Parser[(String, String)] = ident ~  ":" ~ ident ^^ {case name ~ _ ~ t => (name,t)}
+  def fieldDeclList: Parser[List[(String, String)]] = repsep(fieldDecl, ",")
 
   def singletonRelationDecl: Parser[ParsingContext => ParsingContext] =
     (".decl" ~> "*" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ^^ {
