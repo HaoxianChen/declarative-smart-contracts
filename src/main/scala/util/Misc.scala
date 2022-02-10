@@ -1,5 +1,6 @@
 package util
 
+import java.io.{BufferedWriter, File, FileWriter}
 import scala.io.Source
 
 object Misc {
@@ -8,6 +9,13 @@ object Misc {
     val s = src.mkString
     src.close()
     s
+  }
+
+  def writeToFile(content: String, outFileName: String): Unit = {
+    val file = new File(outFileName)
+    val bw = new BufferedWriter(new FileWriter(file))
+    bw.write(content)
+    bw.close()
   }
 
 }

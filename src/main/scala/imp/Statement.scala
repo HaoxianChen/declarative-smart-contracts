@@ -7,7 +7,9 @@ sealed abstract class Statement
 case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
   // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
-  override def toString: String = s"${p._type} $p = ${relation.name}[${relation.memberNames(index)}];"
+  override def toString: String = {
+    s"${p._type} $p = ${relation.name}Tuple[${relation.memberNames(index)}];"
+  }
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
   override def toString: String = s"$p := $arithmetic"
@@ -58,7 +60,7 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
       keys.mkString(",")
     }
     val fieldName = relation.memberNames(valueIndex)
-    s"${relation.name}[$keyStr].$fieldName += $delta"
+    s"${relation.name}[$keyStr].$fieldName += $delta;"
   }
 }
 // Join
@@ -76,7 +78,7 @@ sealed abstract class SolidityStatement extends Statement
 case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
   override def toString: String = {
     val tupleName: String = s"${relation.name}Tuple"
-    s"${tupleName.capitalize} $tupleName = ${relation.name}[$key]"
+    s"${tupleName.capitalize} $tupleName = ${relation.name}[$key];"
   }
 }
 case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement)
@@ -143,8 +145,12 @@ case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex:
 }
 
 sealed abstract class Condition
-case class True() extends Condition
-case class False() extends Condition
+case class True() extends Condition {
+  override def toString: String = "true"
+}
+case class False() extends Condition {
+  override def toString: String = "false"
+}
 case class Match(relation: Relation, index: Int, p: Parameter) extends Condition {
   override def toString: String = s"$p==${relation.name}[$index]"
 }
