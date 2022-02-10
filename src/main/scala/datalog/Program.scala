@@ -56,7 +56,8 @@ case class Interface(relation: Relation, inputTypes: List[Type], returnType: Opt
     s"${relation.name}($inputStr)" + retStr
   }
 }
-case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, Int]) {
+case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, Int],
+                   name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
   override def toString: String = {
     var ret: String = s""
@@ -65,4 +66,5 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
     ret += "Rules:\n" + rules.mkString("\n")
     ret
   }
+  def setName(newName: String): Program = this.copy(name=newName)
 }

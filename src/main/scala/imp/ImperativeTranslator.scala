@@ -48,7 +48,7 @@ case class ImperativeTranslator() {
         case (k,v) => k -> v.map(_._2)
       }
     }
-    ImperativeAbstractProgram(program.relations, program.relationIndices, impProgram, dependencyMap)
+    ImperativeAbstractProgram(program.name, program.relations, program.relationIndices, impProgram, dependencyMap)
   }
 
   private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {
@@ -119,7 +119,10 @@ case class ImperativeTranslator() {
     val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
     val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_==resultIndex)
     /** Apply the chain rule. */
-    val delta: Arithmetic = Mul(Arithmetic.derivativeOf(assignment.b, x), incrementValue.delta)
+    val delta: Arithmetic = {
+      val _d = Mul(Arithmetic.derivativeOf(assignment.b, x), x)
+      Arithmetic.simplify(_d)
+    }
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 

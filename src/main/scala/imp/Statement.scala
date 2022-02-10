@@ -57,7 +57,8 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
       val keys = keyIndices.map(i => literal.fields(i))
       keys.mkString(",")
     }
-    s"${relation.name}[$keyStr] += $delta"
+    val fieldName = relation.memberNames(valueIndex)
+    s"${relation.name}[$keyStr].$fieldName += $delta"
   }
 }
 // Join
@@ -107,6 +108,12 @@ case class DefineStruct(name: String, _type: StructType) extends SolidityStateme
 }
 case class DeclRelation(relation: Relation, mapType: MapType) extends SolidityStatement {
   override def toString: String = s"$mapType ${relation.name};"
+}
+case class DeclContract(name: String, statement: Statement) extends SolidityStatement {
+  override def toString: String =
+    e"""contract $name {
+  $statement
+}""".stripMargin
 }
 
 object Statement {
@@ -180,7 +187,7 @@ object Condition {
   }
 }
 
-case class ImperativeAbstractProgram(relations: Set[Relation], indices: Map[SimpleRelation, Int],
+case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, Int],
                                      statement: Statement,
                                      dependencies: Map[Relation, Set[Relation]]) {
   override def toString: String = s"$statement"

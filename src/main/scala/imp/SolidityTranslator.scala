@@ -3,6 +3,7 @@ package imp
 import datalog.{Interface, MapType, Parameter, Relation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
+  val name: String = program.name
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
   private val dependencies = program.dependencies
@@ -23,10 +24,11 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   def translate(): Statement = {
-    val definitions: Statement = getDefinitions()
+    val structDefinitions: Statement = makeStructDefinitions()
     val declarations: Statement = getRelationDeclartions()
     val functions = translateStatement(program.statement)
-    Statement.makeSeq(definitions, declarations, functions)
+    val definitions = Statement.makeSeq(structDefinitions, declarations, functions)
+    DeclContract(name, definitions)
   }
 
   private def getRelationDeclartions(): Statement = {
@@ -39,7 +41,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     stmt
   }
 
-  private def getDefinitions(): Statement = {
+  private def makeStructDefinitions(): Statement = {
     val allDefs = tupleTypes.map{
       case (rel, _type)=> _type match {
         case st: StructType => DefineStruct(getStructName(rel), st)
@@ -47,7 +49,6 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       }
     }.toList
     Statement.makeSeq(allDefs:_*)
-
   }
 
   /** Translate abstract imperative program into Solidity statements */

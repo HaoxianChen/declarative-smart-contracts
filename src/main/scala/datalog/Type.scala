@@ -14,7 +14,7 @@ case class SymbolType(name: String) extends Type
 case class NumberType(name: String) extends Type
 sealed abstract class CompoundType extends Type
 case class MapType(key: Type, value: Type) extends CompoundType {
-  def name: String = s"Mapping($key=>$value)"
+  def name: String = s"mapping($key=>$value)"
 }
 case class StructType(name: String, members: List[Parameter]) extends CompoundType
 
