@@ -22,12 +22,18 @@ sealed abstract class Relation {
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    SingletonRelation("msgSender", List(Type.addressType), List("p"))
+    MsgSender()
   )
 }
 
 case class SimpleRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
 case class SingletonRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
+sealed abstract class ReservedRelation extends Relation
+case class MsgSender() extends ReservedRelation {
+  def name: String = "msgSender"
+  def sig: List[Type] = List(Type.addressType)
+  def memberNames: List[String] = List("p")
+}
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
   override def toString: String = {

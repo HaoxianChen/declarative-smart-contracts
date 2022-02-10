@@ -1,12 +1,13 @@
 package imp
 
-import datalog.{Interface, MapType, Parameter, Relation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
+import datalog.{Interface, MapType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
   val name: String = program.name
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
   private val dependencies = program.dependencies
+  private val materializedRelations: Set[Relation] = relationsToMaterialize(program.statement)
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(s"recv_"))
@@ -33,10 +34,20 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   private def getRelationDeclartions(): Statement = {
     var stmt: Statement = Empty()
-    for ((rel, i) <- indices) {
-      val mapType = MapType(rel.sig(i), tupleTypes(rel))
-      val declRelation = DeclRelation(rel, mapType)
-      stmt = Statement.makeSeq(stmt, declRelation)
+    for (rel <- materializedRelations) {
+      rel match {
+        case _: SingletonRelation => {
+          val declRelation = DeclRelation(rel, getStructType(rel))
+          stmt = Statement.makeSeq(stmt, declRelation)
+        }
+        case sr: SimpleRelation => {
+          val i = indices(sr)
+          val mapType = MapType(rel.sig(i), tupleTypes(sr))
+          val declRelation = DeclRelation(rel, mapType)
+          stmt = Statement.makeSeq(stmt, declRelation)
+        }
+        case _: ReservedRelation => Empty()
+      }
     }
     stmt
   }
@@ -44,7 +55,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private def makeStructDefinitions(): Statement = {
     val allDefs = tupleTypes.map{
       case (rel, _type)=> _type match {
-        case st: StructType => DefineStruct(getStructName(rel), st)
+        case st: StructType => if (materializedRelations.contains(rel)) DefineStruct(getStructName(rel), st) else Empty()
         case _ => Empty()
       }
     }.toList
@@ -68,7 +79,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
     val increments = update match {
-      case i: Increment => i
+      case i: Increment => if (materializedRelations.contains(i.relation)) i else Empty()
       case _: Insert => Empty()
     }
     var stmt: Statement = increments
@@ -97,7 +108,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   private def translateSearchStatement(search: Search): Statement = {
     search.relation match {
-      case SingletonRelation(_, _, _) => {
+      case _:SingletonRelation|_:ReservedRelation => {
         val condition = search.conditions.foldLeft[Condition](True())(Condition.conjunction)
         If(condition, search.statement)
       }
@@ -116,5 +127,15 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         Statement.makeSeq(readTuple, If(condition, search.statement))
       }
     }
+  }
+
+  private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
+    case ReadTuple(rel, _) => Set(rel)
+    case GroundVar(_, rel, _) => Set(rel)
+    case Search(_, _, stmt) => relationsToMaterialize(stmt)
+    case If(_,stmt) => relationsToMaterialize(stmt)
+    case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
+    case on: OnStatement => relationsToMaterialize(on.statement)
+    case _:Empty|_:Assign|_:UpdateStatement|_:SolidityStatement => Set()
   }
 }

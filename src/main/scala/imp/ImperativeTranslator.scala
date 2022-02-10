@@ -162,9 +162,9 @@ case class ImperativeTranslator() {
      * 1. Singleton relations
      * 2. Other relations ...  */
     literals.toList.sortWith((a,b) => a.relation match {
-      case _: SingletonRelation => true
+      case _: SingletonRelation|_:ReservedRelation => true
       case _: SimpleRelation => b.relation match {
-        case _: SingletonRelation => false
+        case _:SingletonRelation|_:ReservedRelation => false
         case _: SimpleRelation => true
       }
     })

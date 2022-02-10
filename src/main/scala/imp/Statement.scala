@@ -8,7 +8,10 @@ case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
   // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
   override def toString: String = {
-    s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
+    relation match {
+      case _:SingletonRelation|_:MsgSender => s"${p._type} $p = ${relation.name}.${relation.memberNames(index)};"
+      case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
+    }
   }
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
@@ -117,8 +120,8 @@ case class DefineStruct(name: String, _type: StructType) extends SolidityStateme
 }"""
   }
 }
-case class DeclRelation(relation: Relation, mapType: MapType) extends SolidityStatement {
-  override def toString: String = s"$mapType ${relation.name};"
+case class DeclRelation(relation: Relation, _type: Type) extends SolidityStatement {
+  override def toString: String = s"${_type} ${relation.name};"
 }
 case class DeclContract(name: String, statement: Statement) extends SolidityStatement {
   override def toString: String =
@@ -161,7 +164,15 @@ case class False() extends Condition {
   override def toString: String = "false"
 }
 case class Match(relation: Relation, index: Int, p: Parameter) extends Condition {
-  override def toString: String = s"$p==${relation.name}[$index]"
+  override def toString: String = {
+    relation match {
+      case _: MsgSender => s"$p==msg.sender"
+      case _:SingletonRelation|_:SimpleRelation => {
+        val key = relation.memberNames(index)
+        s"$p==${relation.name}[$key]"
+      }
+    }
+  }
 }
 case class Greater(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a>$b"
