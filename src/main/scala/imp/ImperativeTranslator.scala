@@ -127,13 +127,6 @@ case class ImperativeTranslator() {
   }
 
   private def getInsertStatement(rule: Rule, insert: Literal): Statement = {
-    // Ground the insert tuple
-    val groundLiteralParam: Statement = insert.fields.zipWithIndex.foldLeft[Statement](Empty()) {
-      case (stmt, (f,i)) => f.name match {
-        case "_" => stmt
-        case _ => Statement.makeSeq(stmt, GroundVar(f,insert.relation,i))
-      }
-    }
 
     /** Generate assign statements for functors */
     val assignStatements = rule.functors.foldLeft[Statement](Empty())(
@@ -161,9 +154,7 @@ case class ImperativeTranslator() {
       val rest = rule.body.filterNot(_.relation==insert.relation)
       sortJoinLiterals(rest)
     }
-    val joinStatements = _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
-
-    Statement.makeSeq(groundLiteralParam, joinStatements)
+    _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
   }
 
   private def sortJoinLiterals(literals: Set[Literal]): List[Literal] = {
