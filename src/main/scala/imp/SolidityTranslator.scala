@@ -57,7 +57,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case If(cond,stmt) => If(cond, translateStatement(stmt))
     case Seq(a,b) => Seq(translateStatement(a), translateStatement(b))
     case o: OnStatement => translateStatement(translateOnStatement(o))
-    case DeclFunction(name,lit,target,stmt) => DeclFunction(name,lit,target,translateStatement(stmt))
+    case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
     case _:Empty|_:Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
@@ -92,7 +92,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         (getFunName(relation, updateTarget), ps)
       }
     }
-    DeclFunction(funcName, params, returnType = UnitType(), on.statement)
+    DeclFunction(funcName, params, returnType = UnitType(), on.statement, Publicity.Public)
   }
 
   private def translateSearchStatement(search: Search): Statement = {

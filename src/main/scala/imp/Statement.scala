@@ -8,7 +8,7 @@ case class Empty() extends Statement
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
   // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
   override def toString: String = {
-    s"${p._type} $p = ${relation.name}Tuple[${relation.memberNames(index)}];"
+    s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
   }
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
@@ -74,6 +74,10 @@ case class Search(relation: Relation, conditions: Set[Match], statement: Stateme
 }
 
 /** Statements used in Solidity */
+object Publicity extends Enumeration {
+  type Publicity = Value
+  val Public, Private = Value
+}
 sealed abstract class SolidityStatement extends Statement
 case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
   override def toString: String = {
@@ -81,15 +85,20 @@ case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityS
     s"${tupleName.capitalize} $tupleName = ${relation.name}[$key];"
   }
 }
-case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement)
+case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement,
+                        publicity: Publicity.Publicity)
     extends SolidityStatement{
   override def toString: String = {
-    val paramStr = params.mkString(",")
+    val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
     val returnStr: String = returnType match {
       case _ @ (_:UnitType| _:AnyType) => ""
       case t @ (_: SymbolType | _: NumberType|_:CompoundType) => s"returns (${t.name})"
     }
-    e"""function $name($paramStr) $returnStr {
+    val publicityStr = publicity match {
+      case Publicity.Public => "public"
+      case Publicity.Private => "private"
+    }
+    e"""function $name($paramStr) $publicityStr $returnStr {
   $stmt
 }""".stripMargin
   }
