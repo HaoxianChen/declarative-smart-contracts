@@ -85,7 +85,7 @@ sealed abstract class SolidityStatement extends Statement
 case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
   override def toString: String = {
     val tupleName: String = s"${relation.name}Tuple"
-    s"${tupleName.capitalize} $tupleName = ${relation.name}[$key];"
+    s"${tupleName.capitalize} memory $tupleName = ${relation.name}[$key];"
   }
 }
 case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement,
