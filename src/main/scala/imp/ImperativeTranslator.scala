@@ -43,12 +43,27 @@ case class ImperativeTranslator() {
         triggers -= trigger
       }
     }
+    val constructor = {
+      val constructorRel = program.relations.find(_.name=="constructor").get
+      val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
+      for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
+      constuctorDefinition
+    }
+    val statements = Statement.makeSeq(constructor,impProgram)
     val dependencyMap: Map[Relation, Set[Relation]] = {
       dependencies.groupBy(_._1).map{
         case (k,v) => k -> v.map(_._2)
       }
     }
-    ImperativeAbstractProgram(program.name, program.relations, program.relationIndices, impProgram, dependencyMap)
+    ImperativeAbstractProgram(program.name, program.relations, program.relationIndices, statements, dependencyMap)
+  }
+
+  private def getConstructor(constructorRel: Relation, rules: Set[Rule]): (Statement, Set[Relation]) = {
+    val dependentRules = rules.filter(_.body.exists(_.relation.name=="constructor"))
+    val allUpdates = dependentRules.map {
+      r => getUpdateStatements(r, InsertTuple(constructorRel))
+    }
+    (Statement.makeSeq(allUpdates.toList:_*), dependentRules.map(_.head.relation))
   }
 
   private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {
@@ -82,7 +97,6 @@ case class ImperativeTranslator() {
       case iv: IncrementValue => _getUpdateStatementsFromIncrement(rule, literal, iv)
     }
   }
-
 
   private def getIncrementFromAgg(rule: Rule): UpdateStatement = {
     require(rule.aggregators.size == 1)

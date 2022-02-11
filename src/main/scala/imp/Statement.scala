@@ -2,6 +2,8 @@ package imp
 import datalog._
 import util.Indenter._
 
+import java.sql.ParameterMetaData
+
 sealed abstract class Statement
 
 case class Empty() extends Statement
@@ -9,7 +11,8 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
   // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
   override def toString: String = {
     relation match {
-      case _:SingletonRelation|_:MsgSender => s"${p._type} $p = ${relation.name}.${relation.memberNames(index)};"
+      case _:SingletonRelation => s"${p._type} $p = ${relation.name}.${relation.memberNames(index)};"
+      case _:MsgSender => s"${p._type} $p = msg.sender;"
       case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
     }
   }
@@ -97,10 +100,25 @@ case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean) {
   }
 }
 sealed abstract class SolidityStatement extends Statement
+case class Constructor(params: List[Parameter], statement: Statement) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
+    e"""constructor($paramStr) {
+  $statement
+}""".stripMargin
+  }
+}
 case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
   override def toString: String = {
     val tupleName: String = s"${relation.name}Tuple"
     s"${tupleName.capitalize} memory $tupleName = ${relation.name}[$key];"
+  }
+}
+case class SetTuple(relation: SingletonRelation, params: List[Parameter]) extends SolidityStatement {
+  override def toString: String = {
+    val structType = s"${relation.name.capitalize}Tuple"
+    val paramStr = params.mkString(",")
+    s"${relation.name} = $structType($paramStr);"
   }
 }
 case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement,

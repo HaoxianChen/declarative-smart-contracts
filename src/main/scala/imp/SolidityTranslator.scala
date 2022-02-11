@@ -92,13 +92,21 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
-    val increments = update match {
-      case i: Increment => if (materializedRelations.contains(i.relation)) i else Empty()
-      case _: Insert => Empty()
-    }
-    var stmt: Statement = increments
-
     val params: List[Parameter] = update.literal.fields
+    val newUpdates = update match {
+      case i: Increment => if (materializedRelations.contains(i.relation)) i else Empty()
+      case ins: Insert => if (materializedRelations.contains(ins.relation)) {
+        ins.relation match {
+          case rel:SingletonRelation => SetTuple(rel, params)
+          case rel @ (_:SimpleRelation|_:ReservedRelation) => throw new Exception(
+            s"Do not support insert tuple of ${rel.getClass}: $rel")
+        }
+      }
+      else Empty()
+    }
+    var stmt: Statement = newUpdates
+
+    /** Call functions to update dependent relations */
     val targetRels = dependencies.getOrElse(update.relation, Set())
     for (rel <- targetRels) {
       val functionName = getFunName(update.relation, rel)
@@ -227,6 +235,23 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       )
     }
     val allInterfaceFunctions = interfaces.map(_declInterfaceFunction).toList
-    Statement.makeSeq(allInterfaceFunctions:_*)
+    val constructor = makeConstructor()
+    Statement.makeSeq((constructor +: allInterfaceFunctions):_*)
+  }
+
+  private def makeConstructor(): Statement = {
+    val constructorRel = program.relations.find(_.name=="constructor")
+    require(constructorRel.isDefined, s"Constructor undefined")
+    val rel = constructorRel.get
+    val params = rel.sig.zip(rel.memberNames).map{ case (t,n) => Variable(t,n) }
+
+    /** Relevant update functions */
+    var statement: Statement = Empty()
+    for (targetRel <- dependencies.getOrElse(rel, Set()) ) {
+      /** Call the update functions */
+      val f = getFunName(rel, targetRel)
+      statement = Statement.makeSeq(statement,Call(f,params))
+    }
+    Constructor(params = params, statement = statement)
   }
 }
