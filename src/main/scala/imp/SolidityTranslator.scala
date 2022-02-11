@@ -67,12 +67,24 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   /** Translate abstract imperative program into Solidity statements */
   private def translateStatement(statement: Statement): Statement = statement match {
     case s: Search => translateStatement(translateSearchStatement(s))
-    case If(cond,stmt) => If(cond, translateStatement(stmt))
+    case i: If => translateStatement(flattenIfStatement(i))
     case Seq(a,b) => Seq(translateStatement(a), translateStatement(b))
     case o: OnStatement => translateStatement(translateOnStatement(o))
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
     case _:Empty|_:Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
+  }
+
+  private def flattenIfStatement(ifStatement: If): Statement = {
+    val cond = ifStatement.condition
+    cond match {
+      case _: True => ifStatement.statement
+      case _: False => throw new Exception(s"False condition in if statement ${ifStatement}")
+      case _ => {
+        val req = Require(cond, s"condition $cond is false.")
+        Statement.makeSeq(req, ifStatement.statement)
+      }
+    }
   }
 
   private def getFunName(src: Relation, target: Relation): String = {

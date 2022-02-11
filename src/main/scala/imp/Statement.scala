@@ -143,6 +143,9 @@ case class DeclContract(name: String, statement: Statement) extends SolidityStat
 case class Return(p: Parameter) extends SolidityStatement {
   override def toString: String = s"return $p;"
 }
+case class Require(condition: Condition, msg: String) extends SolidityStatement {
+  override def toString: String = s"require($condition,\"$msg\");"
+}
 
 object Statement {
   private def _makeSeq(a: Statement, b: Statement): Statement = a match {
