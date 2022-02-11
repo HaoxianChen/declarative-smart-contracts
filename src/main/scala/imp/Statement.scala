@@ -63,7 +63,10 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
       keys.mkString(",")
     }
     val fieldName = relation.memberNames(valueIndex)
-    s"${relation.name}[$keyStr].$fieldName += $delta;"
+    delta match {
+      case Negative(e) => s"${relation.name}[$keyStr].$fieldName -= $e;"
+      case _ => s"${relation.name}[$keyStr].$fieldName += $delta;"
+    }
   }
 }
 // Join
