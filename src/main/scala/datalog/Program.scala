@@ -52,12 +52,18 @@ case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggre
   }
 }
 
-case class Interface(relation: Relation, inputTypes: List[Type], returnType: Option[Type]) {
+case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex: Option[Int]) {
+  def inputTypes: List[Type] = inputIndices.map(i => relation.sig(i))
+  def returnType: Type = optReturnIndex match {
+    case Some(i) => relation.sig(i)
+    case None => UnitType()
+  }
   override def toString: String = {
     val inputStr = inputTypes.mkString(",")
     val retStr = returnType match {
-      case Some(rt) => s": $rt"
-      case None => s""
+      case _: AnyType => throw new Exception(s"Interface ${relation} does not return Any type.")
+      case _: UnitType => s""
+      case _:SymbolType|_:NumberType|_:CompoundType => s": $returnType"
     }
     s"${relation.name}($inputStr)" + retStr
   }

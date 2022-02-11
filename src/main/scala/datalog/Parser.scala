@@ -33,16 +33,16 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   def addInterface(name: String, optRetIndexStr: Option[String]): ParsingContext = {
     val relation = relsByName(name)
     val sig = relation.sig
-    val (inputTypes,optRetType): (List[Type],Option[Type]) = optRetIndexStr match {
+    val (inputIndices, optOutIndex): (List[Int], Option[Int]) = optRetIndexStr match {
       case Some(idxstr) => {
         val idx = idxstr.toInt
-        val _inputTypes = sig.take(idx) ++ sig.takeRight(sig.size-idx-1)
-        assert(_inputTypes.size + 1 == sig.size, s"sig: ${sig}, idx: $idx")
-        (_inputTypes, Some(sig(idx)))
+        val _inputIndices = sig.indices.take(idx) ++ sig.indices.takeRight(sig.size-idx-1)
+        assert(_inputIndices.size + 1 == sig.size, s"sig: ${sig}, idx: $idx")
+        (_inputIndices.toList, Some(idx))
       }
-      case None => (sig, None)
+      case None => (sig.indices.toList, None)
     }
-    val interface = Interface(relation, inputTypes, optRetType)
+    val interface = Interface(relation, inputIndices, optOutIndex)
     this.copy(interfaces=interfaces+interface)
   }
   def addRule(rule: Rule) = this.copy(rules=rules+rule)

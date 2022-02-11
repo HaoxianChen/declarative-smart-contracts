@@ -4,13 +4,14 @@ import datalog.{Interface, MapType, Parameter, Relation, ReservedRelation, Simpl
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
   val name: String = program.name
+  private val transactionRelationPrefix = "recv_"
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
   private val dependencies = program.dependencies
   private val materializedRelations: Set[Relation] = relationsToMaterialize(program.statement)
 
   private val tupleTypes :Map[Relation, Type] = {
-    relations.filterNot(_.name.startsWith(s"recv_"))
+    relations.filterNot(_.name.startsWith(transactionRelationPrefix))
       .map(rel => rel -> getStructType(rel)).toMap
   }
 
@@ -27,8 +28,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   def translate(): Statement = {
     val structDefinitions: Statement = makeStructDefinitions()
     val declarations: Statement = getRelationDeclartions()
+    val interfaces: Statement = makeInterfaces()
     val functions = translateStatement(program.statement)
-    val definitions = Statement.makeSeq(structDefinitions, declarations, functions)
+    val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, functions)
     DeclContract(name, definitions)
   }
 
@@ -103,7 +105,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         (getFunName(relation, updateTarget), ps)
       }
     }
-    DeclFunction(funcName, params, returnType = UnitType(), on.statement, Publicity.Public)
+    DeclFunction(funcName, params, returnType = UnitType(), on.statement,
+      metaData = FunctionMetaData(Publicity.Private, false))
   }
 
   private def translateSearchStatement(search: Search): Statement = {
@@ -137,5 +140,81 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
     case _:Empty|_:Assign|_:UpdateStatement|_:SolidityStatement => Set()
+  }
+
+  private def makeInterfaces(): Statement = {
+    def interfaceIO(iface: Interface): (List[Parameter], Option[Parameter]) = {
+      val rel = iface.relation
+      val params: List[Parameter] = {
+        iface.inputIndices.map(i=>{
+          val _type = rel.sig(i)
+          val name = rel.memberNames(i)
+          Variable(_type,name)
+        })
+      }
+      val optOutput: Option[Parameter] = iface.optReturnIndex match {
+        case Some(i) => {
+          val n = rel.memberNames(i)
+          val t = iface.returnType
+          Some(Variable(t,n))
+        }
+        case None => None
+      }
+      (params, optOutput)
+    }
+    def _declInterfaceFunction(iface: Interface): DeclFunction = {
+      if (iface.relation.name.startsWith(transactionRelationPrefix)) _declTxFunction(iface)
+      else _declViewFunction(iface)
+    }
+    def _declViewFunction(iface: Interface): DeclFunction = {
+      val funcName: String = s"get${iface.relation.name.capitalize}"
+      val outIndex = iface.optReturnIndex.get
+      val rel = iface.relation
+      val (params, optOutput) = interfaceIO(iface)
+      val statement: Statement = {
+        val outputVar = optOutput.get
+        val groundVar = GroundVar(outputVar, rel, outIndex)
+        val ret = Return(outputVar)
+        iface.relation match {
+          case _rel:SimpleRelation => if (indices.contains(_rel)) {
+            val idx = indices(_rel)
+            val key = {
+              val n = _rel.memberNames(idx)
+              val t = _rel.sig(idx)
+              Variable(t,n)
+            }
+            val readTuple = ReadTuple(_rel, key)
+            Statement.makeSeq(readTuple,groundVar,ret)
+          }
+          else {
+            throw new Exception(s"Do not support simple relation without indices: ${rel}")
+          }
+          case _:SingletonRelation => Statement.makeSeq(groundVar,ret)
+          case _:ReservedRelation => throw new Exception(s"Do not support interface on reserved relation: $rel")
+        }
+      }
+      DeclFunction(funcName, params, returnType = iface.returnType, statement,
+        metaData=FunctionMetaData(Publicity.Public, true))
+    }
+    def _declTxFunction(iface: Interface): DeclFunction = {
+      val funcName: String = {
+        val relName = iface.relation.name
+        relName.substring(transactionRelationPrefix.length, relName.length)
+      }
+      val params: List[Parameter] = iface.relation.sig.zip(iface.relation.memberNames).map{
+        case (t,n) => Variable(t,n)
+      }
+      var statement: Statement = Empty()
+      for (targetRel <- dependencies.getOrElse(iface.relation, Set()) ) {
+        /** Call the update functions */
+        val f = getFunName(iface.relation, targetRel)
+        statement = Statement.makeSeq(statement,Call(f,params))
+      }
+      DeclFunction(funcName, params, returnType = iface.returnType, statement,
+        metaData=FunctionMetaData(Publicity.Public, false)
+      )
+    }
+    val allInterfaceFunctions = interfaces.map(_declInterfaceFunction).toList
+    Statement.makeSeq(allInterfaceFunctions:_*)
   }
 }

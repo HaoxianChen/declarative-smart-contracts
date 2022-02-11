@@ -84,6 +84,18 @@ object Publicity extends Enumeration {
   type Publicity = Value
   val Public, Private = Value
 }
+case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean) {
+  override def toString: String = {
+    val publicityStr = publicity match {
+      case Publicity.Public => "public"
+      case Publicity.Private => "private"
+    }
+    if (isView) {
+      List(publicityStr, "view").mkString(" ")
+    }
+    else publicityStr
+  }
+}
 sealed abstract class SolidityStatement extends Statement
 case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
   override def toString: String = {
@@ -92,7 +104,7 @@ case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityS
   }
 }
 case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement,
-                        publicity: Publicity.Publicity)
+                        metaData: FunctionMetaData)
     extends SolidityStatement{
   override def toString: String = {
     val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
@@ -100,11 +112,7 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
       case _ @ (_:UnitType| _:AnyType) => ""
       case t @ (_: SymbolType | _: NumberType|_:CompoundType) => s"returns (${t.name})"
     }
-    val publicityStr = publicity match {
-      case Publicity.Public => "public"
-      case Publicity.Private => "private"
-    }
-    e"""function $name($paramStr) $publicityStr $returnStr {
+    e"""function $name($paramStr) $metaData $returnStr {
   $stmt
 }""".stripMargin
   }
@@ -131,6 +139,9 @@ case class DeclContract(name: String, statement: Statement) extends SolidityStat
     e"""contract $name {
   $statement
 }""".stripMargin
+}
+case class Return(p: Parameter) extends SolidityStatement {
+  override def toString: String = s"return $p;"
 }
 
 object Statement {
