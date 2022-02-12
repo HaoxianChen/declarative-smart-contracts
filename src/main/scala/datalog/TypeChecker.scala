@@ -6,8 +6,7 @@ case class TypeChecker() {
     program.copy(rules=newRules)
   }
   private def getParamTypes(rule: Rule): Map[String, Type] = {
-    val allParams = (rule.head.fields ++ rule.body.flatMap(_.fields)).toSet
-    allParams.groupBy(_.name).map{
+    rule.groundedParams.groupBy(_.name).map{
       case (name, ps) => {
         val types = ps.map(_._type)
         require(types.size == 1, s"$name has inconsistent type in ${rule}")

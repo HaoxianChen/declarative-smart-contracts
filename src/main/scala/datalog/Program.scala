@@ -50,6 +50,11 @@ case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggre
     val bodyStr = (litStr++functorStr++aggStr).mkString(",")
     s"$head :- $bodyStr."
   }
+
+  def groundedParams: Set[Parameter] = {
+    val allParams = (head.fields ++ body.flatMap(_.fields)).toSet.filterNot(_.name=="_")
+    allParams
+  }
 }
 
 case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex: Option[Int]) {

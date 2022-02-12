@@ -107,7 +107,8 @@ case class ImperativeTranslator() {
     val delta: Arithmetic = agg match {
       case _: Sum => Param(agg.aggParam)
     }
-    Increment(rule.head.relation, agg.literal, keyIndices,resultIndex, delta = delta)
+    // Increment(rule.head.relation, agg.literal, keyIndices,resultIndex, delta = delta)
+    Increment(rule.head.relation, rule.head, keyIndices,resultIndex, delta = delta)
   }
 
   private def getUpdateNonAgg(rule: Rule, incrementValue: IncrementValue): UpdateStatement = {
