@@ -18,4 +18,6 @@ object Misc {
     bw.close()
   }
 
+  def getFileNameFromPath(filepath: String): String = filepath.split('/').last.split('.').head
+
 }
