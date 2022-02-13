@@ -70,14 +70,18 @@ case class Insert(literal: Literal) extends UpdateStatement {
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
   override def toString: String = {
-    val keyStr = {
-      val keys = keyIndices.map(i => literal.fields(i))
-      keys.mkString(",")
+    val keyStr = relation match {
+      case SimpleRelation(name, sig, memberNames) => {
+        val keys = keyIndices.map(i => literal.fields(i))
+        "[" + keys.mkString(",") + "]"
+      }
+      case _:SingletonRelation => ""
+      case r: ReservedRelation => throw new Exception(s"Cannot update reserved relation $r")
     }
     val fieldName = relation.memberNames(valueIndex)
     delta match {
-      case Negative(e) => s"${relation.name}[$keyStr].$fieldName -= $e;"
-      case _ => s"${relation.name}[$keyStr].$fieldName += $delta;"
+      case Negative(e) => s"${relation.name}$keyStr.$fieldName -= $e;"
+      case _ => s"${relation.name}$keyStr.$fieldName += $delta;"
     }
   }
 }

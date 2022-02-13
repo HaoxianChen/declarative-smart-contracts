@@ -4,6 +4,7 @@ sealed abstract class Aggregator {
   def literal: Literal
   def aggParam: Parameter
   def aggResult: Parameter
+  def relation: Relation = literal.relation
   require(literal.fields.contains(aggParam))
   require(!literal.fields.contains(aggResult))
 }

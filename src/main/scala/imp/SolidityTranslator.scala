@@ -7,7 +7,11 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val transactionRelationPrefix = "recv_"
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
-  private val materializedRelations: Set[Relation] = relationsToMaterialize(program.statement)
+  private val materializedRelations: Set[Relation] = {
+    val fromStatements = relationsToMaterialize(program.statement)
+    val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
+    fromStatements ++ viewRelations
+  }
   private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = {
     initFunctionHelpers(program.statement).groupBy(_.inRel)
   }
@@ -92,10 +96,6 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         Statement.makeSeq(req, ifStatement.statement)
       }
     }
-  }
-
-  private def getFunName(src: Relation, target: Relation): String = {
-    s"update${target.name.capitalize}On${src.name.capitalize}"
   }
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {

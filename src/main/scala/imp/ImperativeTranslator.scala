@@ -20,7 +20,7 @@ case class ImperativeTranslator() {
       for (trigger <- triggers) {
 
         val triggeredRules: Set[Rule] = program.rules.filter(
-          _.body.map(_.relation).contains(trigger.relation)
+          r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
         )
 
         for (rule <- triggeredRules) {
@@ -67,7 +67,7 @@ case class ImperativeTranslator() {
   }
 
   private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {
-    def _getInsertStatement(rule: Rule, insertedLiteral: Literal): OnStatement = {
+    def _updateStatementFromInsert(rule: Rule, insertedLiteral: Literal): OnStatement = {
       val updates = getInsertStatement(rule, insertedLiteral)
       OnInsert(insertedLiteral, rule.head.relation, updates)
     }
@@ -90,7 +90,7 @@ case class ImperativeTranslator() {
       }
     }
     trigger match {
-      case _: InsertTuple => _getInsertStatement(rule, literal)
+      case _: InsertTuple => _updateStatementFromInsert(rule, literal)
       case iv: IncrementValue => _getUpdateStatementsFromIncrement(rule, literal, iv)
     }
   }
