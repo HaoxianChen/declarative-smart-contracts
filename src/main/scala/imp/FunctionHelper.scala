@@ -1,8 +1,16 @@
 package imp
 
-import datalog.{Literal, Param, Parameter, Relation, Variable}
+import datalog.{Literal, Param, Parameter, Relation, UnitType, Variable}
 
-case class FunctionHelper(funcName: String, inRel: Relation, keyIndices: List[Int]) {
+case class FunctionHelper(onStatement: OnStatement) {
+  private val funcName: String = FunctionHelper.getFunName(onStatement.relation, onStatement.updateTarget)
+  val inRel = onStatement.relation
+  private val keyIndices: List[Int] = onStatement match {
+    case OnIncrement(literal, keyIndices, updateIndex, updateTarget, statement) => keyIndices
+    case OnInsert(literal, updateTarget, statement) => {
+      literal.fields.zipWithIndex.filterNot(_._1.name=="_").map(_._2)
+    }
+  }
   def getParam(literal: Literal): List[Parameter] = {
     require(literal.relation == inRel)
     keyIndices.map(i=>literal.fields(i))
@@ -21,21 +29,23 @@ case class FunctionHelper(funcName: String, inRel: Relation, keyIndices: List[In
   def getCallStatementFromInterface(params: List[Parameter]): Statement = {
     Call(funcName, params)
   }
-  def getDeclStatement(): DeclFunction = {
-    ???
-  }
 }
 object FunctionHelper {
   private def getFunName(src: Relation, target: Relation): String = {
     s"update${target.name.capitalize}On${src.name.capitalize}"
   }
-  def apply(onStatement: OnStatement): FunctionHelper = onStatement match {
-    case OnInsert(literal, updateTarget, statement) =>
-      val rel = literal.relation
-      val keyIndices = literal.fields.zipWithIndex.filterNot(_._1.name=="_").map(_._2)
-      FunctionHelper(funcName = getFunName(rel, updateTarget), inRel = rel, keyIndices = keyIndices)
-    case OnIncrement(literal, keyIndices, updateIndex, updateTarget, statement) =>
-      val rel = literal.relation
-      FunctionHelper(funcName = getFunName(rel, updateTarget), inRel = rel, keyIndices = keyIndices)
+  def getFunctionDeclaration(on: OnStatement): Statement = {
+    val (funcName,params) = on match {
+      case OnInsert(literal, updateTarget, statement) => {
+        val params = literal.fields.filterNot(_.name == "_")
+        (getFunName(literal.relation, updateTarget), params)
+      }
+      case onIncrement: OnIncrement => {
+        val ps = onIncrement.keys :+ onIncrement.updateValue
+        (getFunName(onIncrement.relation, onIncrement.updateTarget), ps)
+      }
+    }
+    DeclFunction(funcName, params, returnType = UnitType(), on.statement,
+      metaData = FunctionMetaData(Publicity.Private, false))
   }
 }

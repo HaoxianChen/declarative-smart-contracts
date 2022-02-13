@@ -34,11 +34,13 @@ case class If(condition: Condition, statement: Statement) extends Statement {
 }
 sealed abstract class OnStatement extends Statement {
   def literal: Literal
+  def relation: Relation
   def updateTarget: Relation
   def statement: Statement
 }
 
 case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement) extends OnStatement {
+  val relation: Relation = literal.relation
   override def toString: String =
     e"""on insert $literal {
   $statement

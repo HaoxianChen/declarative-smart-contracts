@@ -121,17 +121,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def translateOnStatement(on: OnStatement): Statement = {
-    val (funcName,params) = on match {
-      case OnInsert(literal, updateTarget, statement) => {
-        (getFunName(literal.relation, updateTarget), literal.fields)
-      }
-      case onIncrement: OnIncrement => {
-        val ps = onIncrement.keys :+ onIncrement.updateValue
-        (getFunName(onIncrement.relation, onIncrement.updateTarget), ps)
-      }
-    }
-    DeclFunction(funcName, params, returnType = UnitType(), on.statement,
-      metaData = FunctionMetaData(Publicity.Private, false))
+    FunctionHelper.getFunctionDeclaration(on)
   }
 
   private def translateSearchStatement(search: Search): Statement = {
