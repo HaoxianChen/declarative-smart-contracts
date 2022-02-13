@@ -73,11 +73,8 @@ case class ImperativeTranslator() {
     }
     def _getUpdateStatementsFromIncrement(rule: Rule, literal: Literal, incrementValue: IncrementValue): OnStatement = {
       val updates = getUpdateNonAgg(rule, incrementValue)
-      val keys: List[Parameter] = {
-        incrementValue.keyIndices.map(i => literal.fields(i))
-      }
-      OnIncrement(relation = incrementValue.relation, keys=keys,
-        updateValue = Param(literal.fields(incrementValue.valueIndex)),
+      OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
+        updateIndex = incrementValue.valueIndex,
         updateTarget = rule.head.relation, statement = updates)
     }
     val literal: Literal = {

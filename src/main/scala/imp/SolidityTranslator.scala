@@ -1,27 +1,34 @@
 package imp
 
-import datalog.{Interface, MapType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
+import datalog._
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
   val name: String = program.name
   private val transactionRelationPrefix = "recv_"
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
-  private val dependencies = program.dependencies
   private val materializedRelations: Set[Relation] = relationsToMaterialize(program.statement)
+  private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = {
+    initFunctionHelpers(program.statement).groupBy(_.inRel)
+  }
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(transactionRelationPrefix))
       .map(rel => rel -> getStructType(rel)).toMap
   }
 
+  private def initFunctionHelpers(statement: Statement): Set[FunctionHelper] = statement match {
+    case Seq(a, b) => initFunctionHelpers(a) ++ initFunctionHelpers(b)
+    case If(_, statement) => initFunctionHelpers(statement)
+    case on: OnStatement => Set(FunctionHelper(on))
+    case _:Empty|_:GroundVar|_:imp.Assign|_:UpdateStatement|_:Search|_:SolidityStatement=> Set()
+  }
+
   private def getStructName(relation: Relation): String = s"${relation.name.capitalize}Tuple"
 
   private def getStructType(relation: Relation) = {
     val structName = getStructName(relation)
-    val params = relation.sig.zip(relation.memberNames).map{
-      case (t,n)=> Variable(t,n)
-    }
+    val params = interfaceRelationToParams(relation)
     StructType(structName, params)
   }
 
@@ -72,7 +79,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case o: OnStatement => translateStatement(translateOnStatement(o))
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
-    case _:Empty|_:Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
+    case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
 
   private def flattenIfStatement(ifStatement: If): Statement = {
@@ -107,10 +114,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     var stmt: Statement = newUpdates
 
     /** Call functions to update dependent relations */
-    val targetRels = dependencies.getOrElse(update.relation, Set())
-    for (rel <- targetRels) {
-      val functionName = getFunName(update.relation, rel)
-      stmt = Statement.makeSeq(stmt,Call(functionName, params))
+    for (fh <- dependentFunctions.getOrElse(update.relation, Set())) {
+      stmt = Statement.makeSeq(stmt, fh.getCallStatement(update))
     }
     stmt
   }
@@ -120,9 +125,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       case OnInsert(literal, updateTarget, statement) => {
         (getFunName(literal.relation, updateTarget), literal.fields)
       }
-      case OnIncrement(relation, keys, updateValue, updateTarget, statement) => {
-        val ps = keys :+ updateValue.p
-        (getFunName(relation, updateTarget), ps)
+      case onIncrement: OnIncrement => {
+        val ps = onIncrement.keys :+ onIncrement.updateValue
+        (getFunName(onIncrement.relation, onIncrement.updateTarget), ps)
       }
     }
     DeclFunction(funcName, params, returnType = UnitType(), on.statement,
@@ -159,7 +164,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case If(_,stmt) => relationsToMaterialize(stmt)
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
-    case _:Empty|_:Assign|_:UpdateStatement|_:SolidityStatement => Set()
+    case _:Empty|_:imp.Assign|_:UpdateStatement|_:SolidityStatement => Set()
   }
 
   private def makeInterfaces(): Statement = {
@@ -221,14 +226,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         val relName = iface.relation.name
         relName.substring(transactionRelationPrefix.length, relName.length)
       }
-      val params: List[Parameter] = iface.relation.sig.zip(iface.relation.memberNames).map{
-        case (t,n) => Variable(t,n)
-      }
+      val params: List[Parameter] = interfaceRelationToParams(iface.relation)
       var statement: Statement = Empty()
-      for (targetRel <- dependencies.getOrElse(iface.relation, Set()) ) {
-        /** Call the update functions */
-        val f = getFunName(iface.relation, targetRel)
-        statement = Statement.makeSeq(statement,Call(f,params))
+      for (fh <- dependentFunctions.getOrElse(iface.relation, Set())) {
+        statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
       }
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
         metaData=FunctionMetaData(Publicity.Public, false)
@@ -239,18 +240,20 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     Statement.makeSeq((constructor +: allInterfaceFunctions):_*)
   }
 
+  private def interfaceRelationToParams(rel: Relation): List[Parameter] = {
+    rel.sig.zip(rel.memberNames).map{ case (t,n) => Variable(t,n) }
+  }
+
   private def makeConstructor(): Statement = {
     val constructorRel = program.relations.find(_.name=="constructor")
     require(constructorRel.isDefined, s"Constructor undefined")
     val rel = constructorRel.get
-    val params = rel.sig.zip(rel.memberNames).map{ case (t,n) => Variable(t,n) }
+    val params = interfaceRelationToParams(rel)
 
     /** Relevant update functions */
     var statement: Statement = Empty()
-    for (targetRel <- dependencies.getOrElse(rel, Set()) ) {
-      /** Call the update functions */
-      val f = getFunName(rel, targetRel)
-      statement = Statement.makeSeq(statement,Call(f,params))
+    for (fh <- dependentFunctions.getOrElse(rel, Set())) {
+      statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
     }
     Constructor(params = params, statement = statement)
   }

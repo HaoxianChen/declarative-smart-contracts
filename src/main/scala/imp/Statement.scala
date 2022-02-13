@@ -6,7 +6,9 @@ import java.sql.ParameterMetaData
 
 sealed abstract class Statement
 
-case class Empty() extends Statement
+case class Empty() extends Statement {
+  override def toString: String = s"// Empty()"
+}
 case class GroundVar(p: Parameter, relation: Relation, index: Int) extends Statement {
   // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
   override def toString: String = {
@@ -18,7 +20,8 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
   }
 }
 case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
-  override def toString: String = s"$p := $arithmetic"
+  // override def toString: String = s"$p := $arithmetic"
+  override def toString: String = s"${p.p._type} $p = $arithmetic;"
 }
 case class Seq(a: Statement, b: Statement) extends Statement {
   override def toString: String = s"$a\n$b"
@@ -30,6 +33,7 @@ case class If(condition: Condition, statement: Statement) extends Statement {
 }""".stripMargin
 }
 sealed abstract class OnStatement extends Statement {
+  def literal: Literal
   def updateTarget: Relation
   def statement: Statement
 }
@@ -40,11 +44,14 @@ case class OnInsert(literal: Literal, updateTarget: Relation, statement: Stateme
   $statement
 }""".stripMargin
 }
-case class OnIncrement(relation: Relation, keys: List[Parameter], updateValue: Param, updateTarget: Relation,
+case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int, updateTarget: Relation,
                        statement: Statement) extends OnStatement {
+  val relation: Relation = literal.relation
+  val keys: List[Parameter] = keyIndices.map(i => literal.fields(i))
+  val updateValue = literal.fields(updateIndex)
   override def toString: String = {
     val keyStr = keys.mkString(",")
-    e"""on increment ${relation.name} at $keyStr on $updateValue  {
+    e"""on increment ${relation.name} at $keyStr with $updateValue  {
   $statement
 }""".stripMargin
   }

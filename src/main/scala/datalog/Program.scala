@@ -51,6 +51,8 @@ case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggre
     s"$head :- $bodyStr."
   }
 
+  /** todo: mask ungrounded variable with underscore. */
+
   def groundedParams: Set[Parameter] = {
     val allParams = (head.fields ++ body.flatMap(_.fields)).toSet.filterNot(_.name=="_")
     allParams
