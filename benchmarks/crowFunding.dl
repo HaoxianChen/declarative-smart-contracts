@@ -1,0 +1,44 @@
+// Relation declarations
+.decl *target(t: uint)
+.decl *beneficiary(p: address)
+.decl *owner(p: address)
+.decl constructor(target: uint, beneficiary: address)
+
+// Transactions
+.decl recv_close()
+.decl *close(v: bool)
+.decl recv_invest()
+.decl invest(p: address, n: unit)
+.decl recv_refund()
+.decl refund(p: address, n: unit)
+.decl recv_withdraw()
+.decl withdraw(p: address, n:uint)
+
+.decl *success(b: bool)
+.decl *failed(b: bool)
+
+beneficiary(p) :- constructor(_, p).
+target(t) :- constructor(t, _).
+owner(p) :- constructor(_,_), msgSender(p).
+
+// Views
+raised(s) :- s = sum m: invest(_, m).
+
+investTotal(p, s) :- invest(p, _), s = sum m: invest(p,m).
+refundTotal(p, s) :- refund(p, _), s = sum m: refund(p,m).
+balanceOf(p,s) :- investTotal(p,i), refundTotal(p,r), s := i-r.
+
+success(1) :- raised(s), target(n), s>=n.
+
+// Transaction conditions
+invest(p, n) :- recv_invest(), msgSender(p), msgValue(n), close(0), success(0).
+
+close(1) :- recv_close(), msgSender(s), owner(s).
+
+refund(p, n) :- recv_refund(), msgSender(p), close(1), success(0),
+                       balanceOf(address, n), n > 0.
+// send(p, n) :- recv_refund(), msgSender(p), close(1), success(0),
+//                        balanceOf(address, n), n > 0.
+
+withdraw(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p), success(1).
+// send(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p), success(1).

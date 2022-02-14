@@ -15,6 +15,7 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
     relation match {
       case _:SingletonRelation => s"${p._type} $p = ${relation.name}.${relation.memberNames(index)};"
       case _:MsgSender => s"${p._type} $p = msg.sender;"
+      case _:MsgValue => s"${p._type} $p = msg.value;"
       case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
     }
   }
@@ -116,7 +117,7 @@ sealed abstract class SolidityStatement extends Statement
 case class Constructor(params: List[Parameter], statement: Statement) extends SolidityStatement {
   override def toString: String = {
     val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
-    e"""constructor($paramStr) {
+    e"""constructor($paramStr) public {
   $statement
 }""".stripMargin
   }
@@ -141,7 +142,7 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
     val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
     val returnStr: String = returnType match {
       case _ @ (_:UnitType| _:AnyType) => ""
-      case t @ (_: SymbolType | _: NumberType|_:CompoundType) => s"returns (${t.name})"
+      case t @ (_: SymbolType |_: NumberType|_:BooleanType|_:CompoundType) => s"returns (${t.name})"
     }
     e"""function $name($paramStr) $metaData $returnStr {
   $stmt
@@ -215,9 +216,10 @@ case class Match(relation: Relation, index: Int, p: Parameter) extends Condition
   override def toString: String = {
     relation match {
       case _: MsgSender => s"$p==msg.sender"
+      case _: MsgValue => s"$p==msg.value"
       case _:SingletonRelation|_:SimpleRelation => {
         val key = relation.memberNames(index)
-        s"$p==${relation.name}[$key]"
+        s"$p==${relation.name}.$key"
       }
     }
   }

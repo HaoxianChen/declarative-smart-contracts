@@ -11,9 +11,19 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
   def getProgram(): Program = Program(rules, interfaces, relationIndices)
-  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[String]): ParsingContext = {
+  private def getTypes(schema: List[(String, String)]) :(List[String], List[Type]) = {
     val memberNames = schema.map(_._1)
-    val types = schema.map(s => Type(s._2))
+    val types = schema.map ( s => s._2 match {
+        case "bool" => BooleanType()
+        case "uint" => Type.uintType
+        case "int" => Type.integerType
+        case _ => Type(s._2)
+      }
+    )
+    (memberNames, types)
+  }
+  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[String]): ParsingContext = {
+    val (memberNames, types) = getTypes(schema)
     val relation = SimpleRelation(name, types, memberNames)
     optIndexStr match {
       case Some(s) => {
@@ -25,8 +35,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     }
   }
   def addSingletonRelation(name: String, schema: List[(String,String)]): ParsingContext = {
-    val memberNames = schema.map(_._1)
-    val types = schema.map(s => Type(s._2))
+    val (memberNames, types) = getTypes(schema)
     val relation = SingletonRelation(name, types, memberNames)
     this.copy(relations=relations+relation)
   }
@@ -51,8 +60,16 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     require(fieldNames.size == relation.sig.size,
       s"${relName}${fieldNames}: expected ${relation.sig.size} variables, found ${fieldNames.size}")
     val fields: List[Parameter] = relation.sig.zip(fieldNames).map {
-        case (t, name) => Variable(t, name)
-      }
+        case (t, name) => t match {
+            case _:UnitType|_:AnyType|_:CompoundType => throw new Exception(s"Unsupported type ${t}")
+            case _:SymbolType => Variable(t, name)
+            case _:NumberType => if (name.forall(_.isDigit)) Constant(t,name) else  Variable(t,name)
+            case BooleanType() => name match {
+              case "true"|"false" => Constant(t, name)
+              case _ => Variable(t, name)
+            }
+          }
+        }
     Literal(relation, fields)
   }
   def getAggregator(opName: String, aggResult: Variable, aggParam: Variable, literal: Literal): Aggregator = {
@@ -65,7 +82,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
       val _type = aggParamTyped._type.name match {
         case "uint" => Type.uintType
         case "int" => Type.integerType
-        case _ => ???
+        case _ => throw new Exception(s"Unsupported aggregate type $aggParamTyped")
       }
       aggResult.copy(_type=_type)
     }
@@ -146,7 +163,7 @@ class Parser extends ArithmeticParser {
     }
   }
   def literal: Parser[ParsingContext => Literal] =
-    (ident ~ ("(" ~> repsep(ident,",") <~ ")")) ^^ {
+    (ident ~ ("(" ~> repsep(ident|wholeNumber,",") <~ ")")) ^^ {
       case rel ~ fields => {
         pc => pc.getLiteral(rel, fields)
       }

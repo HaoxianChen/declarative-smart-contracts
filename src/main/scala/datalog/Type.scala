@@ -12,6 +12,9 @@ case class AnyType() extends Type {
 }
 case class SymbolType(name: String) extends Type
 case class NumberType(name: String) extends Type
+case class BooleanType() extends Type {
+  val name: String = "bool"
+}
 sealed abstract class CompoundType extends Type
 case class MapType(key: Type, value: Type) extends CompoundType {
   def name: String = s"mapping($key=>$value)"

@@ -27,7 +27,7 @@ case class FunctionHelper(onStatement: OnStatement) {
     }
   }
   def getCallStatementFromInterface(params: List[Parameter]): Statement = {
-    Call(funcName, params)
+    Call(funcName, keyIndices.map(i=>params(i)))
   }
 }
 object FunctionHelper {

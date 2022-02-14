@@ -5,9 +5,14 @@ import datalog._
 /** Generate imperative program from Datalog rules
  * */
 case class ImperativeTranslator() {
+  private val transactionPrefix = "recv_"
+
   def translate(program: Program): ImperativeAbstractProgram = {
+    def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
+    def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionPrefix)
+
     var triggers: Set[Trigger] = {
-      val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith("recv_"))
+      val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionPrefix))
       val relationsInBodies = program.rules.flatMap(_.body).map(_.relation)
       val toTrigger = relationsInBodies.intersect(relationsToTrigger)
       toTrigger.map(rel => InsertTuple(rel))
@@ -21,6 +26,8 @@ case class ImperativeTranslator() {
 
         val triggeredRules: Set[Rule] = program.rules.filter(
           r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
+        ).filterNot( /** transaction rules are only triggered by new transaction.  */
+          r => isTransactionRule(r) && !isTransactionTrigger(trigger)
         )
 
         for (rule <- triggeredRules) {
@@ -117,7 +124,7 @@ case class ImperativeTranslator() {
         case a: datalog.Assign => Some(a)
         case _ => None
       }
-      require(assignments.size == 1)
+      require(assignments.size == 1, s"$rule\n${incrementValue}")
       assignments.head
     }
     val x: Param = {

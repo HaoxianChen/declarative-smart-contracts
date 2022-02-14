@@ -22,7 +22,7 @@ sealed abstract class Relation {
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    MsgSender()
+    MsgSender(), MsgValue()
   )
 }
 
@@ -32,6 +32,11 @@ sealed abstract class ReservedRelation extends Relation
 case class MsgSender() extends ReservedRelation {
   def name: String = "msgSender"
   def sig: List[Type] = List(Type.addressType)
+  def memberNames: List[String] = List("p")
+}
+case class MsgValue() extends ReservedRelation {
+  def name: String = "msgValue"
+  def sig: List[Type] = List(Type.uintType)
   def memberNames: List[String] = List("p")
 }
 
@@ -70,7 +75,7 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
     val retStr = returnType match {
       case _: AnyType => throw new Exception(s"Interface ${relation} does not return Any type.")
       case _: UnitType => s""
-      case _:SymbolType|_:NumberType|_:CompoundType => s": $returnType"
+      case _:SymbolType|_:NumberType|_:BooleanType|_:CompoundType => s": $returnType"
     }
     s"${relation.name}($inputStr)" + retStr
   }

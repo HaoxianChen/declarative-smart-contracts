@@ -135,7 +135,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
           require(indices.contains(rel), s"$rel\n$search")
           val index = indices(rel)
           val keyConditions = search.conditions.filter(_.index==index)
-          require(keyConditions.size == 1)
+          require(keyConditions.size == 1, s"$search\nkey: $keyConditions")
           keyConditions.head.p
         }
         val readTuple: ReadTuple = {
