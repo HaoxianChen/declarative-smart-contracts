@@ -2,43 +2,56 @@
 .decl *target(t: uint)
 .decl *beneficiary(p: address)
 .decl *owner(p: address)
-.decl constructor(target: uint, beneficiary: address)
+.decl *raised(n: uint)
+.decl constructor(t: uint, b: address)
 
 // Transactions
 .decl recv_close()
 .decl *close(v: bool)
 .decl recv_invest()
-.decl invest(p: address, n: unit)
+.decl invest(p: address, n: uint)
 .decl recv_refund()
-.decl refund(p: address, n: unit)
+.decl refund(p: address, n: uint)
 .decl recv_withdraw()
 .decl withdraw(p: address, n:uint)
 
-.decl *success(b: bool)
-.decl *failed(b: bool)
+.decl *closed(b: bool)
+
+// Interfaces
+.interface recv_close
+.interface recv_invest
+.interface recv_refund
+.interface recv_withdraw
+.interface closed(0)
+.interface raised(0)
 
 beneficiary(p) :- constructor(_, p).
-target(t) :- constructor(t, _).
+target(t) :- constructor(t,_).
 owner(p) :- constructor(_,_), msgSender(p).
 
 // Views
 raised(s) :- s = sum m: invest(_, m).
 
-investTotal(p, s) :- invest(p, _), s = sum m: invest(p,m).
-refundTotal(p, s) :- refund(p, _), s = sum m: refund(p,m).
+.decl investTotal(p: address, n: uint)[0]
+.decl refundTotal(p: address, n: uint)[0]
+.decl balanceOf(p: address, n: uint)[0]
+investTotal(p,s) :- invest(p, _), s = sum m: invest(p,m).
+refundTotal(p,s) :- refund(p, _), s = sum m: refund(p,m).
 balanceOf(p,s) :- investTotal(p,i), refundTotal(p,r), s := i-r.
 
-success(1) :- raised(s), target(n), s>=n.
-
 // Transaction conditions
-invest(p, n) :- recv_invest(), msgSender(p), msgValue(n), close(0), success(0).
+invest(p, n) :- recv_invest(), msgSender(p), msgValue(n), closed(false),
+    raised(s), target(t), s<t.
 
-close(1) :- recv_close(), msgSender(s), owner(s).
+closed(true) :- recv_close(), msgSender(s), owner(s).
 
-refund(p, n) :- recv_refund(), msgSender(p), close(1), success(0),
-                       balanceOf(address, n), n > 0.
-// send(p, n) :- recv_refund(), msgSender(p), close(1), success(0),
+refund(p, n) :- recv_refund(), msgSender(p), closed(true),
+            raised(r), target(t), r<t,
+            balanceOf(p, n), n > 0.
+// send(p, n) :- recv_refund(), msgSender(p), closed(true), success(false),
 //                        balanceOf(address, n), n > 0.
 
-withdraw(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p), success(1).
-// send(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p), success(1).
+withdraw(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p),
+            raised(r), target(t), r>=t.
+// send(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p),
+//             raised(r), target(t), r>=t.
