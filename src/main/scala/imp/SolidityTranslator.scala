@@ -1,10 +1,10 @@
 package imp
 
 import datalog._
+import imp.SolidityTranslator.transactionRelationPrefix
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
   val name: String = program.name
-  private val transactionRelationPrefix = "recv_"
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, Int] = program.indices
   private val materializedRelations: Set[Relation] = {
@@ -40,7 +40,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val structDefinitions: Statement = makeStructDefinitions()
     val declarations: Statement = getRelationDeclartions()
     val interfaces: Statement = makeInterfaces()
-    val functions = translateStatement(program.statement)
+    val functions = {
+      val s1 = translateStatement(program.statement)
+      flattenIfStatement(s1)
+    }
     val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, functions)
     DeclContract(name, definitions)
   }
@@ -78,7 +81,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   /** Translate abstract imperative program into Solidity statements */
   private def translateStatement(statement: Statement): Statement = statement match {
     case s: Search => translateStatement(translateSearchStatement(s))
-    case i: If => translateStatement(flattenIfStatement(i))
+    case If(condition, statement) => If(condition,translateStatement(statement))
     case Seq(a,b) => Seq(translateStatement(a), translateStatement(b))
     case o: OnStatement => translateStatement(translateOnStatement(o))
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
@@ -86,7 +89,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
 
-  private def flattenIfStatement(ifStatement: If): Statement = {
+  private def _flattenIfStatement(ifStatement: If): Statement = {
     val cond = ifStatement.condition
     cond match {
       case _: True => ifStatement.statement
@@ -97,6 +100,18 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       }
     }
   }
+
+  private def flattenIfStatement(statement: Statement): Statement = statement match {
+    case Seq(a, b) => Seq(flattenIfStatement(a),flattenIfStatement(b))
+    case i: If => flattenIfStatement(_flattenIfStatement(i))
+    case DeclFunction(name,params,returnType,stmt,metaData) => if (metaData.isTransaction) {
+      DeclFunction(name,params,returnType,flattenIfStatement(stmt),metaData)
+      } else {
+      DeclFunction(name,params,returnType,stmt,metaData)
+      }
+    case o @ (_:Empty|_:GroundVar|_:imp.Assign|_:OnStatement|_:UpdateStatement|_:Search|_:SolidityStatement) => o
+  }
+
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
     val params: List[Parameter] = update.literal.fields
@@ -139,7 +154,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
           keyConditions.head.p
         }
         val readTuple: ReadTuple = {
-          ReadTuple(rel, key)
+          ReadTuple(rel, List(key))
         }
         val condition = search.conditions.filterNot(_.p==key).foldLeft[Condition](True())(Condition.conjunction)
         Statement.makeSeq(readTuple, If(condition, search.statement))
@@ -198,7 +213,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
               val t = _rel.sig(idx)
               Variable(t,n)
             }
-            val readTuple = ReadTuple(_rel, key)
+            val readTuple = ReadTuple(_rel, List(key))
             Statement.makeSeq(readTuple,groundVar,ret)
           }
           else {
@@ -209,7 +224,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         }
       }
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
-        metaData=FunctionMetaData(Publicity.Public, true))
+        metaData=FunctionMetaData(Publicity.Public, isView = true, isTransaction = false))
     }
     def _declTxFunction(iface: Interface): DeclFunction = {
       val funcName: String = {
@@ -222,7 +237,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
       }
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
-        metaData=FunctionMetaData(Publicity.Public, false)
+        metaData=FunctionMetaData(Publicity.Public, isView = false, isTransaction = true)
       )
     }
     val allInterfaceFunctions = interfaces.map(_declInterfaceFunction).toList
@@ -235,16 +250,21 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def makeConstructor(): Statement = {
-    val constructorRel = program.relations.find(_.name=="constructor")
-    require(constructorRel.isDefined, s"Constructor undefined")
-    val rel = constructorRel.get
-    val params = interfaceRelationToParams(rel)
-
-    /** Relevant update functions */
-    var statement: Statement = Empty()
-    for (fh <- dependentFunctions.getOrElse(rel, Set())) {
-      statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
+    program.relations.find(_.name=="constructor") match {
+      case Some(rel) => {
+        val params = interfaceRelationToParams(rel)
+        /** Relevant update functions */
+        var statement: Statement = Empty()
+        for (fh <- dependentFunctions.getOrElse(rel, Set())) {
+          statement = Statement.makeSeq(statement, fh.getCallStatementFromInterface(params))
+        }
+        Constructor(params = params, statement = statement)
+      }
+      case None => Empty()
     }
-    Constructor(params = params, statement = statement)
   }
+}
+
+object SolidityTranslator {
+  val transactionRelationPrefix = "recv_"
 }

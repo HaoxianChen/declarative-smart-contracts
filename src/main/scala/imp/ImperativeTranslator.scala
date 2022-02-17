@@ -6,6 +6,7 @@ import datalog._
  * */
 case class ImperativeTranslator() {
   private val transactionPrefix = "recv_"
+  private val aggregationTranslator = AggregationTranslator()
 
   def translate(program: Program): ImperativeAbstractProgram = {
     def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
@@ -50,12 +51,14 @@ case class ImperativeTranslator() {
         triggers -= trigger
       }
     }
-    val constructor = {
-      val constructorRel = program.relations.find(_.name=="constructor").get
-      val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
-      for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
-      constuctorDefinition
-    }
+    val constructor = program.relations.find(_.name=="constructor") match {
+        case Some(constructorRel) => {
+          val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
+          for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
+          constuctorDefinition
+        }
+        case None => Empty()
+      }
     val statements = Statement.makeSeq(constructor,impProgram)
     val dependencyMap: Map[Relation, Set[Relation]] = {
       dependencies.groupBy(_._1).map{
@@ -74,31 +77,39 @@ case class ImperativeTranslator() {
   }
 
   private def getUpdateStatements(rule: Rule, trigger: Trigger): OnStatement = {
-    def _updateStatementFromInsert(rule: Rule, insertedLiteral: Literal): OnStatement = {
-      val updates = getInsertStatement(rule, insertedLiteral)
+    def _getInsertedLiteralFromNonAggRule(rule: Rule): Literal = {
+      require(rule.aggregators.isEmpty)
+      val _lits = rule.body.filter(_.relation == trigger.relation)
+      require(_lits.size == 1, s"Only support rules where each relation appears at most once: $rule.")
+      _lits.head
+    }
+    def _updateStatementFromInsert(rule: Rule): OnStatement = {
+      val insertedLiteral = _getInsertedLiteralFromNonAggRule(rule)
+      val updates = getInsertStatementFromNonAggRule(rule, insertedLiteral)
       OnInsert(insertedLiteral, rule.head.relation, updates)
     }
-    def _getUpdateStatementsFromIncrement(rule: Rule, literal: Literal, incrementValue: IncrementValue): OnStatement = {
+    def _getUpdateStatementsFromIncrement(rule: Rule, incrementValue: IncrementValue): OnStatement = {
+      val literal = _getInsertedLiteralFromNonAggRule(rule)
       val updates = getUpdateNonAgg(rule, incrementValue)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,
         updateTarget = rule.head.relation, statement = updates)
-    }
-    val literal: Literal = {
-      val aggs = rule.aggregators.filter(_.literal.relation == trigger.relation)
-      assert(aggs.size <= 1)
-      if (aggs.size == 1) {
-        aggs.head.literal
-      }
-      else {
-        val _lits = rule.body.filter(_.relation == trigger.relation)
-        require(_lits.size == 1)
-        _lits.head
-      }
+      /** todo: Otherwise cast back to insert new tuple and delete old tuple. */
     }
     trigger match {
-      case _: InsertTuple => _updateStatementFromInsert(rule, literal)
-      case iv: IncrementValue => _getUpdateStatementsFromIncrement(rule, literal, iv)
+      case _: InsertTuple => {
+        if (rule.aggregators.isEmpty) {
+          _updateStatementFromInsert(rule)
+        }
+        else {
+          require(rule.aggregators.size==1)
+          rule.aggregators.head match {
+            case sum: Sum => aggregationTranslator.translateSumRule(rule, sum)
+            case max: Max => aggregationTranslator.translateMaxRule(rule, max)
+          }
+        }
+      }
+      case iv: IncrementValue => _getUpdateStatementsFromIncrement(rule, iv)
     }
   }
 
@@ -110,6 +121,7 @@ case class ImperativeTranslator() {
     val keyIndices = rule.head.fields.indices.toList.filterNot(_==resultIndex)
     val delta: Arithmetic = agg match {
       case _: Sum => Param(agg.aggParam)
+      case _: Max => throw new Exception(s"Cannot derive update on $agg.")
     }
     // Increment(rule.head.relation, agg.literal, keyIndices,resultIndex, delta = delta)
     Increment(rule.head.relation, rule.head, keyIndices,resultIndex, delta = delta)
@@ -145,7 +157,8 @@ case class ImperativeTranslator() {
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
-  private def getInsertStatement(rule: Rule, insert: Literal): Statement = {
+  private def getInsertStatementFromNonAggRule(rule: Rule, insert: Literal): Statement = {
+    require(rule.aggregators.isEmpty)
 
     /** Generate assign statements for functors */
     val assignStatements = rule.functors.foldLeft[Statement](Empty())(
@@ -156,12 +169,7 @@ case class ImperativeTranslator() {
     )
 
     // Insert / Increment
-    val updateStatement: UpdateStatement = if (rule.aggregators.isEmpty) {
-      Insert(rule.head)
-    }
-    else {
-      getIncrementFromAgg(rule)
-    }
+    val updateStatement: UpdateStatement = Insert(rule.head)
 
     // Check conditions
     val condition: Condition = getConditionsFromFunctors(rule.functors)

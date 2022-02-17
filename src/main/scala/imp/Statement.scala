@@ -2,8 +2,6 @@ package imp
 import datalog._
 import util.Indenter._
 
-import java.sql.ParameterMetaData
-
 sealed abstract class Statement
 
 case class Empty() extends Statement {
@@ -101,7 +99,7 @@ object Publicity extends Enumeration {
   type Publicity = Value
   val Public, Private = Value
 }
-case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean) {
+case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean, isTransaction: Boolean) {
   override def toString: String = {
     val publicityStr = publicity match {
       case Publicity.Public => "public"
@@ -122,10 +120,12 @@ case class Constructor(params: List[Parameter], statement: Statement) extends So
 }""".stripMargin
   }
 }
-case class ReadTuple(relation: SimpleRelation, key: Parameter) extends SolidityStatement{
+case class ReadTuple(relation: Relation, keyList: List[Parameter]) extends SolidityStatement{
+  require(relation.isInstanceOf[SingletonRelation] || keyList.nonEmpty)
   override def toString: String = {
     val tupleName: String = s"${relation.name}Tuple"
-    s"${tupleName.capitalize} memory $tupleName = ${relation.name}[$key];"
+    val keyStr: String = keyList.map(k=>s"[$k]").mkString("")
+    s"${tupleName.capitalize} memory $tupleName = ${relation.name}$keyStr;"
   }
 }
 case class SetTuple(relation: SingletonRelation, params: List[Parameter]) extends SolidityStatement {

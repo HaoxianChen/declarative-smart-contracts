@@ -88,7 +88,8 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     }
     opName match {
       case "sum" => Sum(literal, aggParamTyped, aggResultTyped)
-      case _ => ???
+      case "max" => Max(literal, aggParamTyped, aggResultTyped)
+      case _ => throw new Exception(s"Unsupported aggregator $opName.")
     }
   }
 }
@@ -173,7 +174,7 @@ class Parser extends ArithmeticParser {
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
   def functorFromPc: Parser[ParsingContext => Functor] = functor ^^ {f => _:ParsingContext => f}
-  def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ "sum" ~ (variable <~ ":") ~ literal ^^ {
+  def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ ("sum"|"max") ~ (variable <~ ":") ~ literal ^^ {
     case s ~ op ~ n ~ fLit => pc => {
       val lit: Literal = fLit(pc)
       pc.getAggregator(op,s,n,lit)

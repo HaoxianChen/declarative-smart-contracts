@@ -46,6 +46,8 @@ object FunctionHelper {
       }
     }
     DeclFunction(funcName, params, returnType = UnitType(), on.statement,
-      metaData = FunctionMetaData(Publicity.Private, false))
+      metaData = FunctionMetaData(Publicity.Private, isView = false,
+        isTransaction = on.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)))
   }
+
 }
