@@ -1,0 +1,39 @@
+/**
+  Example taken from Solidity documentation: https://docs.soliditylang.org/en/v0.8.7/solidity-by-example.html#simple-open-auction
+ */
+
+// Configs
+.decl *owner(p: address)
+
+// Transactions
+.decl bid(bidder: address, amount: uint)
+.decl recv_bid()
+.decl withdraw(bidder: address, amount: uint)
+.decl recv_withdraw()
+.decl recv_withdrawWinner()
+.decl *end(b: bool)
+.decl recv_end()
+
+// Interface
+.interface recv_bid
+.interface recv_withdraw
+
+// Views
+.decl *highestBid(bidder: address, amount: uint)
+.decl balance(p: address, n:uint)[0]
+
+highestBid(p,m) :- bid(p,m), m = max n: bid(_, n).
+
+.decl withdrawTotal(p: address, n:uint)[0]
+.decl bidTotal(p: address, n:uint)[0]
+withdrawTotal(p,n) :- withdraw(p,_), n = sum m: withdraw(p,m).
+bidTotal(p,n) :- bid(p, _), n = sum m: bid(p, m).
+balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
+
+// Transaction conditions
+bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), end(false), highestBid(_,m), n>m.
+
+withdraw(p,s) :- recv_withdrawWinner(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
+withdraw(p,n) :- recv_withdraw(), msgSender(p), end(true), balance(p,n), n>0.
+
+end(true) :- recv_end(), msgSender(s), owner(s).
