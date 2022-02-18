@@ -17,7 +17,7 @@ object Main extends App {
         typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
     println(dl)
-    val imperative = ImperativeTranslator().translate(dl)
+    val imperative = ImperativeTranslator(dl).translate()
     println(imperative)
     val solidity = SolidityTranslator(imperative, dl.interfaces).translate()
     println(s"Solidity program:\n${solidity}")
