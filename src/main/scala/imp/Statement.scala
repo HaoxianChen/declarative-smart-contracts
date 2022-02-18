@@ -72,7 +72,7 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
     val keyStr = relation match {
       case SimpleRelation(name, sig, memberNames) => {
         val keys = keyIndices.map(i => literal.fields(i))
-        "[" + keys.mkString(",") + "]"
+        keys.map(k=>s"[$k]").mkString("")
       }
       case _:SingletonRelation => ""
       case r: ReservedRelation => throw new Exception(s"Cannot update reserved relation $r")
@@ -126,6 +126,13 @@ case class ReadTuple(relation: Relation, keyList: List[Parameter]) extends Solid
     val tupleName: String = s"${relation.name}Tuple"
     val keyStr: String = keyList.map(k=>s"[$k]").mkString("")
     s"${tupleName.capitalize} memory $tupleName = ${relation.name}$keyStr;"
+  }
+}
+case class ReadValueFromMap(relation: Relation, keyList: List[Parameter],
+                            output: Parameter) extends SolidityStatement {
+  override def toString: String = {
+    val keyStr: String = keyList.map(k=>s"[$k]").mkString("")
+    s"${output._type} ${output.name} = ${relation.name}$keyStr;"
   }
 }
 case class SetTuple(relation: SingletonRelation, params: List[Parameter]) extends SolidityStatement {
@@ -261,9 +268,10 @@ object Condition {
       case _ => Or(a,b)
     }
   }
+  def makeConjunction(conditions: Condition*): Condition = conditions.foldLeft[Condition](True())(conjunction)
 }
 
-case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, Int],
+case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
                                      statement: Statement,
                                      dependencies: Map[Relation, Set[Relation]]) {
   override def toString: String = s"$statement"

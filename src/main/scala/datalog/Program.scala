@@ -80,7 +80,7 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
     s"${relation.name}($inputStr)" + retStr
   }
 }
-case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, Int],
+case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, List[Int]],
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
   override def toString: String = {

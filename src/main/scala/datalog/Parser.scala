@@ -7,7 +7,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
-                          relationIndices: Map[SimpleRelation, Int]
+                          relationIndices: Map[SimpleRelation, List[Int]]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
   def getProgram(): Program = Program(rules, interfaces, relationIndices)
@@ -22,14 +22,14 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     )
     (memberNames, types)
   }
-  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[String]): ParsingContext = {
+  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[List[String]]): ParsingContext = {
     val (memberNames, types) = getTypes(schema)
     val relation = SimpleRelation(name, types, memberNames)
     optIndexStr match {
-      case Some(s) => {
-        val index = s.toInt
+      case Some(ls) => {
+        val indices = ls.map(_.toInt)
         require(!relationIndices.contains(relation))
-        this.copy(relations=relations+relation, relationIndices=relationIndices+(relation->index))
+        this.copy(relations=relations+relation, relationIndices=relationIndices+(relation->indices))
       }
       case None => this.copy(relations=relations+relation)
     }
@@ -145,7 +145,7 @@ class Parser extends ArithmeticParser {
       }
     }
   def relationDecl: Parser[ParsingContext => ParsingContext] =
-    (".decl" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ~ opt("[" ~> wholeNumber <~ "]") ^^ {
+    (".decl" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ~ opt("[" ~> repsep(wholeNumber,",") <~ "]") ^^ {
       case name ~ schema ~ optIndex => {
         pc => pc.addRelation(name, schema, optIndex)
       }

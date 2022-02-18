@@ -6,7 +6,14 @@ import imp.SolidityTranslator.transactionRelationPrefix
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
   val name: String = program.name
   private val relations: Set[Relation] = program.relations
-  private val indices: Map[SimpleRelation, Int] = program.indices
+  private val indices: Map[SimpleRelation, List[Int]] = program.indices
+  private val dataStructureHelper: Map[Relation, DataStructureHelper] = relations.map{
+    case rel: SimpleRelation => {
+      /** todo: handle situation with no indices */
+      rel -> DataStructureHelper(rel, indices.getOrElse(rel, List()))
+    }
+    case rel @ (_:SingletonRelation|_:ReservedRelation) => rel -> DataStructureHelper(rel, List())
+  }.toMap
   private val materializedRelations: Set[Relation] = {
     val fromStatements = relationsToMaterialize(program.statement)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
@@ -57,8 +64,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
           stmt = Statement.makeSeq(stmt, declRelation)
         }
         case sr: SimpleRelation => {
-          val i = indices(sr)
-          val mapType = MapType(rel.sig(i), tupleTypes(sr))
+          val mapType = dataStructureHelper(sr)._type
           val declRelation = DeclRelation(rel, mapType)
           stmt = Statement.makeSeq(stmt, declRelation)
         }
@@ -80,7 +86,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   /** Translate abstract imperative program into Solidity statements */
   private def translateStatement(statement: Statement): Statement = statement match {
-    case s: Search => translateStatement(translateSearchStatement(s))
+    case s: Search => translateStatement(dataStructureHelper(s.relation).translateSearchStatement(s))
     case If(condition, statement) => If(condition,translateStatement(statement))
     case Seq(a,b) => Seq(translateStatement(a), translateStatement(b))
     case o: OnStatement => translateStatement(translateOnStatement(o))
@@ -139,29 +145,6 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     FunctionHelper.getFunctionDeclaration(on)
   }
 
-  private def translateSearchStatement(search: Search): Statement = {
-    search.relation match {
-      case _:SingletonRelation|_:ReservedRelation => {
-        val condition = search.conditions.foldLeft[Condition](True())(Condition.conjunction)
-        If(condition, search.statement)
-      }
-      case rel: SimpleRelation => {
-        val key: Parameter = {
-          require(indices.contains(rel), s"$rel\n$search")
-          val index = indices(rel)
-          val keyConditions = search.conditions.filter(_.index==index)
-          require(keyConditions.size == 1, s"$search\nkey: $keyConditions")
-          keyConditions.head.p
-        }
-        val readTuple: ReadTuple = {
-          ReadTuple(rel, List(key))
-        }
-        val condition = search.conditions.filterNot(_.p==key).foldLeft[Condition](True())(Condition.conjunction)
-        Statement.makeSeq(readTuple, If(condition, search.statement))
-      }
-    }
-  }
-
   private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
     case ReadTuple(rel, _) => Set(rel)
     case GroundVar(_, rel, _) => Set(rel)
@@ -207,13 +190,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         val ret = Return(outputVar)
         iface.relation match {
           case _rel:SimpleRelation => if (indices.contains(_rel)) {
-            val idx = indices(_rel)
-            val key = {
-              val n = _rel.memberNames(idx)
-              val t = _rel.sig(idx)
-              Variable(t,n)
-            }
-            val readTuple = ReadTuple(_rel, List(key))
+            val keys = indices(_rel).map(i=> Variable(_rel.sig(i), _rel.memberNames(i)))
+            val readTuple = ReadTuple(_rel, keys)
             Statement.makeSeq(readTuple,groundVar,ret)
           }
           else {
