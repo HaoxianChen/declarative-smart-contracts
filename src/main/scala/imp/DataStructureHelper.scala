@@ -1,25 +1,10 @@
 package imp
 
-import datalog.{AnyType, BooleanType, CompoundType, MapType, MsgSender, MsgValue, NumberType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import datalog.{AnyType, BooleanType, CompoundType, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
   val keyTypes: List[Type] = indices.map(i=>relation.sig(i))
-  // val valueIndices: List[Int] = relation.sig.indices.filterNot(i => indices.contains(i)).toList
-  // val valueType: Type = {
-  //   if (valueIndices.isEmpty) {
-  //     UnitType()
-  //     /** todo: Fix this. */
-  //   }
-  //   else if (valueIndices.size == 1) {
-  //     relation.sig(valueIndices.head)
-  //   }
-  //   else {
-  //     val name = s"${relation.name}Tuple"
-  //     val members = valueIndices.map(i=>Variable(relation.sig(i),relation.memberNames(i)))
-  //     StructType(name, members)
-  //   }
-  // }
   val valueType: Type = {
     val name = s"${relation.name.capitalize}Tuple"
     val members = relation.sig.zip(relation.memberNames).map {
@@ -34,6 +19,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     case reserved: ReservedRelation => reserved match {
       case MsgSender() => UnitType()
       case MsgValue() => UnitType()
+      case Now() => UnitType()
     }
   }
 
@@ -58,6 +44,11 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
         Statement.makeSeq(readTuple, If(condition, search.statement))
       }
     }
+  }
+
+  def insertStatement(insert: Insert): Statement = {
+    val keys: List[Parameter] = indices.map(i=>insert.literal.fields(i))
+    UpdateMap(relation.name, keys, valueType.name, insert.literal.fields)
   }
 
   private def getType(keyTypes: List[Type], valueType: Type): Type = keyTypes match {

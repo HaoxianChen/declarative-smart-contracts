@@ -14,6 +14,7 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
       case _:SingletonRelation => s"${p._type} $p = ${relation.name}.${relation.memberNames(index)};"
       case _:MsgSender => s"${p._type} $p = msg.sender;"
       case _:MsgValue => s"${p._type} $p = msg.value;"
+      case _:Now => s"${p._type} $p = block.timestamp;"
       case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
     }
   }
@@ -135,6 +136,14 @@ case class ReadValueFromMap(relation: Relation, keyList: List[Parameter],
     s"${output._type} ${output.name} = ${relation.name}$keyStr;"
   }
 }
+case class UpdateMap(name: String, keys: List[Parameter], tupleTypeName: String, params: List[Parameter])
+  extends SolidityStatement {
+  override def toString: String = {
+    val keyStr: String = keys.map(k=>s"[$k]").mkString("")
+    val paramStr: String = params.mkString(",")
+    s"$name$keyStr = $tupleTypeName($paramStr);"
+  }
+}
 case class SetTuple(relation: SingletonRelation, params: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
     val structType = s"${relation.name.capitalize}Tuple"
@@ -224,6 +233,7 @@ case class Match(relation: Relation, index: Int, p: Parameter) extends Condition
     relation match {
       case _: MsgSender => s"$p==msg.sender"
       case _: MsgValue => s"$p==msg.value"
+      case _: Now => s"$p==block.timestamp"
       case _:SingletonRelation|_:SimpleRelation => {
         val key = relation.memberNames(index)
         s"$p==${relation.name}.$key"

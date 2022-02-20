@@ -126,7 +126,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       case ins: Insert => if (materializedRelations.contains(ins.relation)) {
         ins.relation match {
           case rel:SingletonRelation => SetTuple(rel, params)
-          case rel @ (_:SimpleRelation|_:ReservedRelation) => throw new Exception(
+          case rel: SimpleRelation => dataStructureHelper(rel).insertStatement(ins)
+          case rel :ReservedRelation => throw new Exception(
             s"Do not support insert tuple of ${rel.getClass}: $rel")
         }
       }
