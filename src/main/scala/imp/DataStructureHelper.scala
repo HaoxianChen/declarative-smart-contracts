@@ -1,6 +1,6 @@
 package imp
 
-import datalog.{AnyType, BooleanType, CompoundType, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import datalog.{MapType, MsgSender, MsgValue, Now, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))

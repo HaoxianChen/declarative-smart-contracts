@@ -78,6 +78,9 @@ case class Geq(a: Arithmetic, b: Arithmetic) extends Functor {
 case class Leq(a: Arithmetic, b: Arithmetic) extends Functor {
   override def toString: String = s"$a<=$b"
 }
+case class Unequal(a: Arithmetic, b: Arithmetic) extends Functor {
+  override def toString: String = s"$a!=$b"
+}
 case class Assign(a: Param, b: Arithmetic) extends Functor {
   override def toString: String = s"$a := $b"
   def updateOutputType(outputType: Type): Assign = {

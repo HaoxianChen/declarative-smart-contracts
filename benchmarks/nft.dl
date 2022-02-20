@@ -36,7 +36,7 @@ transfer(tokenId,s,r,time) :- recv_transfer(s,r,tokenId), ownerOf(tokenId,s),now
 .decl latestTransfer(tokenId: uint, from: address, to: address, time: uint)[0]
 latestTransfer(tokenId,s,r,t) :- transfer(tokenId, s, r, t), t = max s: transfer(tokenId, _,_,s) .
 ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _).
-// exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
+exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
 // approved(tokenId, p, b) :- setApproval(tokenId,o,p,b), ownerOf(tokenId,o).
 
 // balanceOf(p,c) :- ownerOf(p,_), c = count: ownerOf(p,_).

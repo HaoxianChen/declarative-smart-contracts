@@ -22,7 +22,7 @@ case class TypeChecker() {
         val newType = paramTypes(assign.a.p.name)
         assign.updateOutputType(newType)
       }
-      case other @ (_:Greater|_:Lesser|_:Geq|_:Leq) => other
+      case other @ (_:Greater|_:Lesser|_:Geq|_:Leq|_:Unequal) => other
     }
     rule.copy(functors = newFuntors)
   }

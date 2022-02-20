@@ -253,6 +253,9 @@ case class Geq(a: Arithmetic, b: Arithmetic) extends Condition {
 case class Leq(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a<=$b"
 }
+case class Unequal(a: Arithmetic, b: Arithmetic) extends Condition {
+  override def toString: String = s"$a!=$b"
+}
 case class And(a: Condition, b: Condition) extends Condition {
   override def toString: String = s"$a && $b"
 }
