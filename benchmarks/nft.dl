@@ -5,19 +5,26 @@
 .decl balanceOf(p: address, n: uint)[0]
 .decl ownerOf(tokenId: uint, p: address)[0]
 .decl exists(tokenId: uint, b: bool)[0]
+.decl approved(tokenId: uint, p:address, b:bool)[0,1]
 
 .decl constructor()
 
 // Transactions
 .decl recv_mint(tokenId: uint, to: address)
 .decl recv_burn(tokenId: uint)
-.decl recv_transfer(from: address, to: address, tokenId: uint)
+.decl recv_transfer(to: address, tokenId: uint)
+.decl recv_transferFrom(from: address, to: address, tokenId: uint)
+.decl recv_setApproval(tokenId:uint, p:address, b: bool)
+.decl setApproval(o:address, tokenId:uint, p:address, b: bool)[0,1]
 .decl transfer(tokenId: uint, from: address, to: address, time: uint)
 
 // Interfaces
 .interface recv_mint
 .interface recv_burn
 .interface recv_transfer
+.interface recv_transferFrom
+.interface recv_setApproval
+.interface approved(2)
 // .interface balanceOf(1)
 .interface ownerOf(1)
 .interface exists(1)
@@ -30,13 +37,14 @@ transfer(tokenId,0,to,time) :- recv_mint(tokenId,to), msgSender(s), owner(s),
                                exists(tokenId,false), now(time).
 transfer(tokenId,p,0,time) :- recv_burn(tokenId), ownerOf(tokenId,p), msgSender(s),
                               owner(s), exists(tokenId,true), now(time).
-transfer(tokenId,s,r,time) :- recv_transfer(s,r,tokenId), ownerOf(tokenId,s),now(time).
-// setApproval(tokenId,o,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
+transfer(tokenId,s,r,time) :- recv_transfer(r,tokenId), msgSender(s), ownerOf(tokenId,s),now(time).
+transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s,true),now(time).
+setApproval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
 
 .decl latestTransfer(tokenId: uint, from: address, to: address, time: uint)[0]
 latestTransfer(tokenId,s,r,t) :- transfer(tokenId, s, r, t), t = max s: transfer(tokenId, _,_,s) .
 ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _).
 exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
-// approved(tokenId, p, b) :- setApproval(tokenId,o,p,b), ownerOf(tokenId,o).
+approved(tokenId, p, b) :- setApproval(o,tokenId,p,b), ownerOf(tokenId,o).
 
 // balanceOf(p,c) :- ownerOf(p,_), c = count: ownerOf(p,_).

@@ -34,7 +34,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
         val keys: List[Parameter] = indices.map ( i => {
           search.conditions.find(_.index==i) match {
             case Some(cond) => cond.p
-            case None => throw new Exception(s"all keys must be in search conditions.")
+            case None => throw new Exception(s"all keys must be in search conditions.\n$search")
           }
         })
         /** todo: handle situations when not all keys are in search conditions. */

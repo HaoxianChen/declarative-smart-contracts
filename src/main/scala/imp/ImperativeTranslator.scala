@@ -23,8 +23,10 @@ case class ImperativeTranslator(program: Program) {
     var dependencies: Set[(Relation, Relation)] = Set()
 
     var triggered: Set[Trigger] = Set()
-    var impProgram: Statement = Empty()
-    while (triggers.nonEmpty) {
+    var allUpdates: Set[Statement] = Set()
+    var hasUpdate: Boolean = true
+    while (hasUpdate) {
+      hasUpdate = false
       for (trigger <- triggers) {
 
         val triggeredRules: Set[Rule] = program.rules.filter(
@@ -35,17 +37,21 @@ case class ImperativeTranslator(program: Program) {
 
         for (rule <- triggeredRules) {
           val updateProgram = views(rule).getUpdateStatement(trigger)
-          impProgram = Statement.makeSeq(impProgram, updateProgram)
+          if (!allUpdates.contains(updateProgram)) {
+            hasUpdate=true
+            allUpdates += updateProgram
+          }
+
           val allNextTriggers = getTrigger(updateProgram)
           /** Update dependencies */
           for (nt <- allNextTriggers) {
             dependencies += Tuple2(trigger.relation, nt.relation)
           }
-          val nextTriggers = allNextTriggers.
-            filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
+          val nextTriggers = allNextTriggers
+            // .filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
           assert(nextTriggers.size <= 1)
-          /** Check no recursion */
-          assert(triggered.intersect(nextTriggers).isEmpty)
+          /** todo:Check no recursion */
+          // assert(triggered.intersect(nextTriggers).isEmpty, s"$rule\n$nextTriggers\n$triggered")
           triggers ++= nextTriggers
         }
 
@@ -53,7 +59,7 @@ case class ImperativeTranslator(program: Program) {
         triggers -= trigger
       }
     }
-    val constructor = program.relations.find(_.name=="constructor") match {
+    val constructor: Statement = program.relations.find(_.name=="constructor") match {
         case Some(constructorRel) => {
           val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
           for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
@@ -61,12 +67,13 @@ case class ImperativeTranslator(program: Program) {
         }
         case None => Empty()
       }
-    val statements = Statement.makeSeq(constructor,impProgram)
+    val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
     val dependencyMap: Map[Relation, Set[Relation]] = {
       dependencies.groupBy(_._1).map{
         case (k,v) => k -> v.map(_._2)
       }
     }
+    /** todo: check recursions on the dependency map */
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices, statements, dependencyMap)
   }
 
