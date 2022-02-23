@@ -25,7 +25,7 @@
 .interface recv_transferFrom
 .interface recv_setApproval
 .interface approved(2)
-// .interface balanceOf(1)
+.interface balanceOf(1)
 .interface ownerOf(1)
 .interface exists(1)
 
@@ -47,4 +47,4 @@ ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _).
 exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
 approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
 
-// balanceOf(p,c) :- ownerOf(p,_), c = count: ownerOf(p,_).
+balanceOf(p,c) :- ownerOf(_,p), c = count: ownerOf(_,p).

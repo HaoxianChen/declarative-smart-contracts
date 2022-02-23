@@ -47,6 +47,7 @@ object View {
       rule.aggregators.head match {
         case _:Sum => SumView(rule, primaryKeyIndices)
         case _:Max => MaxView(rule, primaryKeyIndices)
+        case _:Count => CountView(rule, primaryKeyIndices)
       }
     }
   }

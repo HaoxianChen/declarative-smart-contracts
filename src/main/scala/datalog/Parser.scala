@@ -71,23 +71,19 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
         }
     Literal(relation, fields)
   }
-  def getAggregator(opName: String, aggResult: Variable, aggParam: Variable, literal: Literal): Aggregator = {
-    val aggParamTyped: Variable = {
-      val idx = literal.fields.map(_.name).indexOf(aggParam.name)
-      val _type = literal.relation.sig(idx)
-      aggParam.copy(_type=_type)
-    }
-    val aggResultTyped: Variable = {
-      val _type = aggParamTyped._type.name match {
-        case "uint" => Type.uintType
-        case "int" => Type.integerType
-        case _ => throw new Exception(s"Unsupported aggregate type $aggParamTyped")
+  def getAggregator(opName: String, aggResult: Variable, optAggParam: Option[Variable], literal: Literal): Aggregator = {
+    val (aggParamTyped, aggResultTyped): (Option[Variable], Variable) = optAggParam match {
+      case Some(aggParam) => {
+        val idx = literal.fields.map(_.name).indexOf(aggParam.name)
+        val _type = literal.relation.sig(idx)
+        (Some(aggParam.copy(_type=_type)), aggResult.copy(_type=_type))
       }
-      aggResult.copy(_type=_type)
+      case None => (None, aggResult)
     }
     opName match {
-      case "sum" => Sum(literal, aggParamTyped, aggResultTyped)
-      case "max" => Max(literal, aggParamTyped, aggResultTyped)
+      case "sum" => Sum(literal, aggParamTyped.get, aggResultTyped)
+      case "max" => Max(literal, aggParamTyped.get, aggResultTyped)
+      case "count" => Count(literal, aggResult.copy(_type = Type.uintType))
       case _ => throw new Exception(s"Unsupported aggregator $opName.")
     }
   }
@@ -174,7 +170,7 @@ class Parser extends ArithmeticParser {
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
   def functorFromPc: Parser[ParsingContext => Functor] = functor ^^ {f => _:ParsingContext => f}
-  def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ ("sum"|"max") ~ (variable <~ ":") ~ literal ^^ {
+  def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ ("sum"|"max"|"count") ~ (opt(variable) <~ ":") ~ literal ^^ {
     case s ~ op ~ n ~ fLit => pc => {
       val lit: Literal = fLit(pc)
       pc.getAggregator(op,s,n,lit)
