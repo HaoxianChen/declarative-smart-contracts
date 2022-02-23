@@ -132,7 +132,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
     case ReadTuple(rel, _, _) => Set(rel)
     case GroundVar(_, rel, _) => Set(rel)
-    case Search(_, _, stmt) => relationsToMaterialize(stmt)
+    case Search(_, matches, stmt) => matches.map(_.relation) ++ relationsToMaterialize(stmt)
     case If(_,stmt) => relationsToMaterialize(stmt)
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
