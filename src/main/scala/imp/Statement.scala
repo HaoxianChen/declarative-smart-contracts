@@ -260,9 +260,13 @@ case class Match(relation: Relation, index: Int, p: Parameter) extends Condition
       case _: MsgSender => s"$p==msg.sender"
       case _: MsgValue => s"$p==msg.value"
       case _: Now => s"$p==block.timestamp"
-      case _:SingletonRelation|_:SimpleRelation => {
+      case _:SingletonRelation => {
         val key = relation.memberNames(index)
         s"$p==${relation.name}.$key"
+      }
+      case _:SimpleRelation => {
+        val key = relation.memberNames(index)
+        s"$p==${relation.name}Tuple.$key"
       }
     }
   }
