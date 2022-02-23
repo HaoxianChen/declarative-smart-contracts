@@ -190,7 +190,10 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
 }
 case class Call(functionName: String, params: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
-    val paramStr = params.mkString(",")
+    val paramStr = params.map {
+      case v: Variable => s"$v"
+      case c: Constant => s"${c._type}(${c.name})"
+    }.mkString(",")
     s"$functionName($paramStr);"
   }
 }

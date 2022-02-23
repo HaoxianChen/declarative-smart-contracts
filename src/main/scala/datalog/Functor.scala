@@ -1,37 +1,63 @@
 package datalog
 
 sealed abstract class Arithmetic {
+  def _type: Type
   def _paren(e: Arithmetic): String = e match {
     case _:Param|_:One|_:Zero => s"$e"
     case _ => s"($e)"
   }
 }
-case class Zero() extends Arithmetic {
-  override def toString: String = "0"
+case class Zero(_type: Type) extends Arithmetic {
+  override def toString: String = _type match {
+    case _:UnitType|_:AnyType|_:NumberType => s"0"
+    case SymbolType(name) => s"$name(0)"
+    case BooleanType() => s"false"
+    case compoundType: CompoundType => throw new Exception(s"illegal type $compoundType for Zero.")
+  }
 }
-case class One() extends Arithmetic {
-  override def toString: String = "1"
+case class One(_type: Type) extends Arithmetic {
+  override def toString: String = _type match {
+    case _:UnitType|_:AnyType|_:NumberType => s"1"
+    case SymbolType(name) => s"$name(1)"
+    case BooleanType() => s"true"
+    case compoundType: CompoundType => throw new Exception(s"illegal type $compoundType for Zero.")
+  }
 }
 case class Param(p: Parameter) extends Arithmetic {
-  override def toString: String = s"$p"
+  val _type = p._type
+  override def toString: String = p match {
+    case Constant(_type, name) => s"${_type}($name)"
+    case Variable(_type, name) => name
+  }
 }
 case class Negative(e: Arithmetic) extends Arithmetic {
+  val _type = e._type
   override def toString: String = s"-${_paren(e)}"
 }
-case class Add(a: Arithmetic, b: Arithmetic) extends Arithmetic {
+sealed abstract class BinaryOperator extends Arithmetic {
+  def a: Arithmetic
+  def b: Arithmetic
+}
+case class Add(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
+  require(a._type == b._type)
+  val _type = a._type
   override def toString: String = s"${_paren(a)}+${_paren(b)}"
 }
-case class Sub(a: Arithmetic, b:Arithmetic) extends Arithmetic {
+case class Sub(a: Arithmetic, b:Arithmetic) extends BinaryOperator {
+  require(a._type == b._type)
+  val _type = a._type
   override def toString: String = s"${_paren(a)}-${_paren(b)}"
 }
-case class Mul(a: Arithmetic, b: Arithmetic) extends Arithmetic {
+case class Mul(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
+  require(a._type == b._type, s"$a,$b")
+  val _type = a._type
   override def toString: String = s"${_paren(a)}*${_paren(b)}"
 }
 object Arithmetic {
   def derivativeOf(e: Arithmetic, x: Param): Arithmetic = e match {
-    case Zero() => Zero()
-    case One() => Zero()
-    case Param(p) => if (p.name==x.p.name) One() else Zero()
+    case Zero(t) => Zero(t)
+    case One(t) => Zero(t)
+    case Param(p) => if (p.name==x.p.name) One(p._type) else Zero(p._type)
     case Negative(e2) => Negative(derivativeOf(e2,x))
     case Add(a,b) => Add(derivativeOf(a,x), derivativeOf(b,x))
     case Sub(a,b) => Sub(derivativeOf(a,x), derivativeOf(b,x))
@@ -42,16 +68,16 @@ object Arithmetic {
       case a @ (_:Zero|_:One|_:Param) => a
       case Negative(Negative(a)) => _simplify(a)
       case Negative(a) => Negative(_simplify(a))
-      case Add(Zero(),b) => _simplify(b)
-      case Add(a,Zero()) => _simplify(a)
+      case Add(Zero(_),b) => _simplify(b)
+      case Add(a,Zero(_)) => _simplify(a)
       case Add(a,b) => Add(_simplify(a),_simplify(b))
-      case Sub(Zero(),b) => Negative(_simplify(b))
-      case Sub(a, Zero()) => _simplify(a)
+      case Sub(Zero(_),b) => Negative(_simplify(b))
+      case Sub(a, Zero(_)) => _simplify(a)
       case Sub(a,b) => Sub(_simplify(a),_simplify(b))
-      case Mul(One(),b) => _simplify(b)
-      case Mul(Negative(One()),b) => Negative(_simplify(b))
-      case Mul(a,One()) => _simplify(a)
-      case Mul(a, Negative(One())) => Negative(_simplify(a))
+      case Mul(One(_),b) => _simplify(b)
+      case Mul(Negative(One(_)),b) => Negative(_simplify(b))
+      case Mul(a,One(_)) => _simplify(a)
+      case Mul(a, Negative(One(_))) => Negative(_simplify(a))
       case Mul(a,b) => Mul(_simplify(a),_simplify(b))
     }
 
@@ -65,7 +91,10 @@ object Arithmetic {
   }
 }
 
-sealed abstract class Functor
+sealed abstract class Functor {
+  def a: Arithmetic
+  def b: Arithmetic
+}
 case class Greater(a: Arithmetic, b: Arithmetic) extends Functor {
   override def toString: String = s"$a>$b"
 }

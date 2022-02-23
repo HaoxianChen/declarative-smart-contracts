@@ -62,8 +62,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     val fields: List[Parameter] = relation.sig.zip(fieldNames).map {
         case (t, name) => t match {
             case _:UnitType|_:AnyType|_:CompoundType => throw new Exception(s"Unsupported type ${t}")
-            case _:SymbolType => Variable(t, name)
-            case _:NumberType => if (name.forall(_.isDigit)) Constant(t,name) else  Variable(t,name)
+            case _:NumberType|_:SymbolType => if (name.forall(_.isDigit)) Constant(t,name) else  Variable(t,name)
             case BooleanType() => name match {
               case "true"|"false" => Constant(t, name)
               case _ => Variable(t, name)
@@ -105,7 +104,7 @@ class ArithmeticParser extends JavaTokenParsers {
   protected override val whiteSpace: Regex = """(\s|//.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   private def variable: Parser[Variable] = ident ^^ {x => Variable(AnyType(), x)}
-  private def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
+  private def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(AnyType(), x)}
   private def parameter: Parser[Param] = (variable | constant) ^^ { p => Param(p)}
 
   private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter

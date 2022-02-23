@@ -15,15 +15,47 @@ case class TypeChecker() {
     }
   }
   private def updateFunctorType(rule: Rule) :Rule= {
-    /** todo: check types of arithemtic operations. */
     val paramTypes = getParamTypes(rule)
-    val newFuntors = rule.functors.map {
-      case assign: Assign => {
-        val newType = paramTypes(assign.a.p.name)
-        assign.updateOutputType(newType)
-      }
-      case other @ (_:Greater|_:Lesser|_:Geq|_:Leq|_:Unequal) => other
-    }
+    val newFuntors = rule.functors.map (
+      f => inferType(f.a, paramTypes) match {
+        case Some(at) => _updateFunctorType(f, at)
+        case None => inferType(f.b, paramTypes) match {
+          case Some(bt) => _updateFunctorType(f, bt)
+          case None => f
+        }
+      })
     rule.copy(functors = newFuntors)
+  }
+
+  private def _updateFunctorType(functor: Functor, newType: Type): Functor = functor match {
+    case Greater(a, b) => Greater(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Lesser(a, b) => Lesser(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Geq(a, b) => Geq(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Leq(a, b) => Leq(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Unequal(a, b) => Unequal(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Assign(a, b) => Assign(Param(a.p.setType(newType)), updateArithmeticType(b,newType))
+  }
+
+  private def updateArithmeticType(arithmetic: Arithmetic, newType: Type): Arithmetic = arithmetic match {
+    case Zero(_type) => Zero(newType)
+    case One(_type) => One(newType)
+    case Param(p) => Param(p.setType(newType))
+    case Negative(e) => Negative(updateArithmeticType(e,newType))
+    case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+  }
+
+  private def inferType(arithmetic: Arithmetic, paramTypes: Map[String,Type]): Option[Type] = arithmetic match {
+    case Zero(_) => None
+    case One(_) => None
+    case Param(p) => paramTypes.get(p.name)
+    case Negative(e) => inferType(e, paramTypes)
+    case bin: BinaryOperator => {
+      val at = inferType(bin.a,paramTypes)
+      val bt = inferType(bin.b,paramTypes)
+      require(at==bt)
+      at
+    }
   }
 }

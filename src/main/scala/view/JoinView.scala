@@ -146,7 +146,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
     val isMatchedInBody = (rule.body - literal).exists(_.fields.contains(newParam))
     val existDifferentiableFunctor = rule.functors.exists {
       case _:Greater|_:Lesser|_:datalog.Geq|_:datalog.Leq|_:datalog.Unequal => false
-      case datalog.Assign(_, b) => Arithmetic.derivativeOf(b,Param(newParam)) != Zero()
+      case datalog.Assign(_, b) => !Arithmetic.derivativeOf(b,Param(newParam)).isInstanceOf[Zero]
     }
     existDifferentiableFunctor && !isMatchedInBody
   }

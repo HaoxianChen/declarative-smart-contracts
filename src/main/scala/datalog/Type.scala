@@ -25,6 +25,7 @@ object Type {
   def apply(name: String): Type = name match {
     case "int" => integerType
     case "uint" => uintType
+    case "address" => addressType
     case _ => SymbolType(name)
   }
   val addressType: Type = SymbolType("address")
