@@ -15,24 +15,17 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case rel @ (_:SingletonRelation|_:ReservedRelation) => rel -> DataStructureHelper(rel, List())
   }.toMap
   private val materializedRelations: Set[Relation] = {
-    val fromStatements = relationsToMaterialize(program.statement)
+    val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
     fromStatements ++ viewRelations
   }
-  private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = {
-    initFunctionHelpers(program.statement).groupBy(_.inRel)
-  }
+  private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
+    on=>on->FunctionHelper(on)).toMap
+  private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = functionHelpers.values.toSet.groupBy(_.inRel)
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(transactionRelationPrefix))
       .map(rel => rel -> getStructType(rel)).toMap
-  }
-
-  private def initFunctionHelpers(statement: Statement): Set[FunctionHelper] = statement match {
-    case Seq(a, b) => initFunctionHelpers(a) ++ initFunctionHelpers(b)
-    case If(_, statement) => initFunctionHelpers(statement)
-    case on: OnStatement => Set(FunctionHelper(on))
-    case _:Empty|_:GroundVar|_:imp.Assign|_:UpdateStatement|_:Search|_:SolidityStatement=> Set()
   }
 
   private def getStructName(relation: Relation): String = s"${relation.name.capitalize}Tuple"
@@ -48,8 +41,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val declarations: Statement = getRelationDeclartions()
     val interfaces: Statement = makeInterfaces()
     val functions = {
-      val s1 = translateStatement(program.statement)
-      flattenIfStatement(s1)
+      val decls = program.onStatements.map(on => functionHelpers(on).getFunctionDeclaration())
+      val translatedDecls = decls.map(translateStatement).map(flattenIfStatement)
+      Statement.makeSeq(translatedDecls.toList:_*)
     }
     val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, functions)
     DeclContract(name, definitions)
@@ -89,7 +83,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case s: Search => translateStatement(dataStructureHelper(s.relation).translateSearchStatement(s))
     case If(condition, statement) => If(condition,translateStatement(statement))
     case Seq(a,b) => Seq(translateStatement(a), translateStatement(b))
-    case o: OnStatement => translateStatement(translateOnStatement(o))
+    // case o: OnStatement => translateStatement(translateOnStatement(o))
+    case o: OnStatement => throw new Exception(s"Cannot translate OnStatement:\n$o")
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
     case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
@@ -120,34 +115,22 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
-    val params: List[Parameter] = update.literal.fields
-    val newUpdates = update match {
-      case i: Increment => if (materializedRelations.contains(i.relation)) i else Empty()
-      case ins: Insert => if (materializedRelations.contains(ins.relation)) {
-        ins.relation match {
-          case rel:SingletonRelation => SetTuple(rel, params)
-          case rel: SimpleRelation => dataStructureHelper(rel).insertStatement(ins)
-          case rel :ReservedRelation => throw new Exception(
-            s"Do not support insert tuple of ${rel.getClass}: $rel")
-        }
-      }
-      else Empty()
+    val dsHelper = dataStructureHelper(update.relation)
+    val newUpdates = if (materializedRelations.contains(update.relation)) {
+      dsHelper.getUpdateStatement(update)
     }
-    var stmt: Statement = newUpdates
-
-    /** Call functions to update dependent relations */
-    for (fh <- dependentFunctions.getOrElse(update.relation, Set())) {
-      stmt = Statement.makeSeq(stmt, fh.getCallStatement(update))
+    else {
+      Empty()
     }
-    stmt
-  }
-
-  private def translateOnStatement(on: OnStatement): Statement = {
-    FunctionHelper.getFunctionDeclaration(on)
+    val callDependentFunctions = dependentFunctions.get(update.relation) match {
+      case Some(dependents) => dsHelper.callDependentFunctions(update, dependents)
+      case None => Empty()
+    }
+    Statement.makeSeq(newUpdates, callDependentFunctions)
   }
 
   private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
-    case ReadTuple(rel, _) => Set(rel)
+    case ReadTuple(rel, _, _) => Set(rel)
     case GroundVar(_, rel, _) => Set(rel)
     case Search(_, _, stmt) => relationsToMaterialize(stmt)
     case If(_,stmt) => relationsToMaterialize(stmt)

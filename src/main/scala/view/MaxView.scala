@@ -1,15 +1,15 @@
 package view
 
 import datalog.{Literal, Max, Param, Parameter, Relation, Rule, Variable}
-import imp.{GroundVar, If, IncrementValue, Insert, OnInsert, ReadTuple, Statement}
+import imp.{GroundVar, If, IncrementValue, Insert, OnInsert, OnStatement, ReadTuple, Statement}
 
-case class MaxView(rule: Rule) extends View {
+case class MaxView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Max])
   val max: Max = rule.aggregators.head.asInstanceOf[Max]
 
   /** Interfaces */
-  def insertRow(relation: Relation): Statement = {
+  def insertRow(relation: Relation): OnStatement = {
     val insertedLiteral: Literal = rule.body.head
     val newValue: Param = Param(insertedLiteral.fields(max.valueIndex))
     val groupKeys: List[Parameter] = {
@@ -28,7 +28,13 @@ case class MaxView(rule: Rule) extends View {
     OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt)
   }
 
-  def deleteRow(relation: Relation): Statement = ???
+  def deleteRow(relation: Relation): OnStatement = ???
 
-  def updateRow(incrementValue: IncrementValue): Statement = ???
+  def updateRow(incrementValue: IncrementValue): OnStatement = ???
+
+  protected def getInsertedLiteral(relation: Relation): Literal = {
+    val lit = rule.body.head
+    require(lit.relation==relation)
+    lit
+  }
 }

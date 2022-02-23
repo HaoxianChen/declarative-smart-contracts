@@ -8,7 +8,15 @@ import view.View
 case class ImperativeTranslator(program: Program) {
   private val transactionPrefix = "recv_"
 
-  private val views: Map[Rule, View] = program.rules.map(r => (r->View(r))).toMap
+  private val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
+    case rel:SimpleRelation => rel->program.relationIndices.getOrElse(rel,List())
+    case rel: SingletonRelation => rel->List()
+    case rel: ReservedRelation => rel->List()
+  }.toMap
+
+  private val views: Map[Rule, View] = program.rules.map(
+    r => (r->View(r,primaryKeyIndices(r.head.relation)))
+  ).toMap
 
   def translate(): ImperativeAbstractProgram = {
     def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
@@ -18,12 +26,12 @@ case class ImperativeTranslator(program: Program) {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionPrefix))
       val relationsInBodies = program.rules.flatMap(_.body).map(_.relation)
       val toTrigger = relationsInBodies.intersect(relationsToTrigger)
-      toTrigger.map(rel => InsertTuple(rel))
+      toTrigger.map(rel => InsertTuple(rel,primaryKeyIndices(rel)))
     }
     var dependencies: Set[(Relation, Relation)] = Set()
 
     var triggered: Set[Trigger] = Set()
-    var allUpdates: Set[Statement] = Set()
+    var allUpdates: Set[OnStatement] = Set()
     var hasUpdate: Boolean = true
     while (hasUpdate) {
       hasUpdate = false
@@ -49,7 +57,7 @@ case class ImperativeTranslator(program: Program) {
           }
           val nextTriggers = allNextTriggers
             // .filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
-          assert(nextTriggers.size <= 1)
+          assert(nextTriggers.size <= 2)
           /** todo:Check no recursion */
           // assert(triggered.intersect(nextTriggers).isEmpty, s"$rule\n$nextTriggers\n$triggered")
           triggers ++= nextTriggers
@@ -59,30 +67,31 @@ case class ImperativeTranslator(program: Program) {
         triggers -= trigger
       }
     }
-    val constructor: Statement = program.relations.find(_.name=="constructor") match {
+    val constructors: Set[OnStatement] = program.relations.find(_.name=="constructor") match {
         case Some(constructorRel) => {
           val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
           for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
           constuctorDefinition
         }
-        case None => Empty()
+        case None => Set()
       }
-    val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
+    // val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
     val dependencyMap: Map[Relation, Set[Relation]] = {
       dependencies.groupBy(_._1).map{
         case (k,v) => k -> v.map(_._2)
       }
     }
     /** todo: check recursions on the dependency map */
-    ImperativeAbstractProgram(program.name, program.relations, program.relationIndices, statements, dependencyMap)
+    ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
+      constructors++allUpdates, dependencyMap)
   }
 
-  private def getConstructor(constructorRel: Relation, rules: Set[Rule]): (Statement, Set[Relation]) = {
+  private def getConstructor(constructorRel: Relation, rules: Set[Rule]): (Set[OnStatement], Set[Relation]) = {
     val dependentRules = rules.filter(_.body.exists(_.relation.name=="constructor"))
     val allUpdates = dependentRules.map {
-      r => views(r).getUpdateStatement(InsertTuple(constructorRel))
+      r => views(r).getUpdateStatement(InsertTuple(constructorRel, primaryKeyIndices(constructorRel)))
     }
-    (Statement.makeSeq(allUpdates.toList:_*), dependentRules.map(_.head.relation))
+    (allUpdates, dependentRules.map(_.head.relation))
   }
 
 
@@ -92,7 +101,9 @@ case class ImperativeTranslator(program: Program) {
     case If(_,s) => getTrigger(s)
     case o: OnStatement => getTrigger(o.statement)
     case Search(_, _, stmt) => getTrigger(stmt)
-    case Insert(lit) => Set(InsertTuple(lit.relation))
+    case Insert(lit) => Set(InsertTuple(lit.relation, primaryKeyIndices(lit.relation)))
+    case Delete(lit) => Set(DeleteTuple(lit.relation, primaryKeyIndices(lit.relation)))
+    case DeleteByKeys(rel,keys) => Set(DeleteTuple(rel,primaryKeyIndices(rel)))
     case Increment(rel,lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
   }
 }

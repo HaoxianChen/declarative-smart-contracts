@@ -1,14 +1,19 @@
 package view
 
 import datalog.{Arithmetic, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
-import imp.{Condition, Empty, Geq, GroundVar, If, Increment, IncrementValue, Insert, Leq, Match, OnIncrement, OnInsert, Search, Statement, True, UpdateStatement}
+import imp.{Condition, Delete, Empty, GroundVar, If, Increment, IncrementValue, Insert, Match, OnDelete, OnIncrement, OnInsert, OnStatement, Search, Statement, True, UpdateStatement}
 
-case class JoinView(rule: Rule) extends View {
+case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   require(rule.aggregators.isEmpty)
 
-  def deleteRow(relation: Relation): Statement = ???
+  def deleteRow(relation: Relation): OnStatement = {
+    val delete = getInsertedLiteral(relation)
+    val updateStatement: UpdateStatement = Delete(rule.head)
+    val statement = getNewRowDerivationStatements(delete, updateStatement)
+    OnDelete(delete, rule.head.relation, statement)
+  }
 
-  def updateRow(incrementValue: IncrementValue): Statement = {
+  def updateRow(incrementValue: IncrementValue): OnStatement = {
 
     val updates = if (isUpdatable(incrementValue)) {
       updateOnIncrementValue(incrementValue)
@@ -18,15 +23,20 @@ case class JoinView(rule: Rule) extends View {
       /** todo: Otherwise, fall back to delete the old row and insert a new row. */
       ???
     }
-    val literal = getInsertedLiteralFromNonAggRule(rule, incrementValue.relation)
+    val literal = getInsertedLiteral(incrementValue.relation)
     OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
       updateIndex = incrementValue.valueIndex,
       updateTarget = rule.head.relation, statement = updates)
   }
 
-  def insertRow(relation: Relation): Statement = {
+  def insertRow(relation: Relation): OnStatement = {
+    val insert = getInsertedLiteral(relation)
+    val updateStatement: Statement = getInsertTupleStatement()
+    val statement = getNewRowDerivationStatements(insert, updateStatement)
+    OnInsert(insert, rule.head.relation, statement)
+  }
 
-    val insert = getInsertedLiteralFromNonAggRule(rule, relation)
+  private def getNewRowDerivationStatements(insert: Literal, updateStatement: Statement): Statement = {
 
     /** Generate assign statements for functors */
     val assignStatements = rule.functors.foldLeft[Statement](Empty())(
@@ -35,9 +45,6 @@ case class JoinView(rule: Rule) extends View {
         case _ => stmt
       }
     )
-
-    // Insert / Increment
-    val updateStatement: UpdateStatement = Insert(rule.head)
 
     // Check conditions
     val condition: Condition = getConditionsFromFunctors(rule.functors)
@@ -50,11 +57,11 @@ case class JoinView(rule: Rule) extends View {
       sortJoinLiterals(rest)
     }
     val updates = _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
-    OnInsert(insert, rule.head.relation, updates)
+    // OnInsert(insert, rule.head.relation, updates)
+    updates
   }
 
-  private def getInsertedLiteralFromNonAggRule(rule: Rule, relation: Relation): Literal = {
-    require(rule.aggregators.isEmpty)
+  private def getInsertedLiteral(relation: Relation): Literal = {
     val _lits = rule.body.filter(_.relation == relation)
     require(_lits.size == 1, s"Only support rules where each relation appears at most once: $rule.")
     _lits.head
@@ -134,7 +141,7 @@ case class JoinView(rule: Rule) extends View {
     /** Check that the incremented value is not matched with other fields.
      * And is differentiable in another functor
      *  */
-    val literal = getInsertedLiteralFromNonAggRule(rule, incrementValue.relation)
+    val literal = getInsertedLiteral(incrementValue.relation)
     val newParam = literal.fields(incrementValue.valueIndex)
     val isMatchedInBody = (rule.body - literal).exists(_.fields.contains(newParam))
     val existDifferentiableFunctor = rule.functors.exists {

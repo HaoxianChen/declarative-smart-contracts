@@ -46,6 +46,13 @@ case class OnInsert(literal: Literal, updateTarget: Relation, statement: Stateme
   $statement
 }""".stripMargin
 }
+case class OnDelete(literal: Literal, updateTarget: Relation, statement: Statement) extends OnStatement {
+  val relation: Relation = literal.relation
+  override def toString: String =
+    e"""on delete $literal {
+  $statement
+}""".stripMargin
+}
 case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int, updateTarget: Relation,
                        statement: Statement) extends OnStatement {
   val relation: Relation = literal.relation
@@ -61,11 +68,20 @@ case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int
 // Update
 sealed abstract class UpdateStatement extends Statement {
   def relation: Relation
-  def literal: Literal
 }
 case class Insert(literal: Literal) extends UpdateStatement {
   val relation = literal.relation
   override def toString: String = s"insert $literal"
+}
+case class Delete(literal: Literal) extends UpdateStatement {
+  val relation = literal.relation
+  override def toString: String = s"delete $literal"
+}
+case class DeleteByKeys(relation: Relation, keys: List[Parameter]) extends UpdateStatement {
+  override def toString: String = {
+    val keyStr = keys.map(k=>s"[$k]").mkString("")
+    s"delete ${relation.name}$keyStr"
+  }
 }
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
@@ -121,12 +137,19 @@ case class Constructor(params: List[Parameter], statement: Statement) extends So
 }""".stripMargin
   }
 }
-case class ReadTuple(relation: Relation, keyList: List[Parameter]) extends SolidityStatement{
+case class ReadTuple(relation: Relation, keyList: List[Parameter],
+                     outputVar: String) extends SolidityStatement{
   require(relation.isInstanceOf[SingletonRelation] || keyList.nonEmpty)
   override def toString: String = {
     val tupleName: String = s"${relation.name}Tuple"
     val keyStr: String = keyList.map(k=>s"[$k]").mkString("")
-    s"${tupleName.capitalize} memory $tupleName = ${relation.name}$keyStr;"
+    s"${tupleName.capitalize} memory $outputVar = ${relation.name}$keyStr;"
+  }
+}
+object ReadTuple {
+  def apply(relation: Relation, keyList: List[Parameter]): ReadTuple = {
+    val tupleName: String = s"${relation.name}Tuple"
+    ReadTuple(relation, keyList, tupleName)
   }
 }
 case class ReadValueFromMap(relation: Relation, keyList: List[Parameter],
@@ -210,8 +233,11 @@ object Statement {
 sealed abstract class Trigger {
   def relation: Relation
 }
-case class InsertTuple(relation: Relation) extends Trigger {
+case class InsertTuple(relation: Relation, keyIndices: List[Int]) extends Trigger {
   override def toString: String = s"insert ${relation.name}"
+}
+case class DeleteTuple(relation: Relation, keyIndices: List[Int]) extends Trigger {
+  override def toString: String = s"delete ${relation.name}"
 }
 case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends Trigger {
@@ -285,7 +311,7 @@ object Condition {
 }
 
 case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
-                                     statement: Statement,
+                                     onStatements: Set[OnStatement],
                                      dependencies: Map[Relation, Set[Relation]]) {
-  override def toString: String = s"$statement"
+  override def toString: String = onStatements.mkString("\n")
 }

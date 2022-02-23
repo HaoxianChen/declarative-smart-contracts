@@ -1,17 +1,17 @@
 package imp
 
-import datalog.{MapType, MsgSender, MsgValue, Now, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
+import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
   val keyTypes: List[Type] = indices.map(i=>relation.sig(i))
-  val valueType: Type = {
+  val valueIndices: List[Int] = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
+  val valueType: StructType = {
     val name = s"${relation.name.capitalize}Tuple"
     val members = relation.sig.zip(relation.memberNames).map {
       case (t,n) => Variable(t,n)
     }
     StructType(name, members)
-
   }
   val _type: Type = relation match {
     case _:SimpleRelation => getType(keyTypes, valueType)
@@ -46,9 +46,92 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     }
   }
 
+  def getUpdateStatement(update: UpdateStatement): Statement = update match {
+    case i:Increment => i
+    case del:Delete => deleteStatement(del)
+    case del:DeleteByKeys => Empty()
+    case ins:Insert => ins.relation match {
+      case rel: SingletonRelation => SetTuple(rel, ins.literal.fields)
+      case rel: SimpleRelation => insertStatement(ins)
+      case rel :ReservedRelation => throw new Exception(
+        s"Do not support insert tuple of ${rel.getClass}: $rel")
+    }
+  }
+
+  def callDependentFunctions(update: UpdateStatement,
+                             dependentFunctions: Set[FunctionHelper]): Statement = {
+    require(dependentFunctions.nonEmpty)
+    update match {
+      case del:DeleteByKeys => {
+        val (readTuple, delete) = translateDeleteByKeys(del)
+        val calls = _callDependentFunctions(delete, dependentFunctions)
+        Statement.makeSeq(readTuple, calls)
+      }
+      case _: Insert | _: Delete | _: Increment => _callDependentFunctions(update, dependentFunctions)
+    }
+  }
+
+  private def _callDependentFunctions(update: UpdateStatement,
+                             dependentFunctions: Set[FunctionHelper]): Statement = {
+    val allCalls = dependentFunctions.map(_.getCallStatement(update))
+    Statement.makeSeq(allCalls.toList:_*)
+  }
+
   def insertStatement(insert: Insert): Statement = {
     val keys: List[Parameter] = indices.map(i=>insert.literal.fields(i))
     UpdateMap(relation.name, keys, valueType.name, insert.literal.fields)
+  }
+
+  private def resetConstant(_type: Type): Constant = _type match {
+    case SymbolType(name) => Constant(_type, s"$name(0)")
+    case t:NumberType => Constant(t, "0")
+    case BooleanType() => Constant(BooleanType(), "false")
+    case t @ (_:UnitType|_:AnyType|_:CompoundType) => throw new Exception(s"Cannot reset type @$t")
+  }
+
+  private def resetTupleStatement(keys: List[Parameter], literal: Literal): Statement = {
+    require(keys.nonEmpty)
+    /** Reset values to zero. */
+    val params: List[Parameter] = relation.sig.indices.map(i => {
+      if (indices.contains(i)) {
+        literal.fields(i)
+      }
+      else {
+        resetConstant(relation.sig(i))
+      }
+    }).toList
+    UpdateMap(relation.name,keys,valueType.name,params)
+  }
+
+  private def translateDeleteByKeys(deleteByKeys: DeleteByKeys): (ReadTuple, Delete) = {
+    val tupleName: String = "toDelete"
+    val rel = deleteByKeys.relation
+    val readTuple = ReadTuple(rel, deleteByKeys.keys, tupleName)
+    val toDelete: Literal = {
+      val fields = rel.sig.zip(rel.memberNames).map{
+        case (t,n) => Variable(t,s"$tupleName.$n")
+      }
+      Literal(deleteByKeys.relation, fields)
+    }
+    (readTuple, Delete(toDelete))
+  }
+
+  def deleteStatement(delete: Delete): Statement = delete.relation match {
+    case SimpleRelation(name, sig, memberNames) => {
+      assert(indices.nonEmpty)
+      /** If tuple exists, reset it to zeros. */
+      val keys: List[Parameter] = indices.map(i=>delete.literal.fields(i))
+      val readTuple = ReadTuple(delete.relation, keys)
+      val matches: List[Match] = valueIndices.map(i=>{
+          val p = delete.literal.fields(i)
+          Match(delete.relation, i, p)
+        })
+      val resetTuple: Statement = resetTupleStatement(keys, delete.literal)
+      val conditionalReset = If(Condition.makeConjunction(matches:_*), resetTuple)
+      Statement.makeSeq(readTuple, conditionalReset)
+    }
+    case rel: SingletonRelation => ???
+    case rel: ReservedRelation => throw new Exception(s"Do not support delete tuple of ${rel.getClass}: $rel")
   }
 
   private def getType(keyTypes: List[Type], valueType: Type): Type = keyTypes match {
