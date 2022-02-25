@@ -9,31 +9,24 @@ abstract class View {
   val relation: Relation = rule.head.relation
 
   /** Interfaces */
-  def insertRow(relation: Relation): OnStatement
-  def deleteRow(relation: Relation): OnStatement
+  def insertRow(insertTuple: InsertTuple): OnStatement
+  def deleteRow(deleteTuple: DeleteTuple): OnStatement
   def updateRow(incrementValue: IncrementValue): OnStatement
 
   def getUpdateStatement(trigger: Trigger): OnStatement = trigger match {
-    case InsertTuple(relation, keyIndices) => insertRow(relation)
-    case DeleteTuple(relation, keyIndices) => deleteRow(relation)
+    case it: InsertTuple => insertRow(it)
+    case dt:DeleteTuple => deleteRow(dt)
     case iv: IncrementValue => updateRow(iv)
   }
 
-  val isDeleteBeforeInsert: Boolean = {
+  def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {
     // todo: skip deletion when the inserted literal share the same key with the head.
-    primaryKeyIndices.nonEmpty
+    keyIndices.nonEmpty || relation.isInstanceOf[SingletonRelation]
   }
 
-  protected def getInsertTupleStatement(): Statement = {
-    val insert = Insert(rule.head)
-    if (isDeleteBeforeInsert) {
-      val keys = primaryKeyIndices.map(i=>insert.literal.fields(i))
-      val deleteByKeys = DeleteByKeys(insert.relation, keys)
-      Statement.makeSeq(deleteByKeys, insert)
-    }
-    else {
-      insert
-    }
+  protected def deleteByKeysStatement(literal: Literal, keyIndices: List[Int]): Statement = {
+      val keys = keyIndices.map(i=>literal.fields(i))
+      DeleteByKeys(literal.relation, keys)
   }
 
 }

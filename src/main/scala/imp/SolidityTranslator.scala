@@ -87,6 +87,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case o: OnStatement => throw new Exception(s"Cannot translate OnStatement:\n$o")
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
+    case UpdateDependentRelations(u) => getCallDependentFunctionsStatement(u)
     case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
 
@@ -110,7 +111,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       } else {
       DeclFunction(name,params,returnType,stmt,metaData)
       }
-    case o @ (_:Empty|_:GroundVar|_:imp.Assign|_:OnStatement|_:UpdateStatement|_:Search|_:SolidityStatement) => o
+    case o @ (_:Empty|_:GroundVar|_:imp.Assign|_:OnStatement|_:UpdateStatement|_:UpdateDependentRelations|_:Search|_:SolidityStatement) => o
   }
 
 
@@ -122,11 +123,16 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     else {
       Empty()
     }
-    val callDependentFunctions = dependentFunctions.get(update.relation) match {
+    val callDependentFunctions = getCallDependentFunctionsStatement(update)
+    Statement.makeSeq(newUpdates, callDependentFunctions)
+  }
+
+  private def getCallDependentFunctionsStatement(update: UpdateStatement): Statement = {
+    val dsHelper = dataStructureHelper(update.relation)
+    dependentFunctions.get(update.relation) match {
       case Some(dependents) => dsHelper.callDependentFunctions(update, dependents)
       case None => Empty()
     }
-    Statement.makeSeq(newUpdates, callDependentFunctions)
   }
 
   private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
@@ -136,7 +142,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case If(_,stmt) => relationsToMaterialize(stmt)
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
-    case _:Empty|_:imp.Assign|_:UpdateStatement|_:SolidityStatement => Set()
+    case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
   }
 
   private def makeInterfaces(): Statement = {

@@ -83,6 +83,9 @@ case class DeleteByKeys(relation: Relation, keys: List[Parameter]) extends Updat
     s"delete ${relation.name}$keyStr"
   }
 }
+case class UpdateDependentRelations(update: UpdateStatement) extends Statement {
+  override def toString: String = s"update dependent relations on $update"
+}
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
   override def toString: String = {

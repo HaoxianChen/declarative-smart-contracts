@@ -73,7 +73,21 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
 
   private def _callDependentFunctions(update: UpdateStatement,
                              dependentFunctions: Set[FunctionHelper]): Statement = {
-    val allCalls = dependentFunctions.map(_.getCallStatement(update))
+    val allCalls = dependentFunctions.map(df => df.onStatement match {
+      case _:OnInsert => update match {
+        case _:Insert => df.getCallStatement(update)
+        case _ => Empty()
+      }
+      case _:OnDelete => update match {
+        case _:Delete => df.getCallStatement(update)
+        case _ => Empty()
+      }
+      case _:OnIncrement => update match {
+        case _:Increment => df.getCallStatement(update)
+        case _ => Empty()
+      }
+    }
+    )
     Statement.makeSeq(allCalls.toList:_*)
   }
 

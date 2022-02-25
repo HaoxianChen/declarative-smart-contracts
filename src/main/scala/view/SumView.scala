@@ -1,7 +1,7 @@
 package view
 
 import datalog.{Arithmetic, Literal, Param, Relation, Rule, Sum}
-import imp.{Increment, IncrementValue, OnInsert, OnStatement, Statement}
+import imp.{DeleteTuple, Increment, IncrementValue, Insert, InsertTuple, OnIncrement, OnInsert, OnStatement, Statement}
 
 case class SumView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   require(rule.aggregators.size==1)
@@ -9,13 +9,8 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   val sum: Sum = rule.aggregators.head.asInstanceOf[Sum]
 
   /** Interfaces */
-  def insertRow(relation: Relation): OnStatement = {
-    require(rule.aggregators.size == 1)
-    require(rule.aggregators.contains(sum))
-    require(rule.body.size <= 1 && rule.body.forall(_.relation == sum.relation))
-    require(rule.head.fields.contains(sum.aggResult))
-
-    val insertedLiteral = getInsertedLiteral(relation)
+  def insertRow(insertTuple: InsertTuple): OnStatement = {
+    val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val resultIndex = rule.head.fields.indexOf(sum.aggResult)
     val keyIndices = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
     val delta: Arithmetic = Param(sum.aggParam)
@@ -23,9 +18,22 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
     OnInsert(insertedLiteral, rule.head.relation, increment)
   }
 
-  def deleteRow(relation: Relation): OnStatement = ???
+  def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
+    ???
+  }
 
-  def updateRow(incrementValue: IncrementValue): OnStatement = ???
+  def updateRow(incrementValue: IncrementValue): OnStatement = {
+    val insertedLiteral = getInsertedLiteral(incrementValue.relation)
+    val resultIndex = rule.head.fields.indexOf(sum.aggResult)
+    val keyIndices = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
+    // val delta: Arithmetic = incrementValue.delta
+    val delta: Arithmetic = {
+      Param(insertedLiteral.fields(incrementValue.valueIndex))
+    }
+    val increment = Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta = delta)
+    OnIncrement(insertedLiteral, keyIndices, updateIndex = incrementValue.valueIndex, updateTarget = rule.head.relation,
+      increment)
+  }
 
   protected def getInsertedLiteral(relation: Relation): Literal = {
     require(relation==sum.relation)
