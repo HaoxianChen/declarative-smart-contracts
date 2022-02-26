@@ -19,7 +19,7 @@ object Main extends App {
     println(dl)
     val imperative = ImperativeTranslator(dl).translate()
     println(imperative)
-    val solidity = SolidityTranslator(imperative, dl.interfaces).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations).translate()
     println(s"Solidity program:\n${solidity}")
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)

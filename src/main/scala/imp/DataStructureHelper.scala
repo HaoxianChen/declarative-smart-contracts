@@ -104,15 +104,16 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   }
 
   private def resetTupleStatement(keys: List[Parameter], literal: Literal): Statement = {
-    require(keys.nonEmpty)
+    require(keys.nonEmpty || literal.relation.isInstanceOf[SingletonRelation])
     /** Reset values to zero. */
     val params: List[Parameter] = relation.sig.indices.map(i => {
-      if (indices.contains(i)) {
-        literal.fields(i)
-      }
-      else {
-        resetConstant(relation.sig(i))
-      }
+      // if (indices.contains(i)) {
+      //   literal.fields(i)
+      // }
+      // else {
+      //   resetConstant(relation.sig(i))
+      //}
+      resetConstant(relation.sig(i))
     }).toList
     UpdateMap(relation.name,keys,valueType.name,params)
   }
@@ -144,7 +145,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       val conditionalReset = If(Condition.makeConjunction(matches:_*), resetTuple)
       Statement.makeSeq(readTuple, conditionalReset)
     }
-    case rel: SingletonRelation => ???
+    case _: SingletonRelation => resetTupleStatement(List(), delete.literal)
     case rel: ReservedRelation => throw new Exception(s"Do not support delete tuple of ${rel.getClass}: $rel")
   }
 

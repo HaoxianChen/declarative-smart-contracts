@@ -119,16 +119,16 @@ object Publicity extends Enumeration {
   type Publicity = Value
   val Public, Private = Value
 }
-case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean, isTransaction: Boolean) {
+case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean, isTransaction: Boolean,
+                            modifiers: Set[String]) {
   override def toString: String = {
     val publicityStr = publicity match {
       case Publicity.Public => "public"
       case Publicity.Private => "private"
     }
-    if (isView) {
-      List(publicityStr, "view").mkString(" ")
-    }
-    else publicityStr
+    val viewStr = if (isView) "view" else ""
+    val modifierStr = modifiers.mkString(" ")
+    List(publicityStr, viewStr, modifierStr).mkString(" ")
   }
 }
 sealed abstract class SolidityStatement extends Statement
@@ -187,9 +187,21 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
       case t @ (_: SymbolType |_: NumberType|_:BooleanType|_:CompoundType) => s"returns (${t.name})"
     }
     e"""function $name($paramStr) $metaData $returnStr {
-  $stmt
+    $stmt
 }""".stripMargin
   }
+}
+case class DeclModifier(name: String, params: List[Parameter], beforeStatement: Statement,
+                        afterStatement: Statement) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")
+    e"""modifier $name($paramStr) {
+    $beforeStatement
+    _;
+    $afterStatement
+}"""
+  }
+
 }
 case class Call(functionName: String, params: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
@@ -222,6 +234,9 @@ case class Return(p: Parameter) extends SolidityStatement {
 }
 case class Require(condition: Condition, msg: String) extends SolidityStatement {
   override def toString: String = s"require($condition,\"$msg\");"
+}
+case class Revert(msg: String) extends SolidityStatement {
+  override def toString: String = s"revert(\"$msg\");"
 }
 
 object Statement {

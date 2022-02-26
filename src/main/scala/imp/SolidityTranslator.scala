@@ -3,7 +3,8 @@ package imp
 import datalog._
 import imp.SolidityTranslator.transactionRelationPrefix
 
-case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface]) {
+case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
+                              violations: Set[Relation]) {
   val name: String = program.name
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, List[Int]] = program.indices
@@ -17,11 +18,13 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val materializedRelations: Set[Relation] = {
     val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
-    fromStatements ++ viewRelations
+    fromStatements ++ viewRelations ++ violations
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
     on=>on->FunctionHelper(on)).toMap
   private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = functionHelpers.values.toSet.groupBy(_.inRel)
+
+  private val violationHelper = ViolationHelper(program.indices)
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(transactionRelationPrefix))
@@ -45,7 +48,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       val translatedDecls = decls.map(translateStatement).map(flattenIfStatement)
       Statement.makeSeq(translatedDecls.toList:_*)
     }
-    val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, functions)
+    val checkViolations = {
+      val _all = violations.map(violationHelper.getViolationCheckingFunction)
+      val declModifier = violationHelper.getViolationCheckingModifier(violations)
+      Statement.makeSeq(_all.toList:+declModifier:_*)
+    }
+    val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, checkViolations, functions)
     DeclContract(name, definitions)
   }
 
@@ -192,7 +200,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         }
       }
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
-        metaData=FunctionMetaData(Publicity.Public, isView = true, isTransaction = false))
+        metaData=FunctionMetaData(Publicity.Public, isView = true, isTransaction = false,
+          modifiers = Set()))
     }
     def _declTxFunction(iface: Interface): DeclFunction = {
       val funcName: String = {
@@ -205,7 +214,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
       }
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
-        metaData=FunctionMetaData(Publicity.Public, isView = false, isTransaction = true)
+        metaData=FunctionMetaData(Publicity.Public, isView = false, isTransaction = true,
+          modifiers = Set(ViolationHelper.violationCheckingFunctionName))
       )
     }
     val allInterfaceFunctions = interfaces.map(_declInterfaceFunction).toList

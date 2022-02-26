@@ -4,13 +4,14 @@ import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
 case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces: Set[Interface],
+                          violations: Set[Relation],
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
                           relationIndices: Map[SimpleRelation, List[Int]]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
-  def getProgram(): Program = Program(rules, interfaces, relationIndices)
+  def getProgram(): Program = Program(rules, interfaces, relationIndices, violations)
   private def getTypes(schema: List[(String, String)]) :(List[String], List[Type]) = {
     val memberNames = schema.map(_._1)
     val types = schema.map ( s => s._2 match {
@@ -54,6 +55,12 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     val interface = Interface(relation, inputIndices, optOutIndex)
     this.copy(interfaces=interfaces+interface)
   }
+
+  def addViolation(name: String): ParsingContext = {
+    val relation = relsByName(name)
+    this.copy(violations=violations+relation)
+  }
+
   def addRule(rule: Rule) = this.copy(rules=rules+rule)
   def getLiteral(relName: String, fieldNames: List[String]): Literal = {
     val relation = relsByName(relName)
@@ -89,7 +96,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Map())
+  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Map())
 }
 
 class ArithmeticParser extends JavaTokenParsers {
@@ -153,6 +160,12 @@ class Parser extends ArithmeticParser {
     }
     }
 
+  def violationDecl: Parser[ParsingContext => ParsingContext] =
+    (".violation" ~> ident) ^^ {
+      case name => {
+        pc => pc.addViolation(name)
+      }
+    }
 
   def literalList: Parser[ParsingContext => List[Literal]] = repsep(literal, ",") ^^ {
     case fs => {
@@ -193,7 +206,8 @@ class Parser extends ArithmeticParser {
           pc.addRule(rule)
         }
       }
-  def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | ruleDecl ).* ^^ {
+  def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | violationDecl
+    | ruleDecl ).* ^^ {
     fs => {
       val parsingContext = fs.foldLeft(ParsingContext()) {case (pc, f) => f(pc)}
       parsingContext.getProgram()

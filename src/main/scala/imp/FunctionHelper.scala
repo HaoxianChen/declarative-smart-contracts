@@ -51,9 +51,11 @@ case class FunctionHelper(onStatement: OnStatement) {
       }
     }
 
+    val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
+
     DeclFunction(funcName, params, returnType = UnitType(), onStatement.statement,
       metaData = FunctionMetaData(Publicity.Private, isView = false,
-        isTransaction = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)))
+        isTransaction = isTransaction, modifiers = Set() ))
   }
 
   val deleteFuncName: String = s"delete${onStatement.relation.name.capitalize}ByKeys"
@@ -73,7 +75,7 @@ case class FunctionHelper(onStatement: OnStatement) {
     }
     DeclFunction(deleteFuncName, keys, returnType = UnitType(), statements,
       metaData = FunctionMetaData(Publicity.Private, isView = false,
-        isTransaction = false))
+        isTransaction = false, modifiers = Set()))
   }
 }
 object FunctionHelper {

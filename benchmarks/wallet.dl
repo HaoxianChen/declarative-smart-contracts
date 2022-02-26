@@ -26,7 +26,7 @@ owner(s) :- constructor(), msgSender(s).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), n>=m.
+transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
 
 .decl totalMint(p: address, n: int)[0]
 .decl totalBurn(p: address, n: int)[0]
@@ -46,6 +46,9 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // Properties
 .decl *totalBalances(m: int)
-.decl *unequalBalance(s: int, n: int)
+.decl *unequalBalance(s: int, n: int, valid:bool)
+
+.violation unequalBalance
+
 totalBalances(s) :- s = sum n: balanceOf(_,n).
-unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+unequalBalance(s,n,true) :- totalBalances(s), totalSupply(n), s!=n.

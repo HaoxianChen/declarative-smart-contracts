@@ -86,6 +86,7 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
   }
 }
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, List[Int]],
+                   violations: Set[Relation],
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
   override def toString: String = {
