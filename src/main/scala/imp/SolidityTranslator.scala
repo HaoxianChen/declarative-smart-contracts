@@ -24,7 +24,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     on=>on->FunctionHelper(on)).toMap
   private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = functionHelpers.values.toSet.groupBy(_.inRel)
 
-  private val violationHelper = ViolationHelper(program.indices)
+  private val violationHelper = ViolationHelper(violations, program.indices)
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(transactionRelationPrefix))
@@ -50,7 +50,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     }
     val checkViolations = {
       val _all = violations.map(violationHelper.getViolationCheckingFunction)
-      val declModifier = violationHelper.getViolationCheckingModifier(violations)
+      val declModifier = violationHelper.getViolationCheckingModifier()
       Statement.makeSeq(_all.toList:+declModifier:_*)
     }
     val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, checkViolations, functions)
@@ -62,28 +62,33 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     for (rel <- materializedRelations) {
       rel match {
         case _: SingletonRelation => {
-          val declRelation = DeclRelation(rel, getStructType(rel))
+          val declRelation = DeclVariable(rel.name, getStructType(rel))
           stmt = Statement.makeSeq(stmt, declRelation)
         }
         case sr: SimpleRelation => {
           val mapType = dataStructureHelper(sr)._type
-          val declRelation = DeclRelation(rel, mapType)
+          val declRelation = DeclVariable(rel.name, mapType)
           stmt = Statement.makeSeq(stmt, declRelation)
         }
         case _: ReservedRelation => Empty()
       }
     }
+    stmt = Statement.makeSeq(stmt, violationHelper.getViolationKeyArrayDecl())
     stmt
   }
 
   private def makeStructDefinitions(): Statement = {
-    val allDefs = tupleTypes.map{
+    val tupleStructDefs  = tupleTypes.map{
       case (rel, _type)=> _type match {
         case st: StructType => if (materializedRelations.contains(rel)) DefineStruct(getStructName(rel), st) else Empty()
         case _ => Empty()
       }
     }.toList
-    Statement.makeSeq(allDefs:_*)
+    val violationKeyStructDefs = violationHelper.getViolationKeyStructTypes().map {
+        case st: StructType => DefineStruct(st.name, st)
+        case _ => Empty()
+    }.toList
+    Statement.makeSeq((tupleStructDefs++violationKeyStructDefs):_*)
   }
 
   /** Translate abstract imperative program into Solidity statements */
@@ -125,8 +130,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   private def translateUpdateStatement(update: UpdateStatement): Statement = {
     val dsHelper = dataStructureHelper(update.relation)
+    val isInsertKey = violations.contains(update.relation)
     val newUpdates = if (materializedRelations.contains(update.relation)) {
-      dsHelper.getUpdateStatement(update)
+      dsHelper.getUpdateStatement(update, isInsertKey)
     }
     else {
       Empty()

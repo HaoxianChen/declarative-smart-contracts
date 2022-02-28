@@ -20,6 +20,9 @@ case class MapType(key: Type, value: Type) extends CompoundType {
   def name: String = s"mapping($key=>$value)"
 }
 case class StructType(name: String, members: List[Parameter]) extends CompoundType
+case class ArrayType(elementType: Type) extends CompoundType {
+  val name: String = s"$elementType[]"
+}
 
 object Type {
   def apply(name: String): Type = name match {

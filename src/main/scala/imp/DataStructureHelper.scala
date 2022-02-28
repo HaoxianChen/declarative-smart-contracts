@@ -46,13 +46,13 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     }
   }
 
-  def getUpdateStatement(update: UpdateStatement): Statement = update match {
+  def getUpdateStatement(update: UpdateStatement, isInsertKey: Boolean): Statement = update match {
     case i:Increment => i
     case del:Delete => deleteStatement(del)
     case del:DeleteByKeys => Empty()
     case ins:Insert => ins.relation match {
       case rel: SingletonRelation => SetTuple(rel, ins.literal.fields)
-      case rel: SimpleRelation => insertStatement(ins)
+      case rel: SimpleRelation => insertStatement(ins, isInsertKey)
       case rel :ReservedRelation => throw new Exception(
         s"Do not support insert tuple of ${rel.getClass}: $rel")
     }
@@ -91,9 +91,16 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     Statement.makeSeq(allCalls.toList:_*)
   }
 
-  def insertStatement(insert: Insert): Statement = {
+  def insertStatement(insert: Insert, isInsertKey: Boolean): Statement = {
     val keys: List[Parameter] = indices.map(i=>insert.literal.fields(i))
-    UpdateMap(relation.name, keys, valueType.name, insert.literal.fields)
+    val updateMap = UpdateMap(relation.name, keys, valueType.name, insert.literal.fields)
+    val insertKey: Statement = if (isInsertKey) {
+      ViolationHelper.getInsertKeyStatement(insert.relation, keys)
+    }
+    else {
+      Empty()
+    }
+    Statement.makeSeq(updateMap, insertKey)
   }
 
   private def resetConstant(_type: Type): Constant = _type match {
@@ -137,9 +144,9 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       /** If tuple exists, reset it to zeros. */
       val keys: List[Parameter] = indices.map(i=>delete.literal.fields(i))
       val readTuple = ReadTuple(delete.relation, keys)
-      val matches: List[Match] = valueIndices.map(i=>{
+      val matches: List[MatchRelationField] = valueIndices.map(i=>{
           val p = delete.literal.fields(i)
-          Match(delete.relation, i, p)
+          MatchRelationField(delete.relation, i, p)
         })
       val resetTuple: Statement = resetTupleStatement(keys, delete.literal)
       val conditionalReset = If(Condition.makeConjunction(matches:_*), resetTuple)
@@ -153,4 +160,8 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     case ::(head, next) => MapType(head, getType(next,valueType))
     case Nil => valueType
   }
+}
+
+object DataStructureHelper {
+  def relationalTupleName(relation: Relation): String = s"${relation.name}Tuple"
 }

@@ -1,7 +1,7 @@
 package view
 
 import datalog.{Arithmetic, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
-import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, Match, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
+import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   require(rule.aggregators.isEmpty)
@@ -105,14 +105,14 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
   }
   private def _getJoinStatements(ruleHead: Literal, groundedParams: Set[Parameter], remainingLiterals: List[Literal],
                                  innerStatement: Statement): Statement = {
-    def _getCondition(grounded: Set[Parameter], literal: Literal): Set[Match] = {
+    def _getCondition(grounded: Set[Parameter], literal: Literal): Set[MatchRelationField] = {
       literal.fields.zipWithIndex.flatMap {
         case (p, i) => p match {
           case v: Variable => if (grounded.contains(v)) {
-            Some(Match(literal.relation, i, v))
+            Some(MatchRelationField(literal.relation, i, v))
           }
           else None
-          case c: Constant => Some(Match(literal.relation, i, c))
+          case c: Constant => Some(MatchRelationField(literal.relation, i, c))
         }
       }.toSet
     }
@@ -139,7 +139,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
         val newGroundedParams = groundedParams ++ head.fields.toSet
         val declareNewVars: Statement = _groundVariables(groundedParams, head)
         val nextStatements = _getJoinStatements(ruleHead, newGroundedParams, tail, innerStatement)
-        val condition: Set[Match] = _getCondition(groundedParams, head)
+        val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
         Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))
       }
     }

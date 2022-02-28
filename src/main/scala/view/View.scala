@@ -15,7 +15,7 @@ abstract class View {
 
   def getUpdateStatement(trigger: Trigger): OnStatement = trigger match {
     case it: InsertTuple => insertRow(it)
-    case dt:DeleteTuple => deleteRow(dt)
+    case dt: DeleteTuple => deleteRow(dt)
     case iv: IncrementValue => updateRow(iv)
   }
 

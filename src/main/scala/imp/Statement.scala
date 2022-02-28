@@ -105,7 +105,7 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
   }
 }
 // Join
-case class Search(relation: Relation, conditions: Set[Match], statement: Statement) extends Statement {
+case class Search(relation: Relation, conditions: Set[MatchRelationField], statement: Statement) extends Statement {
   override def toString: String = {
     val conditionStr = conditions.mkString("&&")
     e"""search ${relation.name} where $conditionStr {
@@ -151,9 +151,14 @@ case class ReadTuple(relation: Relation, keyList: List[Parameter],
 }
 object ReadTuple {
   def apply(relation: Relation, keyList: List[Parameter]): ReadTuple = {
-    val tupleName: String = s"${relation.name}Tuple"
+    // val tupleName: String = s"${relation.name}Tuple"
+    val tupleName: String = DataStructureHelper.relationalTupleName(relation)
     ReadTuple(relation, keyList, tupleName)
   }
+}
+
+case class ReadArray(arrayName: String, iterator: Parameter, outputVar: Variable) extends SolidityStatement {
+  override def toString: String = s"${outputVar._type} memory ${outputVar.name} = $arrayName[$iterator];"
 }
 case class ReadValueFromMap(relation: Relation, keyList: List[Parameter],
                             output: Parameter) extends SolidityStatement {
@@ -201,7 +206,6 @@ case class DeclModifier(name: String, params: List[Parameter], beforeStatement: 
     $afterStatement
 }"""
   }
-
 }
 case class Call(functionName: String, params: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
@@ -220,14 +224,36 @@ case class DefineStruct(name: String, _type: StructType) extends SolidityStateme
 }"""
   }
 }
-case class DeclRelation(relation: Relation, _type: Type) extends SolidityStatement {
-  override def toString: String = s"${_type} ${relation.name};"
+case class DeclVariable(name: String, _type: Type) extends SolidityStatement {
+  override def toString: String = s"${_type} $name;"
 }
 case class DeclContract(name: String, statement: Statement) extends SolidityStatement {
   override def toString: String =
     e"""contract $name {
   $statement
 }""".stripMargin
+}
+case class ForLoop(iterator: Variable, initValue: Arithmetic, loopCondition: Condition,
+               nextValue: Arithmetic,
+               statement: Statement) extends SolidityStatement {
+  override def toString: String = {
+    e"""for(${iterator._type} $iterator = $initValue; $loopCondition; $iterator = $nextValue) {
+    $statement
+}""".stripMargin
+  }
+}
+case class GetObjectAttribute(objectName: String, attributeName: String, ret: Parameter) extends SolidityStatement {
+  override def toString: String = s"${ret._type} ${ret.name} = $objectName.$attributeName;"
+}
+case class CallObjectMethod(objectName: String, methodName: String, params: List[String],
+                            optRet: Option[Variable] = None) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = params.mkString(",")
+    optRet match {
+      case Some(ret) => s"${ret._type} ${ret.name} = $objectName.$methodName($paramStr);"
+      case None => s"$objectName.$methodName($paramStr);"
+    }
+  }
 }
 case class Return(p: Parameter) extends SolidityStatement {
   override def toString: String = s"return $p;"
@@ -275,7 +301,7 @@ case class True() extends Condition {
 case class False() extends Condition {
   override def toString: String = "false"
 }
-case class Match(relation: Relation, index: Int, p: Parameter) extends Condition {
+case class MatchRelationField(relation: Relation, index: Int, p: Parameter) extends Condition {
   override def toString: String = {
     relation match {
       case _: MsgSender => s"$p==msg.sender"
@@ -291,6 +317,9 @@ case class Match(relation: Relation, index: Int, p: Parameter) extends Condition
       }
     }
   }
+}
+case class Match(a: Arithmetic, b: Arithmetic) extends Condition {
+  override def toString: String = s"$a==$b"
 }
 case class Greater(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a>$b"
