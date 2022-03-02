@@ -1,6 +1,6 @@
 package imp
 
-import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
@@ -19,6 +19,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     case reserved: ReservedRelation => reserved match {
       case MsgSender() => UnitType()
       case MsgValue() => UnitType()
+      case Send() => UnitType()
       case Now() => UnitType()
     }
   }
@@ -53,9 +54,15 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     case ins:Insert => ins.relation match {
       case rel: SingletonRelation => SetTuple(rel, ins.literal.fields)
       case rel: SimpleRelation => insertStatement(ins, isInsertKey)
-      case rel :ReservedRelation => throw new Exception(
+      case rel :ReservedRelation => rel match {
+        case Send() => {
+          val (p,n) = (ins.literal.fields(0), ins.literal.fields(1))
+          SendEther(p,n)
+        }
+        case _ => throw new Exception(
         s"Do not support insert tuple of ${rel.getClass}: $rel")
-    }
+        }
+      }
   }
 
   def callDependentFunctions(update: UpdateStatement,

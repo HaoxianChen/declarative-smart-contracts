@@ -18,7 +18,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val materializedRelations: Set[Relation] = {
     val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
-    fromStatements ++ viewRelations ++ violations
+    val sendRelation = program.relations.filter(_ == Send())
+    fromStatements ++ viewRelations ++ violations ++ sendRelation
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
     on=>on->FunctionHelper(on)).toMap
@@ -27,7 +28,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val violationHelper = ViolationHelper(violations, program.indices)
 
   private val tupleTypes :Map[Relation, Type] = {
-    relations.filterNot(_.name.startsWith(transactionRelationPrefix))
+    relations.filterNot(_.name.startsWith(transactionRelationPrefix)).diff(Relation.reservedRelations)
       .map(rel => rel -> getStructType(rel)).toMap
   }
 

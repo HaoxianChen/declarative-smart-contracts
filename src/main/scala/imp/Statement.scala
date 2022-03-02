@@ -15,6 +15,7 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
       case _:MsgSender => s"${p._type} $p = msg.sender;"
       case _:MsgValue => s"${p._type} $p = msg.value;"
       case _:Now => s"${p._type} $p = block.timestamp;"
+      case _:Send => throw new Exception("Send should not appear in body.")
       case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
     }
   }
@@ -269,6 +270,10 @@ case class Require(condition: Condition, msg: String) extends SolidityStatement 
 case class Revert(msg: String) extends SolidityStatement {
   override def toString: String = s"revert(\"$msg\");"
 }
+case class SendEther(p: Parameter, amount: Parameter) extends SolidityStatement {
+  require(p._type == Type.addressType)
+  override def toString: String = s"payable($p).send($amount);"
+}
 
 object Statement {
   private def _makeSeq(a: Statement, b: Statement): Statement = a match {
@@ -312,6 +317,7 @@ case class MatchRelationField(relation: Relation, index: Int, p: Parameter) exte
       case _: MsgSender => s"$p==msg.sender"
       case _: MsgValue => s"$p==msg.value"
       case _: Now => s"$p==block.timestamp"
+      case _: Send => throw new Exception(s"Send relation should not be matched.")
       case _:SingletonRelation => {
         val key = relation.memberNames(index)
         s"$p==${relation.name}.$key"

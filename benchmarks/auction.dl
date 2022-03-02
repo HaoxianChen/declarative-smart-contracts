@@ -4,6 +4,7 @@
 
 // Configs
 .decl *owner(p: address)
+.decl constructor()
 
 // Transactions
 .decl bid(bidder: address, amount: uint)
@@ -12,15 +13,17 @@
 .decl recv_withdraw()
 .decl recv_withdrawWinner()
 .decl *end(b: bool)
-.decl recv_end()
+.decl recv_endAuction()
 
 // Interface
 .interface recv_bid
 .interface recv_withdraw
+.interface recv_endAuction
 
 // Views
 .decl *highestBid(bidder: address, amount: uint)
 .decl balance(p: address, n:uint)[0]
+.interface balance(1)
 
 highestBid(p,m) :- bid(p,m), m = max n: bid(_, n).
 
@@ -33,7 +36,10 @@ balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
 // Transaction conditions
 bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), end(false), highestBid(_,m), n>m.
 
-withdraw(p,s) :- recv_withdrawWinner(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
-withdraw(p,n) :- recv_withdraw(), msgSender(p), end(true), balance(p,n), n>0.
+// withdraw(p,s) :- recv_withdrawWinner(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
+withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
+withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
+send(p,n) :- withdraw(p,n).
 
-end(true) :- recv_end(), msgSender(s), owner(s).
+end(true) :- recv_endAuction(), msgSender(s), owner(s).
+owner(s) :- constructor(), msgSender(s).
