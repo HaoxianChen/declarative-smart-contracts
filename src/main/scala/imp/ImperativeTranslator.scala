@@ -14,9 +14,9 @@ case class ImperativeTranslator(program: Program) {
     case rel: ReservedRelation => rel->List()
   }.toMap
 
-  private val views: Map[Rule, View] = program.rules.map(
-    r => (r->View(r,primaryKeyIndices(r.head.relation)))
-  ).toMap
+  private val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
+    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation),i))
+  }.toMap
 
   def translate(): ImperativeAbstractProgram = {
     def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))

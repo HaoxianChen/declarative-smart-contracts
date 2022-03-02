@@ -3,14 +3,14 @@ package view
 import datalog.{Arithmetic, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
 
-case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
+case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.isEmpty)
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
     val delete = getInsertedLiteral(deleteTuple.relation)
     val updateStatement: UpdateStatement = Delete(rule.head)
     val statement = getNewRowDerivationStatements(delete, updateStatement)
-    OnDelete(delete, rule.head.relation, statement)
+    OnDelete(delete, rule.head.relation, statement, ruleId)
   }
 
   def updateRow(incrementValue: IncrementValue): OnStatement = {
@@ -20,7 +20,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
       val literal = getInsertedLiteral(incrementValue.relation)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,
-        updateTarget = rule.head.relation, statement = updates)
+        updateTarget = rule.head.relation, statement = updates, ruleId)
     }
     else {
       /** todo: Check case where the incremented value directly matched to the head. */
@@ -41,7 +41,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
       val deriveUpdate = getNewRowDerivationStatements(insert, updateStatement)
       Statement.makeSeq(delete, deriveUpdate)
     }
-    OnInsert(insert, rule.head.relation, statement)
+    OnInsert(insert, rule.head.relation, statement, ruleId)
   }
 
   private def getNewRowDerivationStatements(insert: Literal, updateStatement: Statement): Statement = {
@@ -214,6 +214,6 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
     }
     OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
       updateIndex = incrementValue.valueIndex,
-      updateTarget = rule.head.relation, statement = updates)
+      updateTarget = rule.head.relation, statement = updates, ruleId)
   }
 }

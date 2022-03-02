@@ -3,7 +3,7 @@ package view
 import datalog.{Literal, Max, Param, Parameter, Relation, Rule, Variable}
 import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, Statement}
 
-case class MaxView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
+case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Max])
   val max: Max = rule.aggregators.head.asInstanceOf[Max]
@@ -25,7 +25,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int]) extends View {
     val condition = imp.Greater(newValue,oldValue)
     val insert: Insert = Insert(rule.head)
     val stmt = Statement.makeSeq(readTuple, groundVar, If(condition, insert))
-    OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt)
+    OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt, ruleId)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = ???

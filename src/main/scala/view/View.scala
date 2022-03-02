@@ -6,6 +6,7 @@ import imp._
 abstract class View {
   def rule: Rule
   def primaryKeyIndices: List[Int]
+  def ruleId: Int
   val relation: Relation = rule.head.relation
 
   /** Interfaces */
@@ -31,16 +32,16 @@ abstract class View {
 
 }
 object View {
-  def apply(rule: Rule, primaryKeyIndices: List[Int]): View = {
+  def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
-      JoinView(rule, primaryKeyIndices)
+      JoinView(rule, primaryKeyIndices, ruleId)
     }
     else {
       rule.aggregators.head match {
-        case _:Sum => SumView(rule, primaryKeyIndices)
-        case _:Max => MaxView(rule, primaryKeyIndices)
-        case _:Count => CountView(rule, primaryKeyIndices)
+        case _:Sum => SumView(rule, primaryKeyIndices, ruleId)
+        case _:Max => MaxView(rule, primaryKeyIndices, ruleId)
+        case _:Count => CountView(rule, primaryKeyIndices, ruleId)
       }
     }
   }

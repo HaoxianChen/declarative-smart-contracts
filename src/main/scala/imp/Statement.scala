@@ -37,16 +37,17 @@ sealed abstract class OnStatement extends Statement {
   def relation: Relation
   def updateTarget: Relation
   def statement: Statement
+  def ruleId: Int
 }
 
-case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement) extends OnStatement {
+case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int) extends OnStatement {
   val relation: Relation = literal.relation
   override def toString: String =
     e"""on insert $literal {
   $statement
 }""".stripMargin
 }
-case class OnDelete(literal: Literal, updateTarget: Relation, statement: Statement) extends OnStatement {
+case class OnDelete(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int) extends OnStatement {
   val relation: Relation = literal.relation
   override def toString: String =
     e"""on delete $literal {
@@ -54,7 +55,7 @@ case class OnDelete(literal: Literal, updateTarget: Relation, statement: Stateme
 }""".stripMargin
 }
 case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int, updateTarget: Relation,
-                       statement: Statement) extends OnStatement {
+                       statement: Statement, ruleId: Int) extends OnStatement {
   val relation: Relation = literal.relation
   val keys: List[Parameter] = keyIndices.map(i => literal.fields(i))
   val updateValue = literal.fields(updateIndex)
