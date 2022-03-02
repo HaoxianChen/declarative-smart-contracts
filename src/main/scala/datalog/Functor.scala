@@ -27,7 +27,7 @@ case class Param(p: Parameter) extends Arithmetic {
   val _type = p._type
   override def toString: String = p match {
     case Constant(_type, name) => _type match {
-      case SymbolType(name) => s"${_type}($name)"
+      case SymbolType(t) => s"${t}($name)"
       case _ => s"$name"
     }
     case Variable(_type, name) => name
