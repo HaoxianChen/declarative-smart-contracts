@@ -1,10 +1,12 @@
 package view
 
-import datalog.{Arithmetic, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
-import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
+import datalog.{Arithmetic, BooleanType, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
+import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Return, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
+import imp.SolidityTranslator.transactionRelationPrefix
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.isEmpty)
+  val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
     val delete = getInsertedLiteral(deleteTuple.relation)
@@ -32,14 +34,21 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     val insert = getInsertedLiteral(insertTuple.relation)
     val statement = {
       val delete = if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
+        /** todo: this delete should only affect the current view, not others. */
         deleteByKeysStatement(insert, insertTuple.keyIndices)
       }
       else {
         Empty()
       }
-      val updateStatement: Statement = Insert(rule.head)
+      val updateStatement: Statement = if (isTransaction) {
+        Statement.makeSeq(Insert(rule.head), Return(Constant(BooleanType(), "true")))
+      }
+      else {
+        Insert(rule.head)
+      }
       val deriveUpdate = getNewRowDerivationStatements(insert, updateStatement)
-      Statement.makeSeq(delete, deriveUpdate)
+      val ret = if (isTransaction) Return(Constant(BooleanType(), "false")) else Empty()
+      Statement.makeSeq(delete, deriveUpdate, ret)
     }
     OnInsert(insert, rule.head.relation, statement, ruleId)
   }

@@ -208,13 +208,17 @@ case class DeclModifier(name: String, params: List[Parameter], beforeStatement: 
 }"""
   }
 }
-case class Call(functionName: String, params: List[Parameter]) extends SolidityStatement {
+case class Call(functionName: String, params: List[Parameter], optReturnVar: Option[Variable] = None) extends SolidityStatement {
   override def toString: String = {
     val paramStr = params.map {
       case v: Variable => s"$v"
       case c: Constant => s"${c._type}(${c.name})"
     }.mkString(",")
-    s"$functionName($paramStr);"
+    val returnStr = optReturnVar match {
+      case Some(v) => s"${v._type} ${v.name} = "
+      case None => ""
+    }
+    s"$returnStr$functionName($paramStr);"
   }
 }
 case class DefineStruct(name: String, _type: StructType) extends SolidityStatement {

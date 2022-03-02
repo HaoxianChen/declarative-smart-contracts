@@ -45,7 +45,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val interfaces: Statement = makeInterfaces()
     val functions = {
       val decls = program.onStatements.map(on => functionHelpers(on).getFunctionDeclaration())
-      val translatedDecls = decls.map(translateStatement).map(flattenIfStatement)
+      val translatedDecls = decls.map(translateStatement)
+        // .map(flattenIfStatement)
       Statement.makeSeq(translatedDecls.toList:_*)
     }
     val checkViolations = {
@@ -216,9 +217,20 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       }
       val params: List[Parameter] = interfaceRelationToParams(iface.relation)
       var statement: Statement = Empty()
+      var returnVars: Set[Variable] = Set()
       for (fh <- dependentFunctions.getOrElse(iface.relation, Set())) {
-        statement = Statement.makeSeq(statement,fh.getCallStatementFromInterface(params))
+        val callStatement: Call = fh.getCallStatementFromInterface(params)
+        if (callStatement.optReturnVar.isDefined) returnVars += callStatement.optReturnVar.get
+        statement = Statement.makeSeq(statement,callStatement)
       }
+
+      val checkResults = {
+        val allConditions = returnVars.map(v => Match(Param(v), Param(Constant(BooleanType(),"false"))))
+        val condition = Condition.makeConjunction(allConditions.toList:_*)
+        If(condition, Revert("Rule condition failed"))
+      }
+      statement = Statement.makeSeq(statement, checkResults)
+
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
         metaData=FunctionMetaData(Publicity.Public, isView = false, isTransaction = true,
           modifiers = Set(ViolationHelper.violationCheckingFunctionName))

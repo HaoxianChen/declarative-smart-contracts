@@ -1,8 +1,9 @@
 package imp
 
-import datalog.{Literal, Param, Parameter, Relation, UnitType, Variable}
+import datalog.{BooleanType, Literal, Param, Parameter, Relation, UnitType, Variable}
 
 case class FunctionHelper(onStatement: OnStatement) {
+  val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
   val inRel = onStatement.relation
   private val functionName: String = {
     val action: String = onStatement match {
@@ -40,8 +41,14 @@ case class FunctionHelper(onStatement: OnStatement) {
       }
     }
   }
-  def getCallStatementFromInterface(params: List[Parameter]): Statement = {
-    Call(functionName, keyIndices.map(i=>params(i)))
+  def getCallStatementFromInterface(params: List[Parameter]): Call = {
+    val returnVar = if (isTransaction) {
+      Some(Variable(BooleanType(), s"r${onStatement.ruleId}"))
+    }
+    else {
+      None
+    }
+    Call(functionName, keyIndices.map(i=>params(i)), returnVar)
   }
   def getFunctionDeclaration(): Statement = {
     val (funcName,params) = onStatement match {
@@ -59,9 +66,9 @@ case class FunctionHelper(onStatement: OnStatement) {
       }
     }
 
-    val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
+    val returnType = if (isTransaction) BooleanType() else UnitType()
 
-    DeclFunction(funcName, params, returnType = UnitType(), onStatement.statement,
+    DeclFunction(funcName, params, returnType = returnType, onStatement.statement,
       metaData = FunctionMetaData(Publicity.Private, isView = false,
         isTransaction = isTransaction, modifiers = Set() ))
   }
