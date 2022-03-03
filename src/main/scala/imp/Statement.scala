@@ -198,6 +198,12 @@ case class DeclFunction(name: String, params: List[Parameter], returnType: Type,
 }""".stripMargin
   }
 }
+case class DeclEvent(name: String, params: List[Parameter]) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = params.map(p=>s"${p._type} ${p.name}").mkString(",")
+    s"event $name($paramStr);"
+  }
+}
 case class DeclModifier(name: String, params: List[Parameter], beforeStatement: Statement,
                         afterStatement: Statement) extends SolidityStatement {
   override def toString: String = {
@@ -273,6 +279,12 @@ case class Revert(msg: String) extends SolidityStatement {
 case class SendEther(p: Parameter, amount: Parameter) extends SolidityStatement {
   require(p._type == Type.addressType)
   override def toString: String = s"payable($p).send($amount);"
+}
+case class Emit(event: String, parameters: List[Parameter]) extends SolidityStatement {
+  override def toString: String = {
+    val paramStr = parameters.mkString(",")
+    s"emit $event($paramStr);"
+  }
 }
 
 object Statement {
@@ -377,6 +389,7 @@ object Condition {
 
 case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
                                      onStatements: Set[OnStatement],
-                                     dependencies: Map[Relation, Set[Relation]]) {
+                                     dependencies: Map[Relation, Set[Relation]],
+                                     rules: Set[Rule]) {
   override def toString: String = onStatements.mkString("\n")
 }

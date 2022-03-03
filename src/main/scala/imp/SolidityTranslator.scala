@@ -8,6 +8,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   val name: String = program.name
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, List[Int]] = program.indices
+  private val eventHelper = EventHelper(program.rules)
   private val dataStructureHelper: Map[Relation, DataStructureHelper] = relations.map{
     case rel: SimpleRelation => {
       /** todo: handle situation with no indices */
@@ -43,6 +44,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   def translate(): Statement = {
     val structDefinitions: Statement = makeStructDefinitions()
     val declarations: Statement = getRelationDeclartions()
+    val eventDeclarations = eventHelper.getAllEventDeclarations()
     val interfaces: Statement = makeInterfaces()
     val functions = {
       val decls = program.onStatements.map(on => functionHelpers(on).getFunctionDeclaration())
@@ -55,7 +57,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       val declModifier = violationHelper.getViolationCheckingModifier()
       Statement.makeSeq(_all.toList:+declModifier:_*)
     }
-    val definitions = Statement.makeSeq(structDefinitions, declarations, interfaces, checkViolations, functions)
+    val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     DeclContract(name, definitions)
   }
 
@@ -139,8 +141,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     else {
       Empty()
     }
+    /** Emit events */
+    val emitEvent = eventHelper.emitEvent(update)
     val callDependentFunctions = getCallDependentFunctionsStatement(update)
-    Statement.makeSeq(newUpdates, callDependentFunctions)
+    Statement.makeSeq(newUpdates, callDependentFunctions, emitEvent)
   }
 
   private def getCallDependentFunctionsStatement(update: UpdateStatement): Statement = {

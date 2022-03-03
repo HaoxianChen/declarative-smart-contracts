@@ -9,6 +9,11 @@ sealed abstract class Parameter {
 
 case class Constant(_type: Type, name: String) extends Parameter {
   def setType(newType: Type): Constant = this.copy(_type=newType)
+
+  override def toString: String = _type match {
+    case SymbolType(t) => s"${t}($name)"
+    case _ => s"$name"
+  }
 }
 case class Variable(_type: Type, name: String) extends Parameter {
   def setType(newType: Type): Variable = this.copy(_type=newType)
@@ -19,6 +24,10 @@ sealed abstract class Relation {
   def sig: List[Type]
   def memberNames: List[String]
   require(sig.size == memberNames.size)
+
+  def paramList: List[Parameter] = sig.zip(memberNames).map {
+    case (t,n) => Variable(t,n)
+  }
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(

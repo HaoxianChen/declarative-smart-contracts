@@ -83,7 +83,7 @@ case class ImperativeTranslator(program: Program) {
     }
     /** todo: check recursions on the dependency map */
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
-      constructors++allUpdates, dependencyMap)
+      constructors++allUpdates, dependencyMap, program.rules)
   }
 
   private def getConstructor(constructorRel: Relation, rules: Set[Rule]): (Set[OnStatement], Set[Relation]) = {

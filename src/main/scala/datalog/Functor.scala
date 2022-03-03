@@ -25,13 +25,7 @@ case class One(_type: Type) extends Arithmetic {
 }
 case class Param(p: Parameter) extends Arithmetic {
   val _type = p._type
-  override def toString: String = p match {
-    case Constant(_type, name) => _type match {
-      case SymbolType(t) => s"${t}($name)"
-      case _ => s"$name"
-    }
-    case Variable(_type, name) => name
-  }
+  override def toString: String = p.toString
 }
 case class Negative(e: Arithmetic) extends Arithmetic {
   val _type = e._type
