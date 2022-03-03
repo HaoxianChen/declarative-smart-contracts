@@ -28,15 +28,13 @@ mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
 
-.decl totalMint(p: address, n: int)[0]
-.decl totalBurn(p: address, n: int)[0]
 .decl totalOut(p: address, n: int)[0]
 .decl totalIn(p: address, n: int)[0]
+transfer(0,p,n) :- mint(p,n).
+transfer(p,0,n) :- burn(p,n).
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
-totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
-totalBurn(p,s) :- burn(p,_), s = sum n: burn(p,n).
-balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
+balanceOf(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
 
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
@@ -45,10 +43,14 @@ allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // Properties
-.decl *totalBalances(m: int)
-.decl *unequalBalance(s: int, n: int, valid:bool)
+// .decl *totalBalances(m: int)
+// .decl *unequalBalance(s: int, n: int, valid:bool)
+//
+// .violation unequalBalance
+//
+// totalBalances(s) :- s = sum n: balanceOf(_,n).
+// unequalBalance(s,n,true) :- totalBalances(s), totalSupply(n), s!=n.
 
-.violation unequalBalance
-
-totalBalances(s) :- s = sum n: balanceOf(_,n).
-unequalBalance(s,n,true) :- totalBalances(s), totalSupply(n), s!=n.
+.decl negativeBalance(p:address,n:int,valid:bool)[0]
+.violation negativeBalance
+negativeBalance(p,n,true) :- balanceOf(p,n), n<0.

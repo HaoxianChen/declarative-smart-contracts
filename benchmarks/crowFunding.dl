@@ -48,10 +48,9 @@ closed(true) :- recv_close(), msgSender(s), owner(s).
 refund(p, n) :- recv_refund(), msgSender(p), closed(true),
             raised(r), target(t), r<t,
             balanceOf(p, n), n > 0.
-// send(p, n) :- recv_refund(), msgSender(p), closed(true), success(false),
-//                        balanceOf(address, n), n > 0.
+send(p,n) :- refund(p,n).
 
-withdraw(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p),
+withdraw(p,r) :- recv_withdraw(), msgSender(p), beneficiary(p),
             raised(r), target(t), r>=t.
-// send(p, n) :- recv_withdraw(), msgSender(p), beneficiary(p),
-//             raised(r), target(t), r>=t.
+
+send(p,r) :- withdraw(p,r).
