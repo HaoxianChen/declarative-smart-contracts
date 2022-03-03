@@ -9,6 +9,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, List[Int]] = program.indices
   private val eventHelper = EventHelper(program.rules)
+  private val payableRelations: Set[Relation] = {
+    val payableRules = program.rules.filter(_.body.exists(_.relation==MsgValue()))
+    payableRules.flatMap{
+      case rule => rule.body.map(_.relation).filter(_.name.startsWith(transactionRelationPrefix))
+    }
+  }
   private val dataStructureHelper: Map[Relation, DataStructureHelper] = relations.map{
     case rel: SimpleRelation => {
       /** todo: handle situation with no indices */
@@ -236,9 +242,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       }
       statement = Statement.makeSeq(statement, checkResults)
 
+      var modifiers: Set[String] = Set(ViolationHelper.violationCheckingFunctionName)
+      if (payableRelations.contains(iface.relation)) modifiers += "payable"
+
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
         metaData=FunctionMetaData(Publicity.Public, isView = false, isTransaction = true,
-          modifiers = Set(ViolationHelper.violationCheckingFunctionName))
+          modifiers = modifiers)
       )
     }
     val allInterfaceFunctions = interfaces.map(_declInterfaceFunction).toList
