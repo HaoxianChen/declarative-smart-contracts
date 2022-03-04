@@ -1,7 +1,7 @@
 package view
 
-import datalog.{Arithmetic, Count, Literal, Negative, One, Param, Relation, Rule}
-import imp.{DeleteTuple, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement}
+import datalog.{Arithmetic, Count, Literal, Negative, One, Param, Relation, Rule, Variable}
+import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, Statement}
 
 case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
@@ -13,8 +13,17 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
     val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val resultIndex = rule.head.fields.indexOf(count.aggResult)
     val delta: Arithmetic = One(count.aggResult._type)
-    val increment = Increment(rule.head.relation, rule.head, primaryKeyIndices, resultIndex, delta = delta)
-    OnInsert(insertedLiteral, rule.head.relation, statement = increment, ruleId)
+    val statement = {
+      val delete = if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
+        deleteByKeysStatement(insertedLiteral, insertTuple.keyIndices)
+      }
+      else {
+        Empty()
+      }
+      val increment = Increment(rule.head.relation, rule.head, primaryKeyIndices, resultIndex, delta = delta)
+      Statement.makeSeq(delete, increment)
+    }
+    OnInsert(insertedLiteral, rule.head.relation, statement, ruleId)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
@@ -29,6 +38,13 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
 
   protected def getInsertedLiteral(relation: Relation): Literal = {
     require(relation==count.relation)
-    count.literal
+    val memberNames = relation.memberNames
+    val fields = count.literal.fields.zipWithIndex.map{
+      case (p,i) => {
+        val name = if (p.name == "_") s"_${memberNames(i)}$i" else p.name
+        Variable(p._type,name)
+      }
+    }
+    Literal(relation, fields)
   }
 }

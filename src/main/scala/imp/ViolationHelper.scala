@@ -2,9 +2,10 @@ package imp
 
 import datalog.{Add, ArrayType, BooleanType, Constant, Param, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, StructType, Type, UnitType, Variable}
 import imp.ViolationHelper.{getKeyArrayName, getKeyStructName, getKeyTupleName, violationCheckingFunctionName}
+import imp.DataStructureHelper.{validBit, validField}
 
 case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRelation,List[Int]]) {
-  private def validBitIndex(relation: Relation) = relation.memberNames.indexOf("valid")
+  private def validBitIndex(relation: Relation) = relation.memberNames.indexOf(validField.name)
   private def getCheckingFunctionName(relation: Relation) = s"check${relation.name.capitalize}"
 
   def getViolationKeyArrayDecl(): Statement = {
@@ -28,7 +29,7 @@ case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRel
       case SingletonRelation(name, sig, memberNames) => {
         val readTuple = ReadTuple(relation, List())
         val revert = {
-          val cond = MatchRelationField(relation, validBitIndex(relation), Constant(BooleanType(), "true"))
+          val cond = MatchRelationField(relation, validBitIndex(relation), validBit)
           If(cond, Revert(name))
         }
         Statement.makeSeq(readTuple, revert)
@@ -44,8 +45,8 @@ case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRel
     val readTuple = ReadTuple(relation, keys)
     val tupleName = DataStructureHelper.relationalTupleName(relation)
     val revert = {
-      val a = Variable(BooleanType(), s"$tupleName.valid")
-      val b = Constant(BooleanType(), s"true")
+      val a = Variable(BooleanType(), s"$tupleName.${validField.name}")
+      val b = validBit
       val cond = Match(Param(a), Param(b))
       If(cond, Revert(relation.name))
     }

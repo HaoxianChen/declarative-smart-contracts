@@ -19,9 +19,6 @@ case class ImperativeTranslator(program: Program) {
   }.toMap
 
   def translate(): ImperativeAbstractProgram = {
-    def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
-    def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionPrefix)
-
     var triggers: Set[Trigger] = {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionPrefix))
       val relationsInBodies = program.rules.flatMap(_.body).map(_.relation)
@@ -37,11 +34,7 @@ case class ImperativeTranslator(program: Program) {
       hasUpdate = false
       for (trigger <- triggers) {
 
-        val triggeredRules: Set[Rule] = program.rules.filter(
-          r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
-        ).filterNot( /** transaction rules are only triggered by new transaction.  */
-          r => isTransactionRule(r) && !isTransactionTrigger(trigger)
-        )
+        val triggeredRules: Set[Rule] = getTriggeredRules(trigger)
 
         for (rule <- triggeredRules) {
           val updateProgram = views(rule).getUpdateStatement(trigger)
@@ -94,8 +87,24 @@ case class ImperativeTranslator(program: Program) {
     (allUpdates, dependentRules.map(_.head.relation))
   }
 
+  private def getTriggeredRules(trigger: Trigger): Set[Rule] = {
+    def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
+    def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionPrefix)
 
-  def getTrigger(statement: Statement): Set[Trigger] = statement match {
+    val triggeredRules: Set[Rule] = program.rules.filter(
+      r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
+    ).filterNot( /** transaction rules are only triggered by new transaction.  */
+      r => isTransactionRule(r) && !isTransactionTrigger(trigger)
+    )
+
+    trigger match {
+      case ReplacedByKey(_, _, targetRelation) => triggeredRules.filter(_.head.relation==targetRelation)
+      case _:InsertTuple|_:DeleteTuple|_:IncrementValue => triggeredRules
+    }
+  }
+
+
+  private def getTrigger(statement: Statement): Set[Trigger] = statement match {
     case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement => Set()
     case Seq(a,b) => getTrigger(a) ++ getTrigger(b)
     case If(_,s) => getTrigger(s)
@@ -104,7 +113,7 @@ case class ImperativeTranslator(program: Program) {
     case UpdateDependentRelations(update) => getTrigger(update)
     case Insert(lit) => Set(InsertTuple(lit.relation, primaryKeyIndices(lit.relation)))
     case Delete(lit) => Set(DeleteTuple(lit.relation, primaryKeyIndices(lit.relation)))
-    case DeleteByKeys(rel,keys) => Set(DeleteTuple(rel,primaryKeyIndices(rel)))
+    case DeleteByKeys(rel,keys, updateTarget) => Set(ReplacedByKey(rel, primaryKeyIndices(rel), updateTarget))
     case Increment(rel,lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
   }
 }

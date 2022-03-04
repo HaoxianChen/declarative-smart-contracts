@@ -5,6 +5,7 @@ import datalog.{BooleanType, Literal, Param, Parameter, Relation, UnitType, Vari
 case class FunctionHelper(onStatement: OnStatement) {
   val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
   val inRel = onStatement.relation
+  val updateTarget = onStatement.updateTarget
   private val functionName: String = {
     val action: String = onStatement match {
       case _:OnInsert => "Insert"

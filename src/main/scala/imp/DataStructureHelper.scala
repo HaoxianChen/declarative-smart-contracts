@@ -1,6 +1,7 @@
 package imp
 
-import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import imp.DataStructureHelper.{invalidBit, validBit, validField}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
@@ -8,10 +9,8 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   val valueIndices: List[Int] = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
   val valueType: StructType = {
     val name = s"${relation.name.capitalize}Tuple"
-    val members = relation.sig.zip(relation.memberNames).map {
-      case (t,n) => Variable(t,n)
-    }
-    StructType(name, members)
+    val members = valueIndices.map(i=>relation.paramList(i))
+    StructType(name, members:+validField)
   }
   val _type: Type = relation match {
     case _:SimpleRelation => getType(keyTypes, valueType)
@@ -47,12 +46,16 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     }
   }
 
+  private def getInsertParams(literal: Literal): List[Parameter] = {
+    valueIndices.map(i=>literal.fields(i)) :+ validBit
+  }
+
   def getUpdateStatement(update: UpdateStatement, isInsertKey: Boolean): Statement = update match {
     case i:Increment => i
     case del:Delete => deleteStatement(del)
     case del:DeleteByKeys => Empty()
     case ins:Insert => ins.relation match {
-      case rel: SingletonRelation => SetTuple(rel, ins.literal.fields)
+      case rel: SingletonRelation => SetTuple(rel, getInsertParams(ins.literal))
       case rel: SimpleRelation => insertStatement(ins, isInsertKey)
       case rel :ReservedRelation => rel match {
         case Send() => {
@@ -69,11 +72,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
                              dependentFunctions: Set[FunctionHelper]): Statement = {
     require(dependentFunctions.nonEmpty)
     update match {
-      case del:DeleteByKeys => {
-        val (readTuple, delete) = translateDeleteByKeys(del)
-        val calls = _callDependentFunctions(delete, dependentFunctions)
-        Statement.makeSeq(readTuple, calls)
-      }
+      case del:DeleteByKeys => translateDeleteByKeys(del, dependentFunctions)
       case _: Insert | _: Delete | _: Increment => _callDependentFunctions(update, dependentFunctions)
     }
   }
@@ -100,7 +99,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
 
   def insertStatement(insert: Insert, isInsertKey: Boolean): Statement = {
     val keys: List[Parameter] = indices.map(i=>insert.literal.fields(i))
-    val updateMap = UpdateMap(relation.name, keys, valueType.name, insert.literal.fields)
+    val updateMap = UpdateMap(relation.name, keys, valueType.name, getInsertParams(insert.literal))
     val insertKey: Statement = if (isInsertKey) {
       ViolationHelper.getInsertKeyStatement(insert.relation, keys)
     }
@@ -120,29 +119,36 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   private def resetTupleStatement(keys: List[Parameter], literal: Literal): Statement = {
     require(keys.nonEmpty || literal.relation.isInstanceOf[SingletonRelation])
     /** Reset values to zero. */
-    val params: List[Parameter] = relation.sig.indices.map(i => {
-      // if (indices.contains(i)) {
-      //   literal.fields(i)
-      // }
-      // else {
-      //   resetConstant(relation.sig(i))
-      //}
+    val params: List[Parameter] = valueIndices.map(i => {
       resetConstant(relation.sig(i))
-    }).toList
+    }) :+ invalidBit
     UpdateMap(relation.name,keys,valueType.name,params)
   }
 
-  private def translateDeleteByKeys(deleteByKeys: DeleteByKeys): (ReadTuple, Delete) = {
+  private def translateDeleteByKeys(deleteByKeys: DeleteByKeys, _dependentFunctions: Set[FunctionHelper]): Statement = {
     val tupleName: String = "toDelete"
     val rel = deleteByKeys.relation
     val readTuple = ReadTuple(rel, deleteByKeys.keys, tupleName)
     val toDelete: Literal = {
-      val fields = rel.sig.zip(rel.memberNames).map{
-        case (t,n) => Variable(t,s"$tupleName.$n")
-      }
+      val fields: List[Parameter] = deleteByKeys.keys ++ valueIndices.map(i=>{
+        val t = rel.sig(i)
+        val n = s"$tupleName.${rel.memberNames(i)}"
+        Variable(t,n)
+      })
       Literal(deleteByKeys.relation, fields)
     }
-    (readTuple, Delete(toDelete))
+    /** Check that toDelete exists. */
+    val isTupleValid = Match(Param(Variable(BooleanType(), s"$tupleName.${validField.name}")),
+      Param(Variable(BooleanType(), "true")))
+
+    /** Only update itself */
+    val dependentFunctions = _dependentFunctions.filter(_.updateTarget==deleteByKeys.updateTarget)
+    val deleteStatements = {
+      val delete = Delete(toDelete)
+      val calls = _callDependentFunctions(delete, dependentFunctions)
+      calls
+    }
+    Statement.makeSeq(readTuple, If(isTupleValid, deleteStatements))
   }
 
   def deleteStatement(delete: Delete): Statement = delete.relation match {
@@ -170,5 +176,8 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
 }
 
 object DataStructureHelper {
+  val validBit: Constant = Constant(BooleanType(), "true")
+  val invalidBit: Constant = Constant(BooleanType(), "false")
+  val validField: Variable = Variable(BooleanType(), "_valid")
   def relationalTupleName(relation: Relation): String = s"${relation.name}Tuple"
 }

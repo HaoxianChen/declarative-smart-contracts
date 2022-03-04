@@ -145,7 +145,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     remainingLiterals match {
       case Nil => innerStatement
       case head::tail => {
-        val newGroundedParams = groundedParams ++ head.fields.toSet
+        val newGroundedParams = (groundedParams ++ head.fields.toSet).filterNot(_.name=="_")
         val declareNewVars: Statement = _groundVariables(groundedParams, head)
         val nextStatements = _getJoinStatements(ruleHead, newGroundedParams, tail, innerStatement)
         val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
@@ -207,12 +207,19 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
       val deltaParam: Parameter = literal.fields(incrementValue.valueIndex)
       val toInsert: Literal = {
         val rel = incrementValue.relation
-        val fields = rel.sig.zip(rel.memberNames).map {
-          case (t,n) => if (n==targetField) {
-            Variable(t, s"$tupleName.$n+$deltaParam")
-          }
-          else {
-            Variable(t, s"$tupleName.$n")
+        val fields = rel.sig.zipWithIndex.map {
+          case (t,i) => {
+            val n = rel.memberNames(i)
+            if (n==targetField) {
+              Variable(t, s"$tupleName.$n+$deltaParam")
+            }
+            else if (primaryKeyIndices.contains(i)) {
+              Variable(t,n)
+            }
+            else {
+              Variable(t, s"$tupleName.$n")
+            }
+
           }
         }
         Literal(incrementValue.relation, fields)

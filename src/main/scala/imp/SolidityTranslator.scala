@@ -41,11 +41,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   private def getStructName(relation: Relation): String = s"${relation.name.capitalize}Tuple"
 
-  private def getStructType(relation: Relation) = {
-    val structName = getStructName(relation)
-    val params = interfaceRelationToParams(relation)
-    StructType(structName, params)
-  }
+  private def getStructType(relation: Relation) = dataStructureHelper(relation).valueType
 
   def translate(): Statement = {
     val structDefinitions: Statement = makeStructDefinitions()
@@ -150,7 +146,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     /** Emit events */
     val emitEvent = eventHelper.emitEvent(update)
     val callDependentFunctions = getCallDependentFunctionsStatement(update)
-    Statement.makeSeq(newUpdates, callDependentFunctions, emitEvent)
+    Statement.makeSeq(callDependentFunctions, newUpdates, emitEvent)
   }
 
   private def getCallDependentFunctionsStatement(update: UpdateStatement): Statement = {

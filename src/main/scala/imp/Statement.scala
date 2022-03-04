@@ -79,10 +79,10 @@ case class Delete(literal: Literal) extends UpdateStatement {
   val relation = literal.relation
   override def toString: String = s"delete $literal"
 }
-case class DeleteByKeys(relation: Relation, keys: List[Parameter]) extends UpdateStatement {
+case class DeleteByKeys(relation: Relation, keys: List[Parameter], updateTarget: Relation) extends UpdateStatement {
   override def toString: String = {
     val keyStr = keys.map(k=>s"[$k]").mkString("")
-    s"delete ${relation.name}$keyStr"
+    s"update $updateTarget on delete ${relation.name}$keyStr"
   }
 }
 case class UpdateDependentRelations(update: UpdateStatement) extends Statement {
@@ -307,6 +307,9 @@ case class InsertTuple(relation: Relation, keyIndices: List[Int]) extends Trigge
 }
 case class DeleteTuple(relation: Relation, keyIndices: List[Int]) extends Trigger {
   override def toString: String = s"delete ${relation.name}"
+}
+case class ReplacedByKey(relation: Relation, keyIndices: List[Int], targetRelation: Relation) extends Trigger {
+  override def toString: String = s"update $targetRelation on delete ${relation.name}"
 }
 case class IncrementValue(relation: Relation, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends Trigger {

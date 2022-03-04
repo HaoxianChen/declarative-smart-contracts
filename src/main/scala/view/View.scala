@@ -18,6 +18,10 @@ abstract class View {
     case it: InsertTuple => insertRow(it)
     case dt: DeleteTuple => deleteRow(dt)
     case iv: IncrementValue => updateRow(iv)
+    case ReplacedByKey(relation, keyIndices, targetRelation) => {
+      require(targetRelation==this.relation)
+      deleteRow(DeleteTuple(relation,keyIndices))
+    }
   }
 
   def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {
@@ -27,7 +31,7 @@ abstract class View {
 
   protected def deleteByKeysStatement(literal: Literal, keyIndices: List[Int]): Statement = {
       val keys = keyIndices.map(i=>literal.fields(i))
-      DeleteByKeys(literal.relation, keys)
+      DeleteByKeys(literal.relation, keys, updateTarget = this.relation)
   }
 
 }
