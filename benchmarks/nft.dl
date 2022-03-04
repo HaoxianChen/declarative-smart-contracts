@@ -15,7 +15,9 @@
 .decl recv_transfer(to: address, tokenId: uint)
 .decl recv_transferFrom(from: address, to: address, tokenId: uint)
 .decl recv_setApproval(tokenId:uint, p:address, b: bool)
+.decl recv_setApprovalForAll(operator: address, _approved: bool)
 .decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
 .decl transfer(tokenId: uint, from: address, to: address, time: uint)
 
 // Interfaces
@@ -23,11 +25,13 @@
 .interface recv_burn
 .interface recv_transfer
 .interface recv_transferFrom
+.interface recv_setApprovalForAll
 .interface recv_setApproval
 .interface approved(2)
 .interface balanceOf(1)
 .interface ownerOf(1)
 .interface exists(1)
+.interface isApprovedForAll(2)
 
 // Rules
 owner(s) :- constructor(), msgSender(s).
@@ -39,11 +43,14 @@ transfer(tokenId,p,0,time) :- recv_burn(tokenId), ownerOf(tokenId,p), msgSender(
                               owner(s), exists(tokenId,true), now(time).
 transfer(tokenId,s,r,time) :- recv_transfer(r,tokenId), msgSender(s), ownerOf(tokenId,s),now(time).
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s,true),now(time).
+transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId),ownerOf(tokenId,s),
+                                msgSender(o), isApprovedForAll(s,o,true), now(time).
 approval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
+isApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
 
 .decl latestTransfer(tokenId: uint, from: address, to: address, time: uint)[0]
 latestTransfer(tokenId,s,r,t) :- transfer(tokenId, s, r, t), t = max s: transfer(tokenId, _,_,s) .
-ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _).
+ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _), p!=0.
 exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
 approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
 

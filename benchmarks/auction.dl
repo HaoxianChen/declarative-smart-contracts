@@ -4,7 +4,14 @@
 
 // Configs
 .decl *owner(p: address)
-.decl constructor()
+.decl *beneficiary(p: address)
+.decl *endTime(t: uint)
+.decl constructor(beneficiary: address, biddingTime: uint)
+
+// Constructor
+owner(s) :- constructor(_,_), msgSender(s).
+endTime(t2) :- constructor(_,d), now(t), t2 := t+d.
+beneficiary(p) :- constructor(p,_).
 
 // Transactions
 .decl bid(bidder: address, amount: uint)
@@ -34,12 +41,15 @@ bidTotal(p,n) :- bid(p, _), n = sum m: bid(p, m).
 balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
 
 // Transaction conditions
-bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), end(false), highestBid(_,m), n>m.
+bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m,
+            now(t1), endTime(t2), t1 < t2.
 
 // withdraw(p,s) :- recv_withdrawWinner(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
 withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
 withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
 send(p,n) :- withdraw(p,n).
 
-end(true) :- recv_endAuction(), msgSender(s), owner(s).
-owner(s) :- constructor(), msgSender(s).
+end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2.
+send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p).
+// end(true) :- recv_endAuction(), msgSender(s), owner(s).
+// send(p,n) :- recv_endAuction(), msgSender(s), owner(s), highestBid(_,n), beneficiary(p).

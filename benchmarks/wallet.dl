@@ -44,13 +44,13 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // Properties
 // .decl *totalBalances(m: int)
-// .decl *unequalBalance(s: int, n: int, valid:bool)
+// .decl *unequalBalance(s: int, n: int)
 //
 // .violation unequalBalance
 //
 // totalBalances(s) :- s = sum n: balanceOf(_,n).
-// unequalBalance(s,n,true) :- totalBalances(s), totalSupply(n), s!=n.
+// unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
-.decl negativeBalance(p:address,n:int,valid:bool)[0]
-.violation negativeBalance
-negativeBalance(p,n,true) :- balanceOf(p,n), n<0.
+// .decl negativeBalance(p:address,n:int)[0]
+// .violation negativeBalance
+// negativeBalance(p,n) :- balanceOf(p,n), n<0.
