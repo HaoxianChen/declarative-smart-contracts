@@ -33,6 +33,7 @@ case class TypeChecker() {
     case Geq(a, b) => Geq(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Leq(a, b) => Leq(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Unequal(a, b) => Unequal(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Equal(a, b) => Equal(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Assign(a, b) => Assign(Param(a.p.setType(newType)), updateArithmeticType(b,newType))
   }
 

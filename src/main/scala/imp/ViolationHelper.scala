@@ -5,7 +5,6 @@ import imp.ViolationHelper.{getKeyArrayName, getKeyStructName, getKeyTupleName, 
 import imp.DataStructureHelper.{validBit, validField}
 
 case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRelation,List[Int]]) {
-  private def validBitIndex(relation: Relation) = relation.memberNames.indexOf(validField.name)
   private def getCheckingFunctionName(relation: Relation) = s"check${relation.name.capitalize}"
 
   def getViolationKeyArrayDecl(): Statement = {
@@ -82,7 +81,7 @@ case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRel
     val keys = primaryKeys(relation).map(i=>{
       Variable(relation.sig(i),relation.memberNames(i))
     })
-    StructType(structTypeName, keys:+validField)
+    StructType(structTypeName, keys)
   }
 
   def getViolationKeyStructTypes(): Set[StructType] = {

@@ -106,6 +106,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
         case l: datalog.Geq => imp.Geq(l.a,l.b)
         case l: datalog.Leq => imp.Leq(l.a,l.b)
         case l: datalog.Unequal => imp.Unequal(l.a,l.b)
+        case l: datalog.Equal => imp.Match(l.a,l.b)
         case _: datalog.Assign => imp.True()
       }
       cond = Condition.conjunction(cond, nextCond)
@@ -162,7 +163,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     val newParam = literal.fields(incrementValue.valueIndex)
     val isMatchedInBody = (rule.body - literal).exists(_.fields.contains(newParam))
     val existDifferentiableFunctor = rule.functors.exists {
-      case _:Greater|_:Lesser|_:datalog.Geq|_:datalog.Leq|_:datalog.Unequal => false
+      case _:Greater|_:Lesser|_:datalog.Geq|_:datalog.Leq|_:datalog.Unequal|_:datalog.Equal => false
       case datalog.Assign(_, b) => !Arithmetic.derivativeOf(b,Param(newParam)).isInstanceOf[Zero]
     }
     existDifferentiableFunctor && !isMatchedInBody

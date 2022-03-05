@@ -1,5 +1,7 @@
 package datalog
 
+import imp.Match
+
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.JavaTokenParsers
 
@@ -123,13 +125,14 @@ class ArithmeticParser extends JavaTokenParsers {
     case p ~ op ~ e => Assign(p,e)
   }
 
-  def comparison: Parser[Functor] = (expr) ~ (">="|"<="|">"|"<"|"!=") ~ expr ^^ {
+  def comparison: Parser[Functor] = (expr) ~ (">="|"<="|">"|"<"|"!="|"==") ~ expr ^^ {
     case a ~ op ~ b => op match {
       case ">=" => Geq(a,b)
       case "<=" => Leq(a,b)
       case ">" => Greater(a,b)
       case "<" => Lesser(a,b)
       case "!=" => Unequal(a,b)
+      case "==" => Equal(a,b)
     }
   }
 
