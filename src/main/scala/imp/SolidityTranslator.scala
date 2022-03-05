@@ -4,7 +4,7 @@ import datalog._
 import imp.SolidityTranslator.transactionRelationPrefix
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
-                              violations: Set[Relation]) {
+                              violations: Set[Relation], isInstrument: Boolean) {
   val name: String = program.name
   private val relations: Set[Relation] = program.relations
   private val indices: Map[SimpleRelation, List[Int]] = program.indices
@@ -26,7 +26,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
     val sendRelation = program.relations.filter(_ == Send())
-    fromStatements ++ viewRelations ++ violations ++ sendRelation
+    val _v = if (isInstrument) violations else Set()
+    fromStatements ++ viewRelations ++ _v ++ sendRelation
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
     on=>on->FunctionHelper(on)).toMap
@@ -54,11 +55,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         // .map(flattenIfStatement)
       Statement.makeSeq(translatedDecls.toList:_*)
     }
-    val checkViolations = {
+    val checkViolations = if (isInstrument) {
       val _all = violations.map(violationHelper.getViolationCheckingFunction)
       val declModifier = violationHelper.getViolationCheckingModifier()
       Statement.makeSeq(_all.toList:+declModifier:_*)
     }
+    else Empty()
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     DeclContract(name, definitions)
   }
@@ -238,7 +240,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       }
       statement = Statement.makeSeq(statement, checkResults)
 
-      var modifiers: Set[String] = Set(ViolationHelper.violationCheckingFunctionName)
+      var modifiers: Set[String] = Set()
+      if (isInstrument) modifiers += ViolationHelper.violationCheckingFunctionName
       if (payableRelations.contains(iface.relation)) modifiers += "payable"
 
       DeclFunction(funcName, params, returnType = iface.returnType, statement,

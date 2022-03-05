@@ -6,10 +6,11 @@ import java.nio.file.Paths
 
 object Main extends App {
   val outDir = "/Users/hxc/projects/smart-contracts/datalog/dsc"
+  val outDirWithInstrumentations = "/Users/hxc/projects/smart-contracts/datalog/dsc-instruments"
   val benchmarkDir = "/Users/hxc/projects/declarative-smart-contract/benchmarks"
   val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl")
 
-  def run(filepath: String, displayResult: Boolean): Unit = {
+  def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = {
       val parser = new Parser()
@@ -19,7 +20,7 @@ object Main extends App {
       typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
     val imperative = ImperativeTranslator(dl).translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,isInstrument).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -29,17 +30,20 @@ object Main extends App {
     }
   }
 
-  if (args(0) == "parse") {
+  if (args(0) == "compile") {
     val filepath = args(1)
-    run(filepath, displayResult = true)
+    val isInstrument = args(2).toBoolean
+    val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
+    run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument)
   }
   if (args(0) == "regression-test") {
+    val isInstrument = args(1).toBoolean
+    val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false)
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = isInstrument)
     }
-
   }
 
 }
