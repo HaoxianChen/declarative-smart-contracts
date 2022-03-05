@@ -29,8 +29,9 @@ case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRel
       case SingletonRelation(name, sig, memberNames) => {
         val readTuple = ReadTuple(relation, List())
         val revert = {
-          val cond = MatchRelationField(relation, validBitIndex(relation), validBit)
-          If(cond, Revert(name))
+          val isTupleValid = Match(Param(Variable(BooleanType(),
+            s"${relation.name}Tuple.${validField.name}")), Param(validBit))
+          If(isTupleValid, Revert(name))
         }
         Statement.makeSeq(readTuple, revert)
       }
@@ -81,7 +82,7 @@ case class ViolationHelper(violations: Set[Relation], primaryKeys: Map[SimpleRel
     val keys = primaryKeys(relation).map(i=>{
       Variable(relation.sig(i),relation.memberNames(i))
     })
-    StructType(structTypeName, keys)
+    StructType(structTypeName, keys:+validField)
   }
 
   def getViolationKeyStructTypes(): Set[StructType] = {

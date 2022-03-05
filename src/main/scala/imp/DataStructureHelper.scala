@@ -138,8 +138,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       Literal(deleteByKeys.relation, fields)
     }
     /** Check that toDelete exists. */
-    val isTupleValid = Match(Param(Variable(BooleanType(), s"$tupleName.${validField.name}")),
-      Param(Variable(BooleanType(), "true")))
+    val isTupleValid = Match(Param(Variable(BooleanType(), s"$tupleName.${validField.name}")), Param(validBit))
 
     /** Only update itself */
     val dependentFunctions = _dependentFunctions.filter(_.updateTarget==deleteByKeys.updateTarget)

@@ -327,6 +327,7 @@ case class False() extends Condition {
   override def toString: String = "false"
 }
 case class MatchRelationField(relation: Relation, index: Int, p: Parameter) extends Condition {
+  require(0 <= index && index < relation.sig.size, s"index out of bound $relation, $index, $p")
   override def toString: String = {
     relation match {
       case _: MsgSender => s"$p==msg.sender"
