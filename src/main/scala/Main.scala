@@ -19,7 +19,7 @@ object Main extends App {
       val typeChecker = TypeChecker()
       typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
-    val imperative = ImperativeTranslator(dl).translate()
+    val imperative = ImperativeTranslator(dl, isInstrument).translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,isInstrument).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)

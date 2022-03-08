@@ -1,13 +1,12 @@
 package imp
 
 import datalog._
+import imp.SolidityTranslator.transactionRelationPrefix
 import view.View
 
 /** Generate imperative program from Datalog rules
  * */
-case class ImperativeTranslator(program: Program) {
-  private val transactionPrefix = "recv_"
-
+case class ImperativeTranslator(program: Program, isInstrument: Boolean) {
   private val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
     case rel:SimpleRelation => rel->program.relationIndices.getOrElse(rel,List())
     case rel: SingletonRelation => rel->List()
@@ -18,9 +17,28 @@ case class ImperativeTranslator(program: Program) {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation),i))
   }.toMap
 
+  private val rulesToEvaluate: Set[Rule] = {
+    val targetRelations: Set[Relation] = {
+      val _v = if (isInstrument) program.violations else Set()
+      val transactionRules = program.rules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+      val viewRelations = program.interfaces.map(_.relation)
+      viewRelations ++ transactionRules.map(_.head.relation) ++ _v
+    }
+    var toEvaluate: Set[Rule] = Set()
+    var _nextTargetRelations: Set[Relation] = targetRelations
+    while (_nextTargetRelations.nonEmpty) {
+      val _dependentRules = program.rules.filter(r => _nextTargetRelations.contains(r.head.relation))
+      _nextTargetRelations = _dependentRules
+        .flatMap(r=>r.body.map(_.relation)++r.aggregators.map(_.relation))
+        .diff(toEvaluate.map(_.head.relation))
+      toEvaluate ++= _dependentRules
+    }
+    toEvaluate
+  }
+
   def translate(): ImperativeAbstractProgram = {
     var triggers: Set[Trigger] = {
-      val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionPrefix))
+      val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionRelationPrefix))
       val relationsInBodies = program.rules.flatMap(_.body).map(_.relation)
       val toTrigger = relationsInBodies.intersect(relationsToTrigger)
       toTrigger.map(rel => InsertTuple(rel,primaryKeyIndices(rel)))
@@ -88,10 +106,11 @@ case class ImperativeTranslator(program: Program) {
   }
 
   private def getTriggeredRules(trigger: Trigger): Set[Rule] = {
-    def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionPrefix))
-    def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionPrefix)
+    def isTransactionRule(rule: Rule): Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
+    def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionRelationPrefix)
 
-    val triggeredRules: Set[Rule] = program.rules.filter(
+    // val triggeredRules: Set[Rule] = program.rules.filter(
+    val triggeredRules: Set[Rule] = rulesToEvaluate.filter(
       r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
     ).filterNot( /** transaction rules are only triggered by new transaction.  */
       r => isTransactionRule(r) && !isTransactionTrigger(trigger)
