@@ -54,3 +54,10 @@ withdraw(p,r) :- recv_withdraw(), msgSender(p), beneficiary(p),
             raised(r), target(t), r>=t.
 
 send(p,r) :- withdraw(p,r).
+
+// Properties
+.decl *missingFund(m:uint, r:uint)
+.violation missingFund
+.decl *totalBalance(m:uint)
+totalBalance(m) :- m = sum n: balanceOf(_,n).
+missingFund(m,r) :- totalBalance(m),raised(r),m!=r,closed(b), b==false.

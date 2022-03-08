@@ -51,6 +51,6 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 // totalBalances(s) :- s = sum n: balanceOf(_,n).
 // unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
-// .decl negativeBalance(p:address,n:int)[0]
-// .violation negativeBalance
-// negativeBalance(p,n) :- balanceOf(p,n), n<0.
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+negativeBalance(p,n) :- balanceOf(p,n), n<0.

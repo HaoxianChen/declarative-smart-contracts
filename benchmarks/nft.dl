@@ -55,3 +55,8 @@ exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
 approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
 
 balanceOf(p,c) :- ownerOf(_,p), c = count: ownerOf(_,p).
+
+// Properties
+.decl tokenNoOwner(tokenId: uint)[0]
+.violation tokenNoOwner
+tokenNoOwner(tokenId) :- ownerOf(tokenId,o), o==0.
