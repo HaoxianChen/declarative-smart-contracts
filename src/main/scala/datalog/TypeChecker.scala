@@ -1,5 +1,7 @@
 package datalog
 
+import datalog.Arithmetic.updateArithmeticType
+
 case class TypeChecker() {
   def updateTypes(program: Program): Program = {
     val newRules = program.rules.map(updateFunctorType)
@@ -35,16 +37,6 @@ case class TypeChecker() {
     case Unequal(a, b) => Unequal(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Equal(a, b) => Equal(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Assign(a, b) => Assign(Param(a.p.setType(newType)), updateArithmeticType(b,newType))
-  }
-
-  private def updateArithmeticType(arithmetic: Arithmetic, newType: Type): Arithmetic = arithmetic match {
-    case Zero(_type) => Zero(newType)
-    case One(_type) => One(newType)
-    case Param(p) => Param(p.setType(newType))
-    case Negative(e) => Negative(updateArithmeticType(e,newType))
-    case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
-    case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
-    case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
   }
 
   private def inferType(arithmetic: Arithmetic, paramTypes: Map[String,Type]): Option[Type] = arithmetic match {

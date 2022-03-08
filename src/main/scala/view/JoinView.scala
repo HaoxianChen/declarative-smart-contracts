@@ -1,7 +1,7 @@
 package view
 
-import datalog.{Arithmetic, BooleanType, Constant, Functor, Greater, Lesser, Literal, Mul, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable, Zero}
-import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Return, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
+import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Constant, Functor, Greater, Lesser, Literal, Mul, NumberType, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, SymbolType, Type, UnitType, Variable, Zero}
+import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Return, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
@@ -17,16 +17,25 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
 
   def updateRow(incrementValue: IncrementValue): OnStatement = {
 
+    val literal = getInsertedLiteral(incrementValue.relation)
     if (isUpdatable(incrementValue)) {
       val updates = updateOnIncrementValue(incrementValue)
-      val literal = getInsertedLiteral(incrementValue.relation)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,
         updateTarget = rule.head.relation, statement = updates, ruleId)
     }
     else {
       /** todo: Check case where the incremented value directly matched to the head. */
-      fallBackToInsertRow(incrementValue)
+      val delta = {
+        val d = Param(literal.fields(incrementValue.valueIndex))
+        Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+      }
+      val increment = Increment(incrementValue.relation, literal, incrementValue.keyIndices, incrementValue.valueIndex,
+        delta = delta)
+      val incrementAndInsert = IncrementAndInsert(increment)
+      OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
+        updateIndex = incrementValue.valueIndex,
+        updateTarget = rule.head.relation, statement = incrementAndInsert, ruleId)
     }
   }
 
@@ -169,7 +178,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     existDifferentiableFunctor && !isMatchedInBody
   }
 
-  private def updateOnIncrementValue(incrementValue: IncrementValue): UpdateStatement = {
+  private def updateOnIncrementValue(incrementValue: IncrementValue): Increment = {
     val assignment: datalog.Assign = {
       val assignments: Set[datalog.Assign] = rule.functors.flatMap{
         case a: datalog.Assign => Some(a)
@@ -191,46 +200,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     /** Apply the chain rule. */
     val delta: Arithmetic = {
       val _d = Mul(Arithmetic.derivativeOf(assignment.b, x), x)
-      Arithmetic.simplify(_d)
+      val d = Arithmetic.simplify(_d)
+      Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
     }
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
-  private def fallBackToInsertRow(incrementValue: IncrementValue): OnStatement = {
-    val literal = getInsertedLiteral(incrementValue.relation)
-    val updates: Statement = {
-      val tupleName = "toInsert"
-      val readTuple = {
-        val keyList = incrementValue.keyIndices.map(i=>literal.fields(i))
-        ReadTuple(incrementValue.relation, keyList, tupleName)
-      }
-      val targetField: String = incrementValue.relation.memberNames(incrementValue.valueIndex)
-      val deltaParam: Parameter = literal.fields(incrementValue.valueIndex)
-      val toInsert: Literal = {
-        val rel = incrementValue.relation
-        val fields = rel.sig.zipWithIndex.map {
-          case (t,i) => {
-            val n = rel.memberNames(i)
-            if (n==targetField) {
-              Variable(t, s"$tupleName.$n+$deltaParam")
-            }
-            else if (primaryKeyIndices.contains(i)) {
-              Variable(t,n)
-            }
-            else {
-              Variable(t, s"$tupleName.$n")
-            }
-
-          }
-        }
-        Literal(incrementValue.relation, fields)
-      }
-      val insert = Insert(toInsert)
-      val updateDependentRelations = UpdateDependentRelations(insert)
-      Statement.makeSeq(readTuple, updateDependentRelations)
-    }
-    OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
-      updateIndex = incrementValue.valueIndex,
-      updateTarget = rule.head.relation, statement = updates, ruleId)
-  }
 }

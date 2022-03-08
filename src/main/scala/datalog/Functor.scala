@@ -86,6 +86,16 @@ object Arithmetic {
     } while (e2!=e1)
     e2
   }
+  def updateArithmeticType(arithmetic: Arithmetic, newType: Type): Arithmetic = arithmetic match {
+    case Zero(_type) => Zero(newType)
+    case One(_type) => One(newType)
+    case Param(p) => Param(p.setType(newType))
+    case Negative(e) => Negative(updateArithmeticType(e,newType))
+    case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+    case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+  }
+
 }
 
 sealed abstract class Functor {

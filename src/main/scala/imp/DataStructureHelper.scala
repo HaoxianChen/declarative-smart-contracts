@@ -1,7 +1,7 @@
 package imp
 
-import datalog.{AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
-import imp.DataStructureHelper.{invalidBit, validBit, validField}
+import datalog.{Add, AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import imp.DataStructureHelper.{getUpdateName, invalidBit, validBit, validField}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
@@ -51,7 +51,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   }
 
   def getUpdateStatement(update: UpdateStatement, isInsertKey: Boolean): Statement = update match {
-    case i:Increment => i
+    case i:Increment => translateIncrement(i)
     case del:Delete => deleteStatement(del)
     case del:DeleteByKeys => Empty()
     case ins:Insert => ins.relation match {
@@ -66,6 +66,43 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
         s"Do not support insert tuple of ${rel.getClass}: $rel")
         }
       }
+    case _: IncrementAndInsert => Empty()
+  }
+
+  private def _incrementToUpdateStatements(increment: Increment): (ConvertType, Call) = {
+    val valueType = increment.valueType
+    val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
+    val keyStr = if (keyList.nonEmpty) "[" + keyList.mkString(",") + "]" else ""
+    val fieldName = increment.relation.memberNames(increment.valueIndex)
+    val newValue = Variable(valueType, "newValue")
+    val x = Variable(valueType, s"${increment.relation.name}$keyStr.$fieldName")
+    val delta = Variable(increment.delta._type, "_delta")
+    // val assign = Assign(Param(delta), increment.delta)
+    val convertType = ConvertType(increment.delta, delta)
+    val callUpdate = {
+      Call(getUpdateName(valueType, increment.delta._type), params = List(x,delta) , Some(newValue))
+    }
+    (convertType, callUpdate)
+    /** todo : Make the type conversion conditional */
+    // if (increment.delta._type != valueType) {
+    // }
+    // else {
+    // }
+  }
+
+  private def translateIncrement(increment: Increment): Statement = {
+    val valueType = increment.valueType
+    if (valueType == increment.delta._type) {
+      increment
+    }
+    else {
+      val (assign, callUpdate) = _incrementToUpdateStatements(increment)
+      val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
+      val fieldName = increment.relation.memberNames(increment.valueIndex)
+      val newValue = callUpdate.optReturnVar.get
+      val updateMapValue = UpdateMapValue(increment.relation.name, keyList, fieldName, newValue)
+      Statement.makeSeq(assign, callUpdate, updateMapValue)
+    }
   }
 
   def callDependentFunctions(update: UpdateStatement,
@@ -73,9 +110,29 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     require(dependentFunctions.nonEmpty)
     update match {
       case del:DeleteByKeys => translateDeleteByKeys(del, dependentFunctions)
+      case inc: IncrementAndInsert => translateIncrementAndInsert(inc, dependentFunctions)
       case _: Insert | _: Delete | _: Increment => _callDependentFunctions(update, dependentFunctions)
     }
   }
+
+  private def translateIncrementAndInsert(incrementAndInsert: IncrementAndInsert,
+                                          _dependentFunctions: Set[FunctionHelper]
+                                         ): Statement = {
+    val increment = incrementAndInsert.increment
+    /** Read the tuple and update */
+    val (assign, callUpdate) = _incrementToUpdateStatements(increment)
+    /** Call dependent functions */
+    val newValue: Variable = callUpdate.optReturnVar.get
+    val insert: Insert = {
+      val fields = increment.literal.fields.zipWithIndex.map{
+        case (f,i) => if (i == increment.valueIndex) newValue else f
+      }
+      Insert(Literal(increment.relation, fields))
+    }
+    val call = _callDependentFunctions(insert, _dependentFunctions)
+    Statement.makeSeq(assign, callUpdate, call)
+  }
+
 
   private def _callDependentFunctions(update: UpdateStatement,
                              dependentFunctions: Set[FunctionHelper]): Statement = {
@@ -179,4 +236,22 @@ object DataStructureHelper {
   val invalidBit: Constant = Constant(BooleanType(), "false")
   val validField: Variable = Variable(BooleanType(), "_valid")
   def relationalTupleName(relation: Relation): String = s"${relation.name}Tuple"
+
+  def getUpdateName(xType: Type, deltaType: Type): String = s"update${xType}By${deltaType}"
+  def updateFunctionDecl(xType: Type, deltaType: Type): DeclFunction = {
+    val x = Variable(xType, "x")
+    val delta = Variable(deltaType, "delta")
+    val statement = {
+      val convertedX = Variable(deltaType, "convertedX")
+      val convert = ConvertType(x,convertedX)
+      val value = Variable(deltaType, "value")
+      val update = Assign(Param(value), Add(Param(convertedX), Param(delta)))
+      val convertedValue = Variable(xType, "convertedValue")
+      val convertBack = ConvertType(value, convertedValue)
+      val ret = Return(convertedValue)
+      Statement.makeSeq(convert, update,convertBack, ret)
+    }
+    DeclFunction(getUpdateName(xType,deltaType), List(x,delta), xType,statement,
+      metaData = FunctionMetaData(Publicity.Private, isView = false, isTransaction = false, modifiers = Set()))
+  }
 }

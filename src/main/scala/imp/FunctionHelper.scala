@@ -1,11 +1,13 @@
 package imp
 
 import datalog.{BooleanType, Literal, Param, Parameter, Relation, UnitType, Variable}
+import view.View
 
 case class FunctionHelper(onStatement: OnStatement) {
   val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
   val inRel = onStatement.relation
   val updateTarget = onStatement.updateTarget
+  private val functionDeclaration: DeclFunction = getFunctionDeclaration()
   private val functionName: String = {
     val action: String = onStatement match {
       case _:OnInsert => "Insert"
@@ -32,13 +34,15 @@ case class FunctionHelper(onStatement: OnStatement) {
       case Insert(literal) => Call(functionName, getParam(literal))
       case Delete(literal) => Call(functionName, getParam(literal))
       case _:DeleteByKeys => throw new Exception(s"Unhandled statement:$update")
-      case Increment(relation, literal, keyIndices, valueIndex, delta) => {
-        val outputType = relation.sig(valueIndex)
-        val outVar = Variable(outputType, "delta")
-        val params = getParam(literal) :+ outVar
-        val assign = imp.Assign(Param(outVar), delta)
+      case _:IncrementAndInsert => throw new Exception(s"Unhandled statement:$update")
+      case inc: Increment => {
+        val delta = inc.delta
+        val outVar = Variable(delta._type, "delta")
+        // val assign = imp.Assign(Param(outVar), delta)
+        val convertType: ConvertType = ConvertType(delta, outVar)
+        val params = getParam(inc.literal) :+ outVar
         val call = Call(functionName = functionName, params)
-        Statement.makeSeq(assign,call)
+        Statement.makeSeq(convertType,call)
       }
     }
   }
@@ -51,7 +55,7 @@ case class FunctionHelper(onStatement: OnStatement) {
     }
     Call(functionName, keyIndices.map(i=>params(i)), returnVar)
   }
-  def getFunctionDeclaration(): Statement = {
+  def getFunctionDeclaration(): DeclFunction = {
     val (funcName,params) = onStatement match {
       case OnInsert(literal, updateTarget, _,_) => {
         val params = literal.fields.filterNot(_.name == "_")
@@ -62,7 +66,10 @@ case class FunctionHelper(onStatement: OnStatement) {
         (functionName, params)
       }
       case onIncrement: OnIncrement => {
-        val ps = onIncrement.keys :+ onIncrement.updateValue
+        val delta = {
+          Variable(View.getDeltaType(onIncrement.updateValue._type), onIncrement.updateValue.name)
+        }
+        val ps = onIncrement.keys :+ delta
         (functionName, ps)
       }
     }

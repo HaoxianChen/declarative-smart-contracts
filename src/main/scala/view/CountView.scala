@@ -12,7 +12,10 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   def insertRow(insertTuple: InsertTuple): OnStatement = {
     val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val resultIndex = rule.head.fields.indexOf(count.aggResult)
-    val delta: Arithmetic = One(count.aggResult._type)
+    val delta: Arithmetic = {
+      val d = One(count.aggResult._type)
+      Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+    }
     val statement = {
       val delete = if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
         deleteByKeysStatement(insertedLiteral, insertTuple.keyIndices)
@@ -29,7 +32,10 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
     val deletedLiteral = getInsertedLiteral(deleteTuple.relation)
     val resultIndex = rule.head.fields.indexOf(count.aggResult)
-    val delta: Arithmetic = Negative(One(count.aggResult._type))
+    val delta: Arithmetic = {
+      val d = Negative(One(count.aggResult._type))
+      Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+    }
     val decrement = Increment(rule.head.relation, rule.head, primaryKeyIndices, resultIndex, delta = delta)
     OnDelete(deletedLiteral, rule.head.relation, statement = decrement, ruleId)
   }

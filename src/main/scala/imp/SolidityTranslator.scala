@@ -2,6 +2,7 @@ package imp
 
 import datalog._
 import imp.SolidityTranslator.transactionRelationPrefix
+import view.View
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
                               violations: Set[Relation], isInstrument: Boolean) {
@@ -52,8 +53,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val functions = {
       val decls = program.onStatements.map(on => functionHelpers(on).getFunctionDeclaration())
       val translatedDecls = decls.map(translateStatement)
+      val updateFunctions = getUpdateFunctionDeclarations()
         // .map(flattenIfStatement)
-      Statement.makeSeq(translatedDecls.toList:_*)
+      Statement.makeSeq((translatedDecls++updateFunctions).toList:_*)
     }
     val checkViolations = if (isInstrument) {
       val _all = violations.map(violationHelper.getViolationCheckingFunction)
@@ -63,6 +65,19 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     else Empty()
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     DeclContract(name, definitions)
+  }
+
+  private def getUpdateFunctionDeclarations(): Set[DeclFunction] = {
+    /** todo: make this more dynamic */
+    val all = program.onStatements.flatMap {
+      case _:OnInsert | _:OnDelete => None
+      case onIncrement: OnIncrement => {
+        val xType = onIncrement.relation.sig(onIncrement.updateIndex)
+        val deltaType = View.getDeltaType(xType)
+        Some(DataStructureHelper.updateFunctionDecl(xType,deltaType))
+      }
+    }
+    all + DataStructureHelper.updateFunctionDecl(Type.uintType, Type.integerType)
   }
 
   private def getRelationDeclartions(): Statement = {
@@ -166,6 +181,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case If(_,stmt) => relationsToMaterialize(stmt)
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
+    case inc: IncrementAndInsert => Set(inc.relation)
     case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
   }
 

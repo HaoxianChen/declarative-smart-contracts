@@ -29,5 +29,6 @@ case class EventHelper(rules: Set[Rule]) {
     case _:Delete => Empty()
     case _:DeleteByKeys => Empty()
     case _:Increment => Empty()
+    case _:IncrementAndInsert => Empty()
   }
 }

@@ -111,6 +111,7 @@ case class ImperativeTranslator(program: Program) {
     case o: OnStatement => getTrigger(o.statement)
     case Search(_, _, stmt) => getTrigger(stmt)
     case UpdateDependentRelations(update) => getTrigger(update)
+    case IncrementAndInsert(increment) => Set(InsertTuple(increment.relation, primaryKeyIndices(increment.relation)))
     case Insert(lit) => Set(InsertTuple(lit.relation, primaryKeyIndices(lit.relation)))
     case Delete(lit) => Set(DeleteTuple(lit.relation, primaryKeyIndices(lit.relation)))
     case DeleteByKeys(rel,keys, updateTarget) => Set(ReplacedByKey(rel, primaryKeyIndices(rel), updateTarget))

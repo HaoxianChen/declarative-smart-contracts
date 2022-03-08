@@ -85,11 +85,15 @@ case class DeleteByKeys(relation: Relation, keys: List[Parameter], updateTarget:
     s"update $updateTarget on delete ${relation.name}$keyStr"
   }
 }
+case class IncrementAndInsert(increment: Increment) extends UpdateStatement {
+  val relation = increment.relation
+}
 case class UpdateDependentRelations(update: UpdateStatement) extends Statement {
   override def toString: String = s"update dependent relations on $update"
 }
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
+  val valueType = relation.sig(valueIndex)
   override def toString: String = {
     val keyStr = relation match {
       case SimpleRelation(name, sig, memberNames) => {
@@ -177,12 +181,26 @@ case class UpdateMap(name: String, keys: List[Parameter], tupleTypeName: String,
     s"$name$keyStr = $tupleTypeName($paramStr);"
   }
 }
+case class UpdateMapValue(name: String, keys: List[Parameter], fieldName: String, p: Parameter)
+  extends SolidityStatement {
+  override def toString: String = {
+    val keyStr: String = keys.map(k=>s"[$k]").mkString("")
+    s"$name$keyStr.$fieldName = $p;"
+  }
+}
 case class SetTuple(relation: SingletonRelation, params: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
     val structType = s"${relation.name.capitalize}Tuple"
     val paramStr = params.mkString(",")
     s"${relation.name} = $structType($paramStr);"
   }
+}
+case class ConvertType(from: Arithmetic, to: Variable) extends SolidityStatement {
+  private val t = to._type
+  override def toString: String = s"$t $to = $t($from);"
+}
+object ConvertType {
+  def apply(from: Variable, to: Variable): ConvertType = ConvertType(Param(from),to)
 }
 case class DeclFunction(name: String, params: List[Parameter], returnType: Type, stmt: Statement,
                         metaData: FunctionMetaData)

@@ -49,5 +49,16 @@ object View {
       }
     }
   }
+
+  def getDeltaType(t: Type): Type = t match {
+      case NumberType(name) => {
+        if (name == "uint") Type.integerType
+        else if (name == "int") Type.integerType
+        else {
+          ???
+        }
+      }
+      case _ => ???
+    }
 }
 
