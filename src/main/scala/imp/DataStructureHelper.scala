@@ -71,13 +71,12 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
 
   private def _incrementToUpdateStatements(increment: Increment): (Statement, Variable) = {
     val valueType = increment.valueType
-    val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
-    val keyStr = if (keyList.nonEmpty) "[" + keyList.mkString(",") + "]" else ""
+    val keyList = increment.keyParams
+    val keyStr = keyList.map(k => s"[$k]").mkString("")
     val fieldName = increment.relation.memberNames(increment.valueIndex)
     val newValue = Variable(valueType, "newValue")
     val x = Variable(valueType, s"${increment.relation.name}$keyStr.$fieldName")
     val delta = Variable(increment.delta._type, "_delta")
-    // val assign = Assign(Param(delta), increment.delta)
     val convertType = ConvertType(increment.delta, delta)
     val callUpdate = {
       Call(getUpdateName(valueType, increment.delta._type), params = List(x,delta) , Some(newValue))
@@ -92,9 +91,8 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     }
     else {
       val (callUpdate, newValue) = _incrementToUpdateStatements(increment)
-      val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
       val fieldName = increment.relation.memberNames(increment.valueIndex)
-      val updateMapValue = UpdateMapValue(increment.relation.name, keyList, fieldName, newValue)
+      val updateMapValue = UpdateMapValue(increment.relation.name, increment.keyParams, fieldName, newValue)
       Statement.makeSeq(callUpdate, updateMapValue)
     }
   }

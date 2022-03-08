@@ -94,6 +94,7 @@ case class UpdateDependentRelations(update: UpdateStatement) extends Statement {
 case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int], valueIndex: Int, delta: Arithmetic)
   extends UpdateStatement {
   val valueType = relation.sig(valueIndex)
+  val keyParams = keyIndices.map(i => literal.fields(i))
   override def toString: String = {
     val keyStr = relation match {
       case SimpleRelation(name, sig, memberNames) => {
