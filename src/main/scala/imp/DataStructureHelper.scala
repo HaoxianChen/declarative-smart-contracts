@@ -69,7 +69,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     case _: IncrementAndInsert => Empty()
   }
 
-  private def _incrementToUpdateStatements(increment: Increment): (ConvertType, Call) = {
+  private def _incrementToUpdateStatements(increment: Increment): (Statement, Variable) = {
     val valueType = increment.valueType
     val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
     val keyStr = if (keyList.nonEmpty) "[" + keyList.mkString(",") + "]" else ""
@@ -82,12 +82,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
     val callUpdate = {
       Call(getUpdateName(valueType, increment.delta._type), params = List(x,delta) , Some(newValue))
     }
-    (convertType, callUpdate)
-    /** todo : Make the type conversion conditional */
-    // if (increment.delta._type != valueType) {
-    // }
-    // else {
-    // }
+    (Statement.makeSeq(convertType, callUpdate), newValue)
   }
 
   private def translateIncrement(increment: Increment): Statement = {
@@ -96,12 +91,11 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       increment
     }
     else {
-      val (assign, callUpdate) = _incrementToUpdateStatements(increment)
+      val (callUpdate, newValue) = _incrementToUpdateStatements(increment)
       val keyList = increment.keyIndices.map(i=>increment.relation.paramList(i))
       val fieldName = increment.relation.memberNames(increment.valueIndex)
-      val newValue = callUpdate.optReturnVar.get
       val updateMapValue = UpdateMapValue(increment.relation.name, keyList, fieldName, newValue)
-      Statement.makeSeq(assign, callUpdate, updateMapValue)
+      Statement.makeSeq(callUpdate, updateMapValue)
     }
   }
 
@@ -120,9 +114,8 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
                                          ): Statement = {
     val increment = incrementAndInsert.increment
     /** Read the tuple and update */
-    val (assign, callUpdate) = _incrementToUpdateStatements(increment)
+    val (callUpdate, newValue) = _incrementToUpdateStatements(increment)
     /** Call dependent functions */
-    val newValue: Variable = callUpdate.optReturnVar.get
     val insert: Insert = {
       val fields = increment.literal.fields.zipWithIndex.map{
         case (f,i) => if (i == increment.valueIndex) newValue else f
@@ -130,7 +123,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       Insert(Literal(increment.relation, fields))
     }
     val call = _callDependentFunctions(insert, _dependentFunctions)
-    Statement.makeSeq(assign, callUpdate, call)
+    Statement.makeSeq(callUpdate, call)
   }
 
 
@@ -242,14 +235,22 @@ object DataStructureHelper {
     val x = Variable(xType, "x")
     val delta = Variable(deltaType, "delta")
     val statement = {
-      val convertedX = Variable(deltaType, "convertedX")
-      val convert = ConvertType(x,convertedX)
-      val value = Variable(deltaType, "value")
-      val update = Assign(Param(value), Add(Param(convertedX), Param(delta)))
-      val convertedValue = Variable(xType, "convertedValue")
-      val convertBack = ConvertType(value, convertedValue)
-      val ret = Return(convertedValue)
-      Statement.makeSeq(convert, update,convertBack, ret)
+      if (xType == deltaType) {
+        val newValue = Variable(xType, "newValue")
+        val update = Assign(Param(newValue), Add(Param(x), Param(delta)))
+        val ret = Return(newValue)
+        Statement.makeSeq(update,ret)
+      }
+      else {
+        val convertedX = Variable(deltaType, "convertedX")
+        val convert = ConvertType(x,convertedX)
+        val value = Variable(deltaType, "value")
+        val update = Assign(Param(value), Add(Param(convertedX), Param(delta)))
+        val convertedValue = Variable(xType, "convertedValue")
+        val convertBack = ConvertType(value, convertedValue)
+        val ret = Return(convertedValue)
+        Statement.makeSeq(convert, update,convertBack, ret)
+      }
     }
     DeclFunction(getUpdateName(xType,deltaType), List(x,delta), xType,statement,
       metaData = FunctionMetaData(Publicity.Private, isView = false, isTransaction = false, modifiers = Set()))
