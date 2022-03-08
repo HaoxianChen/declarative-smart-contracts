@@ -2,25 +2,25 @@
 .decl *owner(p: address)
 
 // views
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl *totalSupply(n: uint)
+.decl balanceOf(p: address, n: uint)[0]
 .decl constructor()
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:uint)[0,1]
 
 // Transactions
-.decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
-.decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
-.decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl mint(p: address, amount: uint)
+.decl recv_mint(p: address, amount: uint)
+.decl burn(p: address, amount: uint)
+.decl recv_burn(p: address, amount: uint)
+.decl transfer(from: address, to: address, amount: uint)
+.decl recv_transfer(from: address, to: address, amount: uint)
 
 // New transactions
-.decl recv_transferFrom(from: address, to: address, amount: int)
-.decl increaseAllowance(p: address, s: address, n:int)
-.decl recv_approve(p: address, s: address, n:int)
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_approve(p: address, s: address, n:uint)
 
 // Interfaces
 .interface recv_mint
@@ -41,18 +41,18 @@ mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), n>=m.
 
-.decl totalMint(p: address, n: int)[0]
-.decl totalBurn(p: address, n: int)[0]
-.decl totalOut(p: address, n: int)[0]
-.decl totalIn(p: address, n: int)[0]
+.decl totalMint(p: address, n: uint)[0]
+.decl totalBurn(p: address, n: uint)[0]
+.decl totalOut(p: address, n: uint)[0]
+.decl totalIn(p: address, n: uint)[0]
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
 totalBurn(p,s) :- burn(p,_), s = sum n: burn(p,n).
 balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
 
-.decl *allMint(n: int)
-.decl *allBurn(n: int)
+.decl *allMint(n: uint)
+.decl *allBurn(n: uint)
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
@@ -62,23 +62,23 @@ transfer(o,r,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
                     msgSender(s), allowance(o,s,k), k>=n.
 
-.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: uint)
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
                     msgSender(s), allowance(o,s,k), k>=n.
 
 increaseAllowance(o,s,d) :- recv_approve(o,s,n), msgSender(o), allowance(o,s,m), d:=n-m.
 
-.decl allowanceTotal(o:address, s:address, m:int)[0,1]
-.decl spentTotal(o:address, s:address, m:int)[0,1]
+.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl spentTotal(o:address, s:address, m:uint)[0,1]
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 // Properties
-.decl *totalBalances(m: int)
-.decl *unequalBalance(s: int, n: int)
+.decl *totalBalances(m: uint)
+.decl *unequalBalance(s: uint, n: uint)
 
 .violation unequalBalance
 
