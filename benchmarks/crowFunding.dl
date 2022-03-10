@@ -28,6 +28,7 @@
 beneficiary(p) :- constructor(_, p).
 target(t) :- constructor(t,_).
 owner(p) :- constructor(_,_), msgSender(p).
+raised(0) :- constructor(_,_).
 
 // Views
 raised(s) :- s = sum m: invest(_, m).
@@ -59,5 +60,6 @@ send(p,r) :- withdraw(p,r).
 .decl *missingFund(m:uint, r:uint)
 .violation missingFund
 .decl *totalBalance(m:uint)
+totalBalance(0) :- constructor(_,_).
 totalBalance(m) :- m = sum n: balanceOf(_,n).
 missingFund(m,r) :- totalBalance(m),raised(r),m!=r,closed(b), b==false.

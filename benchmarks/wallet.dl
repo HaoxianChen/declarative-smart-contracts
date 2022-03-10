@@ -53,4 +53,4 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
-negativeBalance(p,n) :- balanceOf(p,n), n<0.
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
