@@ -58,14 +58,11 @@ allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // New rules
-transfer(o,r,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n.
-
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
                     msgSender(s), allowance(o,s,k), k>=n.
+transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
 
