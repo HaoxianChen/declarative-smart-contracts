@@ -17,6 +17,8 @@ case class ImperativeTranslator(program: Program, isInstrument: Boolean) {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation),i))
   }.toMap
 
+  def ruleSize: Int = rulesToEvaluate.size
+
   private val rulesToEvaluate: Set[Rule] = {
     val targetRelations: Set[Relation] = {
       val _v = if (isInstrument) program.violations else Set()

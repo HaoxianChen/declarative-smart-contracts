@@ -19,7 +19,8 @@ object Main extends App {
       val typeChecker = TypeChecker()
       typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
-    val imperative = ImperativeTranslator(dl, isInstrument).translate()
+    val impTranslator =ImperativeTranslator(dl, isInstrument)
+    val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,isInstrument).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
@@ -28,6 +29,7 @@ object Main extends App {
       println(imperative)
       println(s"Solidity program:\n${solidity}")
     }
+    println(s"${impTranslator.ruleSize} rules.")
   }
 
   if (args(0) == "compile") {
