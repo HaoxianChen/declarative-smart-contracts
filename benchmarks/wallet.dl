@@ -24,8 +24,8 @@
 // Rules
 owner(s) :- constructor(), msgSender(s).
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), balanceOf(p,m), n<=m.
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0, p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0, balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
 
 .decl totalOut(p: address, n: int)[0]

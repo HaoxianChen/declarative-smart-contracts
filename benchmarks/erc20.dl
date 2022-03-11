@@ -38,8 +38,8 @@
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), balanceOf(p,m), n<=m.
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
 
 .decl totalMint(p: address, n: uint)[0]
