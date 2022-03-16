@@ -157,7 +157,7 @@ class Parser extends ArithmeticParser {
       }
     }
   def interfaceDecl: Parser[ParsingContext => ParsingContext] =
-    (".interface" ~> ident) ~ opt("("~> wholeNumber <~")") ^^ {
+    (".public" ~> ident) ~ opt("("~> wholeNumber <~")") ^^ {
       case name ~ optOutIndex => {
         pc => pc.addInterface(name, optOutIndex)
     }

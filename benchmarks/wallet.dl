@@ -15,11 +15,11 @@
 .decl recv_transfer(from: address, to: address, amount: int)
 
 // Interfaces
-.interface recv_mint
-.interface recv_burn
-.interface recv_transfer
-.interface balanceOf(1)
-.interface totalSupply(0)
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
 
 // Rules
 owner(s) :- constructor(), msgSender(s).

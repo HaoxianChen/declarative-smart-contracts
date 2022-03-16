@@ -23,16 +23,16 @@
 .decl recv_approve(s: address, n:uint)
 
 // Interfaces
-.interface recv_mint
-.interface recv_burn
-.interface recv_transfer
-.interface balanceOf(1)
-.interface totalSupply(0)
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
 
 // New interfaces
-.interface recv_approve
-.interface recv_transferFrom
-.interface allowance(2)
+.public recv_approve
+.public recv_transferFrom
+.public allowance(2)
 
 // Rules
 owner(s) :- constructor(), msgSender(s).

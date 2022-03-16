@@ -18,12 +18,12 @@
 .decl *closed(b: bool)
 
 // Interfaces
-.interface recv_close
-.interface recv_invest
-.interface recv_refund
-.interface recv_withdraw
-.interface closed(0)
-.interface raised(0)
+.public recv_close
+.public recv_invest
+.public recv_refund
+.public recv_withdraw
+.public closed(0)
+.public raised(0)
 
 beneficiary(p) :- constructor(_, p).
 target(t) :- constructor(t,_).

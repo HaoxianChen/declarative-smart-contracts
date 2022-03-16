@@ -23,14 +23,14 @@ beneficiary(p) :- constructor(p,_).
 .decl recv_endAuction()
 
 // Interface
-.interface recv_bid
-.interface recv_withdraw
-.interface recv_endAuction
+.public recv_bid
+.public recv_withdraw
+.public recv_endAuction
 
 // Views
 .decl *highestBid(bidder: address, amount: uint)
 .decl balance(p: address, n:uint)[0]
-.interface balance(1)
+.public balance(1)
 
 highestBid(p,m) :- bid(p,m), m = max n: bid(_, n).
 

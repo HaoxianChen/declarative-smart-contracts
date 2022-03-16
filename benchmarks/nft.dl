@@ -21,17 +21,17 @@
 .decl transfer(tokenId: uint, from: address, to: address, time: uint)
 
 // Interfaces
-.interface recv_mint
-.interface recv_burn
-.interface recv_transfer
-.interface recv_transferFrom
-.interface recv_setApprovalForAll
-.interface recv_setApproval
-.interface approved(2)
-.interface balanceOf(1)
-.interface ownerOf(1)
-.interface exists(1)
-.interface isApprovedForAll(2)
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_transferFrom
+.public recv_setApprovalForAll
+.public recv_setApproval
+.public approved(2)
+.public balanceOf(1)
+.public ownerOf(1)
+.public exists(1)
+.public isApprovedForAll(2)
 
 // Rules
 owner(s) :- constructor(), msgSender(s).
