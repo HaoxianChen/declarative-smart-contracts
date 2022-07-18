@@ -1,5 +1,7 @@
 package datalog
 
+import imp.SolidityTranslator.transactionRelationPrefix
+
 sealed abstract class Parameter {
   def _type: Type
   def name: String
@@ -66,7 +68,7 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
   }
 }
 
-case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggregators: Set[Aggregator]) {
+case class Rule(head: Literal, body: Set[Literal], functors: Set[BinFunctor], aggregators: Set[Aggregator]) {
   override def toString: String = {
     val litStr = body.map(_.toString)
     val functorStr = functors.map(_.toString)
@@ -111,4 +113,7 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
     ret
   }
   def setName(newName: String): Program = this.copy(name=newName)
+
+  def transactionRules(): Set[Rule] = rules.filter(_.body.exists(
+                                         _.relation.name.startsWith(transactionRelationPrefix)))
 }

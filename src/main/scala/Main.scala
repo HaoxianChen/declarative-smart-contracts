@@ -1,6 +1,7 @@
 import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
+import verification.{Prove, TransitionSystem}
 
 import java.nio.file.Paths
 
@@ -46,6 +47,11 @@ object Main extends App {
       val filepath = Paths.get(benchmarkDir, p).toString
       run(filepath, displayResult = false, outDir=_outDir, isInstrument = isInstrument)
     }
+  }
+
+  if (args(0) == "testz3") {
+    TransitionSystem.testTS()
+    // Prove.testZ3()
   }
 
 }

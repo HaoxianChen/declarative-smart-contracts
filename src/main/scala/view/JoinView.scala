@@ -1,6 +1,6 @@
 package view
 
-import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Constant, Functor, Greater, Lesser, Literal, Mul, NumberType, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, SymbolType, Type, UnitType, Variable, Zero}
+import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Constant, BinFunctor, Greater, Lesser, Literal, Mul, NumberType, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, SymbolType, Type, UnitType, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Return, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 
@@ -106,7 +106,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
     })
   }
 
-  private def getConditionsFromFunctors(functors: Set[Functor]): Condition = {
+  private def getConditionsFromFunctors(functors: Set[BinFunctor]): Condition = {
     var cond: Condition = True()
     for (f <- functors) {
       val nextCond: Condition = f match {

@@ -121,11 +121,11 @@ class ArithmeticParser extends JavaTokenParsers {
     }
   }
 
-  def assignment: Parser[Functor] = parameter ~ ":=" ~ expr ^^ {
+  def assignment: Parser[BinFunctor] = parameter ~ ":=" ~ expr ^^ {
     case p ~ op ~ e => Assign(p,e)
   }
 
-  def comparison: Parser[Functor] = (expr) ~ (">="|"<="|">"|"<"|"!="|"==") ~ expr ^^ {
+  def comparison: Parser[BinFunctor] = (expr) ~ (">="|"<="|">"|"<"|"!="|"==") ~ expr ^^ {
     case a ~ op ~ b => op match {
       case ">=" => Geq(a,b)
       case "<=" => Leq(a,b)
@@ -136,7 +136,7 @@ class ArithmeticParser extends JavaTokenParsers {
     }
   }
 
-  def functor: Parser[Functor] = comparison | assignment
+  def functor: Parser[BinFunctor] = comparison | assignment
 
 }
 
@@ -185,7 +185,7 @@ class Parser extends ArithmeticParser {
   def variable: Parser[Variable] = ident ^^ {x => Variable(AnyType(), x)}
   def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(Type.integerType, x)}
   def parameter: Parser[Parameter] = variable | constant
-  def functorFromPc: Parser[ParsingContext => Functor] = functor ^^ {f => _:ParsingContext => f}
+  def functorFromPc: Parser[ParsingContext => BinFunctor] = functor ^^ { f => _:ParsingContext => f}
   def aggregator: Parser[ParsingContext => Aggregator] = (variable <~ "=") ~ ("sum"|"max"|"count") ~ (opt(variable) <~ ":") ~ literal ^^ {
     case s ~ op ~ n ~ fLit => pc => {
       val lit: Literal = fLit(pc)
@@ -198,11 +198,11 @@ class Parser extends ArithmeticParser {
       case head ~ fs =>
         pc => {
           var body: Set[Literal] = Set()
-          var functors: Set[Functor] = Set()
+          var functors: Set[BinFunctor] = Set()
           var aggregators: Set[Aggregator] = Set()
           for (f <- fs) f(pc) match {
               case l: Literal => body += l
-              case f: Functor => functors += f
+              case f: BinFunctor => functors += f
               case a: Aggregator => aggregators += a
             }
           val rule = Rule(head(pc), body, functors, aggregators)
