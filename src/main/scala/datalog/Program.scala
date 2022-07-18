@@ -66,7 +66,7 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
   }
 }
 
-case class Rule(head: Literal, body: Set[Literal], functors: Set[Functor], aggregators: Set[Aggregator]) {
+case class Rule(head: Literal, body: Set[Literal], functors: Set[BinFunctor], aggregators: Set[Aggregator]) {
   override def toString: String = {
     val litStr = body.map(_.toString)
     val functorStr = functors.map(_.toString)

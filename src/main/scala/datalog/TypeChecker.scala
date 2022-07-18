@@ -29,7 +29,7 @@ case class TypeChecker() {
     rule.copy(functors = newFuntors)
   }
 
-  private def _updateFunctorType(functor: Functor, newType: Type): Functor = functor match {
+  private def _updateFunctorType(functor: BinFunctor, newType: Type): BinFunctor = functor match {
     case Greater(a, b) => Greater(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Lesser(a, b) => Lesser(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
     case Geq(a, b) => Geq(updateArithmeticType(a,newType), updateArithmeticType(b,newType))

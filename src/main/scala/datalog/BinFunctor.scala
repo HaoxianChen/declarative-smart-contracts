@@ -98,29 +98,31 @@ object Arithmetic {
 
 }
 
-sealed abstract class Functor {
+sealed abstract class Functor
+
+sealed abstract class BinFunctor extends Functor {
   def a: Arithmetic
   def b: Arithmetic
 }
-case class Greater(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Greater(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a>$b"
 }
-case class Lesser(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Lesser(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a<$b"
 }
-case class Geq(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Geq(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a>=$b"
 }
-case class Leq(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Leq(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a<=$b"
 }
-case class Unequal(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Unequal(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a!=$b"
 }
-case class Equal(a: Arithmetic, b: Arithmetic) extends Functor {
+case class Equal(a: Arithmetic, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a==$b"
 }
-case class Assign(a: Param, b: Arithmetic) extends Functor {
+case class Assign(a: Param, b: Arithmetic) extends BinFunctor {
   override def toString: String = s"$a := $b"
   def updateOutputType(outputType: Type): Assign = {
     val newP = a.p.setType(outputType)
