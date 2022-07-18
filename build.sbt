@@ -8,3 +8,7 @@ lazy val root = (project in file("."))
 
   )
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+
+Compile / unmanagedJars += {
+  baseDirectory.value / "unmanaged" / "com.microsoft.z3.jar"
+}
