@@ -1,5 +1,7 @@
 package datalog
 
+import imp.SolidityTranslator.transactionRelationPrefix
+
 sealed abstract class Parameter {
   def _type: Type
   def name: String
@@ -111,4 +113,7 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
     ret
   }
   def setName(newName: String): Program = this.copy(name=newName)
+
+  def transactionRules(): Set[Rule] = rules.filter(_.body.exists(
+                                         _.relation.name.startsWith(transactionRelationPrefix)))
 }
