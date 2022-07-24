@@ -20,4 +20,8 @@ object Misc {
 
   def getFileNameFromPath(filepath: String): String = filepath.split('/').last.split('.').head
 
+  def createDirectory(path: String): Boolean = {
+    val dir = new File(path)
+    dir.mkdirs()
+  }
 }

@@ -1,6 +1,7 @@
 import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
+import util.Misc.createDirectory
 
 import java.nio.file.Paths
 
@@ -11,6 +12,7 @@ object Main extends App {
   val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl")
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
+    createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = {
       val parser = new Parser()
