@@ -15,7 +15,7 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
   }.toMap
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
-    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i))
+    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices))
   }.toMap
 
   protected val rulesToEvaluate: Set[Rule] = {

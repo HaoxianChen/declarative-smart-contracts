@@ -2,13 +2,41 @@ package imp
 
 import datalog._
 import imp.SolidityTranslator.transactionRelationPrefix
+import imp.Translator.getMaterializedRelations
 import view.View
 
+abstract class Translator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
+                          violations: Set[Relation], isInstrument: Boolean) {
+
+  protected val relations: Set[Relation] = program.relations
+  protected val indices: Map[SimpleRelation, List[Int]] = program.indices
+
+}
+
+object Translator {
+  def getMaterializedRelations(program: ImperativeAbstractProgram, interfaces: Set[Interface]): Set[Relation] = {
+    val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
+    val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
+    fromStatements ++ viewRelations
+  }
+
+  protected def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
+    case ReadTuple(rel, _, _) => Set(rel)
+    case GroundVar(_, rel, _) => Set(rel)
+    case Search(_, matches, stmt) => matches.map(_.relation) ++ relationsToMaterialize(stmt)
+    case If(_,stmt) => relationsToMaterialize(stmt)
+    case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
+    case on: OnStatement => relationsToMaterialize(on.statement)
+    case inc: IncrementAndInsert => Set(inc.relation)
+    case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
+  }
+
+}
+
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
-                              violations: Set[Relation], isInstrument: Boolean) {
+                              violations: Set[Relation], isInstrument: Boolean)
+      extends Translator(program, interfaces, violations, isInstrument) {
   val name: String = program.name
-  private val relations: Set[Relation] = program.relations
-  private val indices: Map[SimpleRelation, List[Int]] = program.indices
   private val eventHelper = EventHelper(program.rules)
   private val payableRelations: Set[Relation] = {
     val payableRules = program.rules.filter(_.body.exists(_.relation==MsgValue()))
@@ -24,11 +52,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case rel @ (_:SingletonRelation|_:ReservedRelation) => rel -> DataStructureHelper(rel, List())
   }.toMap
   private val materializedRelations: Set[Relation] = {
-    val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
-    val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
     val sendRelation = program.relations.filter(_ == Send())
     val _v = if (isInstrument) violations else Set()
-    fromStatements ++ viewRelations ++ _v ++ sendRelation
+    getMaterializedRelations(program,interfaces) ++ _v ++ sendRelation
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
     on=>on->FunctionHelper(on)).toMap
@@ -172,17 +198,6 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       case Some(dependents) => dsHelper.callDependentFunctions(update, dependents)
       case None => Empty()
     }
-  }
-
-  private def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
-    case ReadTuple(rel, _, _) => Set(rel)
-    case GroundVar(_, rel, _) => Set(rel)
-    case Search(_, matches, stmt) => matches.map(_.relation) ++ relationsToMaterialize(stmt)
-    case If(_,stmt) => relationsToMaterialize(stmt)
-    case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
-    case on: OnStatement => relationsToMaterialize(on.statement)
-    case inc: IncrementAndInsert => Set(inc.relation)
-    case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
   }
 
   private def makeInterfaces(): Statement = {

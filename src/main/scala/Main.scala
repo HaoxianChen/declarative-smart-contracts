@@ -1,7 +1,7 @@
 import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
-import verification.{Prove, TransitionSystem}
+import verification.{Prove, Verifier}
 
 import java.nio.file.Paths
 
@@ -49,8 +49,28 @@ object Main extends App {
     }
   }
 
+  if (args(0) == "verify") {
+    val filepath = args(1)
+
+    val filename = Misc.getFileNameFromPath(filepath)
+    val dl = {
+      val parser = new Parser()
+      val inputStr = Misc.fileToString(filepath)
+      val raw = parser.parseAll(parser.program, inputStr).get
+      val typeChecker = TypeChecker()
+      typeChecker.updateTypes(raw).setName(filename.capitalize)
+    }
+    val impTranslator =ImperativeTranslator(dl, isInstrument=true)
+    val imperative = impTranslator.translate()
+    println(imperative)
+    val verifier = new Verifier(dl, imperative)
+    verifier.check()
+
+  }
+
   if (args(0) == "testz3") {
-    TransitionSystem.testTS()
+    Prove.testSimplification()
+    // TransitionSystem.testTS()
     // Prove.testZ3()
   }
 

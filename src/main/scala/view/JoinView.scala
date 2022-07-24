@@ -1,10 +1,12 @@
 package view
 
-import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Constant, BinFunctor, Greater, Lesser, Literal, Mul, NumberType, Param, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, SymbolType, Type, UnitType, Variable, Zero}
-import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, Return, Search, Statement, True, UpdateDependentRelations, UpdateStatement}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort}
+import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
+import verification.Verifier.{literalToConst, functorToZ3}
 
-case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
+case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
 
@@ -204,6 +206,71 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exten
       Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
     }
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
+  }
+
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean): BoolExpr = {
+
+    val insert = getInsertedLiteral(insertTuple.relation)
+
+    val sortedLiteral: List[Literal] = {
+      val rest = rule.body.filterNot(_.relation==insert.relation)
+      sortJoinLiterals(rest)
+    }
+
+    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation)))
+    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f))
+
+    ctx.mkAnd((exprs++functorExprs).toArray:_*)
+  }
+
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = {
+    /** todo: support more general cases, where join exists.
+     * Now this function only propagates the update.
+     * */
+    if (isMaterialized) {
+      val (resultIndex, delta) = getUpdate(incrementValue)
+      val insertedLiteral = getInsertedLiteral(incrementValue.relation)
+      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex)
+    }
+    else {
+      ctx.mkTrue()
+    }
+  }
+
+  private def getUpdate(incrementValue: IncrementValue): (Int, Arithmetic) = {
+    val assignment: datalog.Assign = {
+      val assignments: Set[datalog.Assign] = rule.functors.flatMap{
+        case a: datalog.Assign => Some(a)
+        case _ => None
+      }
+      require(assignments.size == 1, s"$rule\n${incrementValue}")
+      assignments.head
+    }
+    val x: Param = {
+      val lits = rule.body.filter(_.relation == incrementValue.relation)
+      require(lits.size==1)
+      val lit = lits.head
+      val p = lit.fields(incrementValue.valueIndex)
+      Param(p)
+    }
+    val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
+    /** Apply the chain rule. */
+    val delta: Arithmetic = {
+      val _d = Mul(Arithmetic.derivativeOf(assignment.b, x), x)
+      val d = Arithmetic.simplify(_d)
+      Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
+    }
+    (resultIndex, delta)
+  }
+
+  def getNextTriggers(trigger: Trigger): Set[Trigger] = trigger match {
+    case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices))
+    case DeleteTuple(relation, keyIndices) => ???
+    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
+    case ic: IncrementValue => {
+      val (valueIndex, delta) = getUpdate(ic)
+      Set(IncrementValue(relation, primaryKeyIndices, valueIndex, delta))
+    }
   }
 
 }

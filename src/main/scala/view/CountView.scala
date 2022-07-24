@@ -1,7 +1,8 @@
 package view
 
+import com.microsoft.z3.{BoolExpr, Context, Expr}
 import datalog.{Arithmetic, Count, Literal, Negative, One, Param, Relation, Rule, Variable}
-import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, Statement}
+import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, Statement, Trigger}
 
 case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
@@ -53,4 +54,12 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
     }
     Literal(relation, fields)
   }
+
+  /** Interfaces to genreate Z3 constraints */
+  def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
+
+  /** Interfaces to genreate Z3 constraints */
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean): BoolExpr = ???
+
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = ???
 }

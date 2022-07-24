@@ -47,6 +47,17 @@ object Prove {
     (res1,res2)
   }
 
+  def testSimplification(): Unit = {
+    val ctx = new Context()
+
+    val x = ctx.mkIntConst("x")
+    val y = ctx.mkIntConst("y")
+    val z = ctx.mkIntConst("z")
+
+    val e = ctx.mkAnd(ctx.mkEq(x,y), ctx.mkEq(y,z))
+    println(e.simplify())
+  }
+
   def testQuantifier(): Unit = {
     val ctx: Context = new Context()
 

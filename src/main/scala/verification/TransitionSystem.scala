@@ -2,7 +2,7 @@ package verification
 
 import com.microsoft.z3.{BitVecSort, BoolExpr, BoolSort, Context, Expr, Sort}
 import verification.Prove.prove_inductive
-import verification.TransitionSystem.makeNewVar
+import verification.TransitionSystem.makeStateVar
 
 case class TransitionSystem(name: String, ctx: Context) {
   var variables: Set[(Expr[_], Expr[_])] = Set()
@@ -13,7 +13,7 @@ case class TransitionSystem(name: String, ctx: Context) {
   def setTr(_tr: BoolExpr): Unit = tr = _tr
 
   def newVar[T<:Sort](name: String, sort: T): (Expr[T], Expr[T]) = {
-    val (v_in,v_out) = makeNewVar(ctx, name, sort)
+    val (v_in,v_out) = makeStateVar(ctx, name, sort)
     variables += Tuple2(v_in, v_out)
     (v_in,v_out)
   }
@@ -66,7 +66,7 @@ object TransitionSystem {
 
   }
 
-  def makeNewVar[T<:Sort](ctx: Context, name: String, sort: T): (Expr[T], Expr[T]) = {
+  def makeStateVar[T<:Sort](ctx: Context, name: String, sort: T): (Expr[T], Expr[T]) = {
     val v_in = ctx.mkConst(s"v_${name}_in", sort)
     val v_out = ctx.mkConst(s"v_${name}_out", sort)
     (v_in,v_out)
