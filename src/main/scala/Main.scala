@@ -5,9 +5,9 @@ import util.Misc
 import java.nio.file.Paths
 
 object Main extends App {
-  val outDir = "/Users/hxc/projects/smart-contracts/datalog/dsc"
-  val outDirWithInstrumentations = "/Users/hxc/projects/smart-contracts/datalog/dsc-instruments"
-  val benchmarkDir = "/Users/hxc/projects/declarative-smart-contract/benchmarks"
+  val outDir = "solidity/dsc"
+  val outDirWithInstrumentations = "solidity/dsc-instrument"
+  val benchmarkDir = "benchmarks"
   val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl")
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
@@ -38,13 +38,20 @@ object Main extends App {
     val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument)
   }
-  if (args(0) == "regression-test") {
-    val isInstrument = args(1).toBoolean
-    val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
+  if (args(0) == "test") {
+    val _outDir = outDir
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false, outDir=_outDir, isInstrument = isInstrument)
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = false)
+    }
+  }
+  if (args(0) == "test-instrument") {
+    val _outDir = outDirWithInstrumentations
+    for (p <- allBenchmarks) {
+      println(p)
+      val filepath = Paths.get(benchmarkDir, p).toString
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = true)
     }
   }
 
