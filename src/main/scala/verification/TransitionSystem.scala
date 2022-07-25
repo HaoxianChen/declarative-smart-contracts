@@ -34,31 +34,31 @@ object TransitionSystem {
     val bvSort = ctx.mkBitVecSort(bvSize)
 
     val p: Expr[BitVecSort] = ctx.mkConst("p", bvSort)
-    val amount = ctx.mkConst("amount", bvSort)
+    val amount = ctx.mkIntConst("amount")
 
     /** Variables */
-    val (totalSuuply, totalSupplyOut) = tr.newVar("totalSupply", bvSort)
-    val (balances, balancesOut) = tr.newVar("balances", ctx.mkArraySort(bvSort, bvSort))
+    val (totalSuuply, totalSupplyOut) = tr.newVar("totalSupply", ctx.mkIntSort())
+    val (balances, balancesOut) = tr.newVar("balances", ctx.mkArraySort(bvSort, ctx.mkIntSort()))
 
     /** Transitions */
     val init = ctx.mkAnd(
-      ctx.mkEq(totalSuuply,ctx.mkBV(0,bvSize)),
-      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(balances,p), ctx.mkBV(0,bvSize)),
+      ctx.mkEq(totalSuuply,ctx.mkInt(0)),
+      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(balances,p), ctx.mkInt(0)),
                   1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
     )
 
     val trMint = ctx.mkAnd(
-        ctx.mkEq(totalSupplyOut, ctx.mkBVAdd(totalSuuply, amount)),
-        ctx.mkBVSGT(amount,ctx.mkBV(0, bvSize)),
-      ctx.mkBVSLT(amount,ctx.mkBV(0, bvSize)),
+        ctx.mkEq(totalSupplyOut, ctx.mkAdd(totalSuuply, amount)),
+        ctx.mkGt(amount,ctx.mkInt(0)),
+      ctx.mkLt(amount,ctx.mkInt(0)),
       ctx.mkEq(balancesOut,
-              ctx.mkStore(balances,p,ctx.mkBVAdd(ctx.mkSelect(balances,p), amount)))
+              ctx.mkStore(balances,p,ctx.mkAdd(ctx.mkSelect(balances,p), amount)))
     )
 
     tr.setInit(init)
     tr.setTr(trMint)
 
-    val property = ctx.mkForall(Array(p), ctx.mkBVSGE(ctx.mkSelect(balances,p), ctx.mkBV(0,bvSize)),
+    val property = ctx.mkForall(Array(p), ctx.mkGe(ctx.mkSelect(balances,p), ctx.mkInt(0)),
         1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2"))
 
     val res = prove_inductive(ctx, tr,property)

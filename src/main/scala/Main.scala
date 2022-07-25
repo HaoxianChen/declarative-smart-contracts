@@ -1,7 +1,7 @@
 import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
-import verification.{Prove, Verifier}
+import verification.{Prove, Verifier, TransitionSystem}
 import util.Misc.createDirectory
 
 import java.nio.file.Paths
@@ -78,8 +78,7 @@ object Main extends App {
   }
 
   if (args(0) == "testz3") {
-    Prove.testSimplification()
-    // TransitionSystem.testTS()
+    TransitionSystem.testTS()
     // Prove.testZ3()
   }
 
