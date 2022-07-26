@@ -58,8 +58,11 @@ object TransitionSystem {
     tr.setInit(init)
     tr.setTr(trMint)
 
-    val property = ctx.mkForall(Array(p), ctx.mkGe(ctx.mkSelect(balances,p), ctx.mkInt(0)),
-        1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2"))
+    val n = ctx.mkIntConst("n")
+    val property = ctx.mkNot(ctx.mkExists(
+                              Array(p,n),
+                              ctx.mkAnd( ctx.mkEq(ctx.mkSelect(balances,p), n), ctx.mkLt(n,ctx.mkInt(0))),
+                               1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2")))
 
     val res = prove_inductive(ctx, tr,property)
     println(res)

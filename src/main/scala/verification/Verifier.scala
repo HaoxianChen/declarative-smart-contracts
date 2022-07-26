@@ -59,8 +59,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       val dependentRules: Set[Rule] = getTriggeredRules(t)
       for (dr <- dependentRules) {
         val dependentConstraints = ruleToExpr(dr,t, depth+1)
-        val (namingConstraints, from, to) = getNamingConstraints(rule, dr, depth)
-        // exprs +:= ctx.mkAnd(dependentConstraints, namingConstraints)
+        val (_, from, to) = getNamingConstraints(rule, dr, depth)
         val renamed = dependentConstraints.substitute(from,to).asInstanceOf[BoolExpr]
         exprs +:= renamed
       }
