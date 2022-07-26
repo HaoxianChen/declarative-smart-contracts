@@ -62,9 +62,9 @@ abstract class View {
       val (_, valueSort) = fieldsToConst(ctx,values, z3Prefix)
       val arraySort = ctx.mkArraySort(keySort, valueSort)
       val (v_in, v_out) = makeStateVar(ctx, relation.name, arraySort)
-      val valueConst: ArithExpr[_] = ctx.mkSelect(v_in, keyConst).asInstanceOf[ArithExpr[_]]
+      val valueConst: ArithExpr[_] = ctx.mkSelect(v_in, keyConst.asInstanceOf[Expr[Sort]]).asInstanceOf[ArithExpr[_]]
       val newValue: Expr[Sort] = ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], arithmeticToZ3(ctx, delta, z3Prefix)).asInstanceOf[Expr[Sort]]
-      val update = ctx.mkStore(v_in, keyConst, newValue)
+      val update = ctx.mkStore(v_in, keyConst.asInstanceOf[Expr[Sort]], newValue)
       ctx.mkEq(v_out, update)
     }
     else {

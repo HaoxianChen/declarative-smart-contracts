@@ -1,7 +1,7 @@
 package verification
 
 import com.microsoft.z3.{ArithSort, BoolExpr, Context, Expr, Solver, Sort, Status, Symbol}
-import datalog.{Add, Arithmetic, Assign, BinFunctor, BinaryOperator, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, Type, Unequal, Zero}
+import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
@@ -118,13 +118,26 @@ object Verifier {
     ctx.mkTupleSort(ctx.mkSymbol(name), symbols, sorts)
   }
 
-  def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[Sort], Sort) = {
+  def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[_], Sort) = {
     val sort = typeToSort(ctx, param._type)
-    val _newX: Expr[Sort] = ctx.mkConst(s"${prefix}_${param.name}", sort)
+    val _newX = param match {
+      case Constant(_type, name) => {
+        _type.name match {
+          case "address" => ctx.mkBV(name.toInt, addressSize)
+          case "int" => ctx.mkInt(name.toInt)
+          case "uint" => ctx.mkBV(name.toInt, uintSize)
+          case _ => ???
+        }
+      }
+      case Variable(_,name) => {
+        ctx.mkConst(s"${prefix}_${name}", sort)
+
+      }
+    }
     (_newX, sort)
   }
 
-  def fieldsToConst(ctx: Context, fields: List[Parameter], prefix: String): (Expr[Sort], Sort) = {
+  def fieldsToConst(ctx: Context, fields: List[Parameter], prefix: String): (Expr[_], Sort) = {
     if (fields.size==1) {
       paramToConst(ctx, fields.head, prefix)
     }
@@ -142,7 +155,7 @@ object Verifier {
           val (keyConst, keySort) = fieldsToConst(ctx,keys,prefix)
           val (valueConst, valueSort) = fieldsToConst(ctx,values,prefix)
           val arrayConst = ctx.mkArrayConst(lit.relation.name, keySort, valueSort)
-          ctx.mkEq(ctx.mkSelect(arrayConst, keyConst), valueConst)
+          ctx.mkEq(ctx.mkSelect(arrayConst, keyConst.asInstanceOf[Expr[Sort]]), valueConst)
         }
         else {
           ???
@@ -211,7 +224,10 @@ object Verifier {
         case "uint" => ctx.mkBV(1,uintSize).asInstanceOf[Expr[ArithSort]]
         case _ => ???
       }
-      case Param(p) => ctx.mkConst(s"${prefix}_${p.name}", sort).asInstanceOf[Expr[ArithSort]]
+      case Param(p) => {
+        paramToConst(ctx, p, prefix)._1.asInstanceOf[Expr[ArithSort]]
+        // ctx.mkConst(s"${prefix}_${p.name}", sort).asInstanceOf[Expr[ArithSort]]
+      }
       case Negative(e) => {
         assert(e._type.name == "int")
         arithmeticToZ3(ctx,Sub(Zero(e._type),e), prefix)
