@@ -208,7 +208,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean): BoolExpr = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): BoolExpr = {
 
     val insert = getInsertedLiteral(insertTuple.relation)
 
@@ -217,20 +217,20 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       sortJoinLiterals(rest)
     }
 
-    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation)))
-    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f))
+    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix))
+    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f,z3Prefix))
 
     ctx.mkAnd((exprs++functorExprs).toArray:_*)
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = {
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr = {
     /** todo: support more general cases, where join exists.
      * Now this function only propagates the update.
      * */
     if (isMaterialized) {
       val (resultIndex, delta) = getUpdate(incrementValue)
       val insertedLiteral = getInsertedLiteral(incrementValue.relation)
-      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex)
+      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, z3Prefix)
     }
     else {
       ctx.mkTrue()

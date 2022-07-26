@@ -5,6 +5,8 @@ import datalog.{Add, Arithmetic, Assign, BinFunctor, BinaryOperator, Equal, Geq,
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
+import verification.Verifier.{fieldsToConst, paramToConst}
+import view.{CountView, JoinView, MaxView, SumView}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   extends AbstractImperativeTranslator(program, isInstrument = false) {
@@ -37,7 +39,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     for (t <- triggers) {
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
-        val c = ruleToExpr(rule, t)
+        val c = ruleToExpr(rule, t, 0).simplify().asInstanceOf[BoolExpr]
         transactionConstraints +:= c
       }
     }
@@ -45,19 +47,57 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     ctx.mkOr(transactionConstraints.toArray:_*)
   }
 
-  private def ruleToExpr(rule: Rule, trigger: Trigger): BoolExpr = {
+  private def ruleToExpr(rule: Rule, trigger: Trigger, depth: Int): BoolExpr = {
 
+    val z3Prefix = s"d${depth}"
     val isMaterialized = materializedRelations.contains(rule.head.relation)
-    val bodyConstraints = views(rule).getZ3Constraint(ctx, trigger, isMaterialized)
+    val bodyConstraints = views(rule).getZ3Constraint(ctx, trigger, isMaterialized, z3Prefix)
     val nextTriggers = views(rule).getNextTriggers(trigger)
 
     var exprs: List[BoolExpr] = List(bodyConstraints)
     for (t <- nextTriggers) {
       val dependentRules: Set[Rule] = getTriggeredRules(t)
-      val dependentConstraints: Array[BoolExpr] = dependentRules.toArray.map(r => ruleToExpr(r,t))
-      exprs +:= ctx.mkAnd(dependentConstraints:_*)
+      for (dr <- dependentRules) {
+        val dependentConstraints = ruleToExpr(dr,t, depth+1)
+        val (namingConstraints, from, to) = getNamingConstraints(rule, dr, depth)
+        // exprs +:= ctx.mkAnd(dependentConstraints, namingConstraints)
+        val renamed = dependentConstraints.substitute(from,to).asInstanceOf[BoolExpr]
+        exprs +:= renamed
+      }
     }
     ctx.mkAnd(exprs.toArray:_*)
+  }
+
+  private def getNamingConstraints(rule: Rule, dependentRule: Rule, depth: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
+    val headLiteral = rule.head
+    val bodyLiteral = views(dependentRule) match {
+      case CountView(rule, primaryKeyIndices, ruleId) => ???
+      case _: JoinView => {
+        val _s = dependentRule.body.filter(_.relation == rule.head.relation)
+        assert(_s.size==1)
+        _s.head
+      }
+      case MaxView(rule, primaryKeyIndices, ruleId) => ???
+      case sv: SumView => {
+        val lit = sv.sum.literal
+        lit.rename(sv.sum.aggParam, sv.sum.aggResult)
+      }
+      case _ => ???
+    }
+
+    var expr: List[BoolExpr] = List()
+    var from: List[Expr[_]] = List()
+    var to: List[Expr[_]] = List()
+    for (v <- headLiteral.fields.zip(bodyLiteral.fields)) {
+      if (v._1.name != "_" && v._2.name != "_") {
+        val (x1,_) = paramToConst(ctx, v._1, s"d${depth}")
+        val (x2,_) = paramToConst(ctx, v._2, s"d${depth+1}")
+        expr +:= ctx.mkEq(x1,x2)
+        to +:= x1
+        from +:= x2
+      }
+    }
+    (ctx.mkAnd(expr.toArray:_*), from.toArray, to.toArray)
   }
 
 }
@@ -78,26 +118,29 @@ object Verifier {
     ctx.mkTupleSort(ctx.mkSymbol(name), symbols, sorts)
   }
 
-  def fieldsToConst(ctx: Context, fields: List[Parameter]): (Expr[Sort], Sort) = {
+  def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[Sort], Sort) = {
+    val sort = typeToSort(ctx, param._type)
+    val _newX: Expr[Sort] = ctx.mkConst(s"${prefix}_${param.name}", sort)
+    (_newX, sort)
+  }
+
+  def fieldsToConst(ctx: Context, fields: List[Parameter], prefix: String): (Expr[Sort], Sort) = {
     if (fields.size==1) {
-      val param = fields.head
-      val sort = typeToSort(ctx, param._type)
-      val _newX: Expr[Sort] = ctx.mkConst(param.name, sort)
-      (_newX, sort)
+      paramToConst(ctx, fields.head, prefix)
     }
     else {
       ???
     }
   }
 
-  def literalToConst(ctx: Context, lit: Literal, indices: List[Int]): BoolExpr = {
+  def literalToConst(ctx: Context, lit: Literal, indices: List[Int], prefix: String): BoolExpr = {
     lit.relation match {
       case SimpleRelation(name, sig, memberNames) => {
         val keys = indices.map(i => lit.fields(i))
         val values = lit.fields.filterNot(f => keys.contains(f))
         if (keys.nonEmpty) {
-          val (keyConst, keySort) = fieldsToConst(ctx,keys)
-          val (valueConst, valueSort) = fieldsToConst(ctx,values)
+          val (keyConst, keySort) = fieldsToConst(ctx,keys,prefix)
+          val (valueConst, valueSort) = fieldsToConst(ctx,values,prefix)
           val arrayConst = ctx.mkArrayConst(lit.relation.name, keySort, valueSort)
           ctx.mkEq(ctx.mkSelect(arrayConst, keyConst), valueConst)
         }
@@ -106,14 +149,14 @@ object Verifier {
         }
       }
       case SingletonRelation(name, sig, memberNames) => {
-        val (x,_) = fieldsToConst(ctx, lit.fields)
+        val (x,_) = fieldsToConst(ctx, lit.fields,prefix)
         val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
         ctx.mkEq(relConst, x)
       }
       case reserved: ReservedRelation => {
         reserved match {
           case MsgSender() | MsgValue() | Now() => {
-            val (x,_) = fieldsToConst(ctx, lit.fields)
+            val (x,_) = fieldsToConst(ctx, lit.fields, prefix)
             val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
             ctx.mkEq(relConst, x)
           }
@@ -155,7 +198,7 @@ object Verifier {
     }
   }
 
-  def arithmeticToZ3(ctx: Context, arithmetic: Arithmetic): Expr[ArithSort] = {
+  def arithmeticToZ3(ctx: Context, arithmetic: Arithmetic, prefix: String): Expr[ArithSort] = {
     val sort = typeToSort(ctx, arithmetic._type)
     arithmetic match {
       case Zero(_type) => _type.name match {
@@ -168,14 +211,14 @@ object Verifier {
         case "uint" => ctx.mkBV(1,uintSize).asInstanceOf[Expr[ArithSort]]
         case _ => ???
       }
-      case Param(p) => ctx.mkConst(p.name, sort).asInstanceOf[Expr[ArithSort]]
+      case Param(p) => ctx.mkConst(s"${prefix}_${p.name}", sort).asInstanceOf[Expr[ArithSort]]
       case Negative(e) => {
         assert(e._type.name == "int")
-        arithmeticToZ3(ctx,Sub(Zero(e._type),e))
+        arithmeticToZ3(ctx,Sub(Zero(e._type),e), prefix)
       }
       case operator: BinaryOperator => {
-        val x = arithmeticToZ3(ctx, operator.a)
-        val y = arithmeticToZ3(ctx, operator.b)
+        val x = arithmeticToZ3(ctx, operator.a, prefix)
+        val y = arithmeticToZ3(ctx, operator.b, prefix)
         operator match {
           case _:Add => ctx.mkAdd(x,y)
           case _:Sub => ctx.mkSub(x,y)
@@ -185,9 +228,9 @@ object Verifier {
     }
   }
 
-  def functorToZ3(ctx: Context, binFunctor: BinFunctor): BoolExpr = {
-    val x = arithmeticToZ3(ctx, binFunctor.a)
-    val y = arithmeticToZ3(ctx, binFunctor.b)
+  def functorToZ3(ctx: Context, binFunctor: BinFunctor, prefix: String): BoolExpr = {
+    val x = arithmeticToZ3(ctx, binFunctor.a, prefix)
+    val y = arithmeticToZ3(ctx, binFunctor.b, prefix)
 
     binFunctor match {
       case _:Greater => ctx.mkGt(x,y)

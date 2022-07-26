@@ -59,7 +59,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
 
   /** Interfaces to genreate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean): BoolExpr = ???
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): BoolExpr = ???
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr = ???
 }

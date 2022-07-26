@@ -66,6 +66,11 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
     val fieldStr = fields.mkString(",")
     s"${relation.name}($fieldStr)"
   }
+
+  def rename(from: Parameter, to: Parameter): Literal = {
+    val newFields = fields.map(x => if (x==from) to else x)
+    this.copy(fields=newFields)
+  }
 }
 
 case class Rule(head: Literal, body: Set[Literal], functors: Set[BinFunctor], aggregators: Set[Aggregator]) {

@@ -68,11 +68,11 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean): BoolExpr = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): BoolExpr = {
     if (isMaterialized) {
       val (delta, resultIndex) = getDelta(insertTuple)
       val insertedLiteral = getInsertedLiteral(insertTuple.relation)
-      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex)
+      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, z3Prefix)
     }
     else {
       ctx.mkTrue()
@@ -95,6 +95,6 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     }
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr = ???
 }
 

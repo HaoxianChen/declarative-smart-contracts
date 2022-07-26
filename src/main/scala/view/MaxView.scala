@@ -42,7 +42,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   /** Interfaces to genreate Z3 constraints */
   def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
 
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized:Boolean): BoolExpr = ???
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized:Boolean, z3Prefix: String): BoolExpr = ???
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean): BoolExpr = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr = ???
 }
