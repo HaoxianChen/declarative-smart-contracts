@@ -5,7 +5,7 @@ import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, Bo
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
-import verification.Verifier.{fieldsToConst, paramToConst}
+import verification.Verifier.{fieldsToConst, functorToZ3, literalToConst, paramToConst}
 import view.{CountView, JoinView, MaxView, SumView}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
@@ -24,6 +24,24 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     val verificationConditions = getVerificationCondition()
     solver.add(verificationConditions)
     solver.check()
+  }
+
+  private def getProperty(ctx: Context, rule: Rule): BoolExpr = {
+    val prefix = "p"
+    val _indices = rule.head.relation match {
+      case rel: SimpleRelation => indices(rel)
+      case SingletonRelation(name, sig, memberNames) => ???
+      case relation: ReservedRelation => ???
+    }
+    val _vars: Array[Expr[_]] = rule.body.flatMap(_.fields).toArray.map(p => paramToConst(ctx,p,prefix)._1)
+    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, _indices, prefix)).toArray
+    val functorConstraints = rule.functors.map(f => functorToZ3(ctx,f, prefix)).toArray
+    ctx.mkNot(ctx.mkExists(
+        _vars,
+        ctx.mkAnd(bodyConstraints++functorConstraints:_*),
+        1, null, null, ctx.mkSymbol("Q"), ctx.mkSymbol("skid2")
+      )
+    )
   }
 
   private def getVerificationCondition(): BoolExpr = {
