@@ -38,15 +38,6 @@ object Prove {
      res
    }
 
-  def prove_inductive(ctx: Context, ts: TransitionSystem, property: Expr[BoolSort]): (Status, Status) = {
-    // val f1 = get_clause(ctx, ts.init, property)
-    val res1 = prove(ctx, ctx.mkImplies(ts.init, property))
-    // val f2 = get_clause(ctx, ctx.mkAnd(property, ts.tr), ts.toPost(property))
-    val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.tr), ts.toPost(property))
-    val res2 = prove(ctx, f2)
-    (res1,res2)
-  }
-
   def testSimplification(): Unit = {
     val ctx = new Context()
 

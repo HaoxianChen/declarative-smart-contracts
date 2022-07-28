@@ -5,6 +5,7 @@ import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, Bo
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
+import verification.TransitionSystem.makeStateVar
 import verification.Verifier.{addressSize, fieldsToConst, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView}
 
@@ -25,11 +26,28 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     case relation: ReservedRelation => ???
   }
 
-  def check(): Status = {
-    val solver: Solver = ctx.mkSolver()
-    val verificationConditions = getVerificationCondition()
-    solver.add(verificationConditions)
-    solver.check()
+  def check(): Unit = {
+    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
+    val tr = TransitionSystem(program.name, ctx)
+
+    var initConditions: List[BoolExpr] = List()
+    for (rel <- materializedRelations) {
+      val sort = getSort(ctx, rel, getIndices(rel))
+      val (v_in, _) = tr.newVar(rel.name, sort)
+      initConditions :+= getInitConstraints(rel, v_in)
+    }
+    tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
+
+    val transitionConditions = getTransitionConstraints()
+    tr.setTr(transitionConditions)
+
+    for (vr <- violationRules) {
+      val property = getProperty(ctx, vr)
+      val (resInit, resTr) = tr.inductiveProve(ctx, property)
+      println(property)
+      println(s"Init: $resInit")
+      println(s"Tr: $resTr")
+    }
   }
 
   private def initValue(_type: Type): Expr[_<:Sort] = _type.name match {

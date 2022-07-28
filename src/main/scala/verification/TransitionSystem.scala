@@ -1,13 +1,13 @@
 package verification
 
-import com.microsoft.z3.{BitVecSort, BoolExpr, BoolSort, Context, Expr, Sort}
-import verification.Prove.prove_inductive
+import com.microsoft.z3.{BitVecSort, BoolExpr, BoolSort, Context, Expr, Sort, Status}
+import verification.Prove.{prove}
 import verification.TransitionSystem.makeStateVar
 
 case class TransitionSystem(name: String, ctx: Context) {
-  var variables: Set[(Expr[_], Expr[_])] = Set()
-  var init: BoolExpr = ctx.mkTrue()
-  var tr: BoolExpr = ctx.mkTrue()
+  private var variables: Set[(Expr[_], Expr[_])] = Set()
+  private var init: BoolExpr = ctx.mkTrue()
+  private var tr: BoolExpr = ctx.mkTrue()
 
   def setInit(_init: BoolExpr): Unit = init = _init
   def setTr(_tr: BoolExpr): Unit = tr = _tr
@@ -22,6 +22,13 @@ case class TransitionSystem(name: String, ctx: Context) {
   def toPost(f: Expr[BoolSort]): Expr[BoolSort] = {
     val vs = variables.toArray
     f.substitute(vs.map(_._1), vs.map(_._2))
+  }
+
+  def inductiveProve(ctx: Context, property: BoolExpr): (Status, Status) = {
+    val resInit = prove(ctx, ctx.mkImplies(init, property))
+    val f2 = ctx.mkImplies(ctx.mkAnd(property, tr), toPost(property))
+    val resTr = prove(ctx, f2)
+    (resInit, resTr)
   }
 }
 
@@ -64,13 +71,14 @@ object TransitionSystem {
                               ctx.mkAnd( ctx.mkEq(ctx.mkSelect(balances,p), n), ctx.mkLt(n,ctx.mkInt(0))),
                                1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2")))
 
-    val res = prove_inductive(ctx, tr,property)
+    val res = tr.inductiveProve(ctx, property)
     println(res)
 
   }
 
   def makeStateVar[T<:Sort](ctx: Context, name: String, sort: T): (Expr[T], Expr[T]) = {
-    val v_in = ctx.mkConst(s"v_${name}_in", sort)
+    // val v_in = ctx.mkConst(s"v_${name}_in", sort)
+    val v_in = ctx.mkConst(s"${name}", sort)
     val v_out = ctx.mkConst(s"v_${name}_out", sort)
     (v_in,v_out)
   }
