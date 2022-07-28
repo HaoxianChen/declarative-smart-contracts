@@ -71,7 +71,7 @@ object Main extends App {
     }
     val impTranslator =ImperativeTranslator(dl, isInstrument=true)
     val imperative = impTranslator.translate()
-    println(imperative)
+    // println(imperative)
     val verifier = new Verifier(dl, imperative)
     verifier.check()
 
