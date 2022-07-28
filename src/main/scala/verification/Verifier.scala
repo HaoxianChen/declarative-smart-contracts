@@ -1,11 +1,11 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, BoolExpr, Context, Expr, Solver, Sort, Status, Symbol}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, Solver, Sort, Status, Symbol, TupleSort}
 import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
-import verification.Verifier.{fieldsToConst, functorToZ3, literalToConst, paramToConst}
+import verification.Verifier.{addressSize, fieldsToConst, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
@@ -19,6 +19,12 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   private val materializedRelations: Set[Relation] = getMaterializedRelations(impAbsProgram, program.interfaces)
        .filterNot(_.isInstanceOf[ReservedRelation])
 
+  private def getIndices(relation: Relation): List[Int] = relation match {
+    case sr:SimpleRelation => indices(sr)
+    case SingletonRelation(name, sig, memberNames) => List()
+    case relation: ReservedRelation => ???
+  }
+
   def check(): Status = {
     val solver: Solver = ctx.mkSolver()
     val verificationConditions = getVerificationCondition()
@@ -26,7 +32,56 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     solver.check()
   }
 
+  private def initValue(_type: Type): Expr[_<:Sort] = _type.name match {
+    case "address" => ctx.mkBV(0, addressSize)
+    case "int" => ctx.mkInt(0)
+    case "uint" => ctx.mkBV(0, uintSize)
+  }
+
+  private def getArrayInitValues[T<:Sort](name: String, keyTypes: List[Type], initValues: Expr[T], depth: Int): Expr[_] = keyTypes match {
+    case ::(head, next) => {
+      // val (p, keySort) = paramToConst(ctx, head, prefix="")
+      val keySort = typeToSort(ctx, head)
+      val p = ctx.mkConst(s"${head.name.toLowerCase}${depth}", keySort)
+      val _arrayInitValues = getArrayInitValues(name, next, initValues, depth+1)
+      val arrayName = if (depth > 0) s"$name$depth" else name
+      val array = ctx.mkArrayConst(arrayName, keySort, _arrayInitValues.getSort)
+      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(array, p), _arrayInitValues),
+        1, null, null, ctx.mkSymbol(s"Q${name}${depth}"), ctx.mkSymbol(s"skid${name}${depth}")
+      )
+    }
+    case Nil => initValues
+  }
+
+  private def getInitConstraints(relation: Relation, const: Expr[Sort]): BoolExpr = relation match {
+    case sr: SimpleRelation => {
+      val keyTypes: List[Type] = indices(sr).map(i=>relation.sig(i))
+      val valueTypes: List[Type] = relation.sig.filterNot(t => keyTypes.contains(t))
+      val initValues = if (valueTypes.size == 1) {
+        initValue(valueTypes.head)
+      }
+      else {
+        val _initValues = valueTypes.toArray.map(initValue)
+        val tupleSort = makeTupleSort(ctx, s"${sr.name}Tuple", valueTypes.toArray)
+        tupleSort.mkDecl().apply(_initValues:_*)
+      }
+      val head = keyTypes.head
+      val keySort = typeToSort(ctx, head)
+      val p = ctx.mkConst(s"${head.name.toLowerCase}", keySort)
+      val arrayInitValues = getArrayInitValues(sr.name, keyTypes.tail, initValues, 1)
+      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,_<:Sort]], p), arrayInitValues),
+        1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+    }
+    case SingletonRelation(name, sig, memberNames) => ctx.mkEq(const, initValue(sig.head))
+    case rel: ReservedRelation => ???
+  }
+
   private def getProperty(ctx: Context, rule: Rule): BoolExpr = {
+    /** Each violation query rule is translated into a property as follows:
+     *  ! \E (V), P1 /\ P2 /\ ...
+     *  where V is the set of variable appears in the rule body,
+     *  P1, P2, ... are predicates translated from each rule body literal.
+     *  */
     val prefix = "p"
     val _indices = rule.head.relation match {
       case rel: SimpleRelation => indices(rel)
@@ -44,7 +99,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     )
   }
 
-  private def getVerificationCondition(): BoolExpr = {
+  private def getTransitionConstraints(): BoolExpr = {
 
     val triggers: Set[Trigger] = {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionRelationPrefix))
@@ -129,13 +184,13 @@ object Verifier {
       case _ => ???
     }
 
-  def makeTupleSort(ctx: Context, name: String, types: Array[Type]): Sort = {
+  def makeTupleSort(ctx: Context, name: String, types: Array[Type]): TupleSort = {
     val sorts = types.map(t => typeToSort(ctx, t))
     val symbols: Array[Symbol] = types.map(t => ctx.mkSymbol(t.name))
     ctx.mkTupleSort(ctx.mkSymbol(name), symbols, sorts)
   }
 
-  def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[_], Sort) = {
+  def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[_<:Sort], Sort) = {
     val sort = typeToSort(ctx, param._type)
     val _newX = param match {
       case Constant(_type, name) => {
