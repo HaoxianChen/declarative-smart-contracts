@@ -1,12 +1,11 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, Solver, Sort, Status, Symbol, TupleSort}
-import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import com.microsoft.z3.{ArithSort, ArrayExpr, BoolExpr, Context, Expr, Sort, Symbol, TupleSort}
+import datalog.{Add, Arithmetic, Assign, BinFunctor, BinaryOperator, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
-import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{addressSize, fieldsToConst, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
+import verification.Verifier.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
@@ -232,7 +231,12 @@ object Verifier {
       paramToConst(ctx, fields.head, prefix)
     }
     else {
-      ???
+      val fieldTypes = fields.map(_._type)
+      val fieldTypeNames = fieldTypes.mkString(",")
+      val tupleSortName: String = s"Tuple($fieldTypeNames)"
+      val tupleSort = makeTupleSort(ctx, tupleSortName, fieldTypes.toArray)
+      val params = fields.map(f => paramToConst(ctx, f, prefix)._1).toArray
+      (tupleSort.mkDecl().apply(params:_*), tupleSort)
     }
   }
 
@@ -269,26 +273,19 @@ object Verifier {
     }
   }
 
+  def getArraySort(ctx: Context, keyTypes: List[Type], valueTypes: List[Type]): (Sort, Sort) = {
+    val keys = keyTypes.map(_type => Variable(_type, _type.name.toLowerCase))
+    val values = valueTypes.map(_type => Variable(_type, _type.name.toLowerCase))
+    val (_, keySort) = fieldsToConst(ctx,keys,prefix="")
+    val (_, valueSort) = fieldsToConst(ctx,values,prefix="")
+    (keySort, valueSort)
+  }
+
   def getSort(ctx: Context, relation: Relation, indices: List[Int]): Sort = relation match {
     case rel: SimpleRelation => {
       val keyTypes = indices.map(i => rel.sig(i))
-      val keySort: Sort = if (keyTypes.size == 1) {
-        typeToSort(ctx, keyTypes.head)
-      }
-      else {
-        val tupleSortName: String = s"${rel.name}Key"
-        makeTupleSort(ctx, tupleSortName, keyTypes.toArray)
-      }
-      val valueSort: Sort = {
-        val remainingFields = rel.sig.diff(keyTypes)
-        if (remainingFields.size == 1) {
-          typeToSort(ctx, remainingFields.head)
-        }
-        else {
-          val tupleSortName: String = s"${rel.name}Value"
-          makeTupleSort(ctx, tupleSortName, remainingFields.toArray)
-        }
-      }
+      val valueTypes = rel.sig.filterNot(t => keyTypes.contains(t))
+      val (keySort, valueSort) = getArraySort(ctx, keyTypes, valueTypes)
       ctx.mkArraySort(keySort, valueSort)
     }
     case SingletonRelation(name, sig, _) => {
