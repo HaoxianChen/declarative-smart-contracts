@@ -18,7 +18,9 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices))
   }.toMap
 
-  protected val rulesToEvaluate: Set[Rule] = {
+  protected val rulesToEvaluate: Set[Rule] = getRulesToEvaluate()
+
+  protected def getRulesToEvaluate() : Set[Rule] = {
     val targetRelations: Set[Relation] = {
       val _v = if (isInstrument) program.violations else Set()
       val transactionRules = program.rules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))

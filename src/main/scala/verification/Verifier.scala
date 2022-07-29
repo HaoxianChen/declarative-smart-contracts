@@ -7,10 +7,10 @@ import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
 import verification.TransitionSystem.makeStateVar
 import verification.Verifier.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
-import view.{CountView, JoinView, MaxView, SumView}
+import view.{CountView, JoinView, MaxView, SumView, View}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
-  extends AbstractImperativeTranslator(program, isInstrument = false) {
+  extends AbstractImperativeTranslator(program, isInstrument = true) {
 
   private val ctx: Context = new Context()
 
@@ -19,6 +19,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
   private val materializedRelations: Set[Relation] = getMaterializedRelations(impAbsProgram, program.interfaces)
        .filterNot(_.isInstanceOf[ReservedRelation])
+  override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
 
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices(sr)
