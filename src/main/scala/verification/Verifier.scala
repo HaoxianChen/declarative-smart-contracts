@@ -5,6 +5,7 @@ import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, Bo
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
+import verification.TransitionSystem.makeStateVar
 import verification.Verifier.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView}
 
@@ -113,7 +114,18 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
         val c = ruleToExpr(rule, t, 0).simplify().asInstanceOf[BoolExpr]
-        transactionConstraints +:= c
+
+        /** Add the "unchanged" constraints */
+        var unchangedConstraints: List[BoolExpr] = List()
+        for (rel <- materializedRelations) {
+          val sort = getSort(ctx, rel, getIndices(rel))
+          val (v_in, v_out) = makeStateVar(ctx, rel.name, sort)
+          val allVars = Prove.get_vars(c)
+          if (!allVars.contains(v_out)) {
+            unchangedConstraints :+= ctx.mkEq(v_out, v_in)
+          }
+        }
+        transactionConstraints +:= ctx.mkAnd((c::unchangedConstraints).toArray:_*)
       }
     }
 
