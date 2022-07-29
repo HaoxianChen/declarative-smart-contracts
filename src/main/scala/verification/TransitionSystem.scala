@@ -47,15 +47,14 @@ object TransitionSystem {
     /** Variables */
     val (totalSuuply, totalSupplyOut) = tr.newVar("totalSupply", ctx.mkIntSort())
     val (balances, balancesOut) = tr.newVar("balances", ctx.mkArraySort(bvSort, ctx.mkIntSort()))
-    val (allowances, allowancesOut) = tr.newVar("allowances", ctx.mkArraySort(bvSort,
-                                                        ctx.mkArraySort(bvSort, bvSort)))
+    val (allowances, allowancesOut) = tr.newVar("allowances", ctx.mkArraySort(Array(bvSort, bvSort).asInstanceOf[Array[Sort]], bvSort))
 
     /** Transitions */
     val init = ctx.mkAnd(
       ctx.mkEq(totalSuuply,ctx.mkInt(0)),
       ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(balances,p), ctx.mkInt(0)),
                   1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1")),
-      ctx.mkForall(Array(p,q), ctx.mkEq(ctx.mkSelect(ctx.mkSelect(allowances, p),q), ctx.mkBV(0,bvSize)),
+      ctx.mkForall(Array(p,q), ctx.mkEq(ctx.mkSelect(allowances, Array(p, q).asInstanceOf[Array[Expr[_]]]), ctx.mkBV(0,bvSize)),
                   1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
     )
 
@@ -67,9 +66,8 @@ object TransitionSystem {
               ctx.mkStore(balances,p,ctx.mkAdd(ctx.mkSelect(balances,p), amount)))
     )
 
-    val trSetAllowance = ctx.mkAnd(ctx.mkEq(allowancesOut, ctx.mkStore(allowances,p,
-                                          ctx.mkStore(ctx.mkSelect(allowances,p), q,
-                                            ctx.mkBVConst("n", bvSize)))),
+    val trSetAllowance = ctx.mkAnd(ctx.mkEq(allowancesOut, ctx.mkStore(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]],
+                                            ctx.mkBVConst("n", bvSize))),
       ctx.mkEq(balancesOut, balances),
       ctx.mkEq(totalSupplyOut, totalSuuply))
 

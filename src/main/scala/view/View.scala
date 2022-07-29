@@ -1,10 +1,11 @@
 package view
 
-import com.microsoft.z3.{ArithExpr, ArithSort, BoolExpr, Context, Expr, Sort}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort}
+import datalog.Arithmetic.updateArithmeticType
 import datalog._
 import imp._
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{arithmeticToZ3, fieldsToConst, typeToSort}
+import verification.Verifier.{arithmeticToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
 
 abstract class View {
   def rule: Rule
@@ -53,24 +54,36 @@ abstract class View {
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,
                                        z3Prefix: String): BoolExpr = {
-    val keyIndices = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
-    val keys = keyIndices.map(i=>insertedLiteral.fields(i))
-    val values = rule.head.fields.filterNot(f => keys.contains(f))
+    val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
+    val valueType = this.relation.sig(resultIndex)
+    val deltaz3 = arithmeticToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
 
-    if (keyIndices.nonEmpty) {
-      val (keyConst, keySort) = fieldsToConst(ctx, keys, z3Prefix)
-      val (_, valueSort) = fieldsToConst(ctx,values, z3Prefix)
-      val arraySort = ctx.mkArraySort(keySort, valueSort)
+    if (primaryKeyIndices.nonEmpty) {
+      val arraySort = getSort(ctx, insertedLiteral.relation, primaryKeyIndices)
       val (v_in, v_out) = makeStateVar(ctx, relation.name, arraySort)
-      val valueConst: ArithExpr[_] = ctx.mkSelect(v_in, keyConst.asInstanceOf[Expr[Sort]]).asInstanceOf[ArithExpr[_]]
-      val newValue: Expr[Sort] = ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], arithmeticToZ3(ctx, delta, z3Prefix)).asInstanceOf[Expr[Sort]]
-      val update = ctx.mkStore(v_in, keyConst.asInstanceOf[Expr[Sort]], newValue)
+      val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+
+      val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]],
+                                      keyConstArray)
+
+      val newValue = valueType.name match {
+        case "int" => ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], deltaz3.asInstanceOf[Expr[ArithSort]])
+        case "uint" => ctx.mkBVAdd(valueConst.asInstanceOf[Expr[BitVecSort]],deltaz3.asInstanceOf[Expr[BitVecSort]])
+        case _ => ???
+      }
+
+      val update = ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
+                                newValue.asInstanceOf[Expr[Sort]])
       ctx.mkEq(v_out, update)
     }
     else {
       assert(this.relation.isInstanceOf[SingletonRelation])
       val (v_in, v_out) = makeStateVar(ctx, relation.name, typeToSort(ctx, this.relation.sig.head))
-      val update = ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], arithmeticToZ3(ctx, delta, z3Prefix))
+
+      val update = valueType.name match {
+        case "int" => ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], deltaz3.asInstanceOf[Expr[ArithSort]])
+        case "uint" => ctx.mkBVAdd(v_in.asInstanceOf[Expr[BitVecSort]], deltaz3.asInstanceOf[Expr[BitVecSort]])
+      }
       ctx.mkEq(v_out, update)
     }
   }
