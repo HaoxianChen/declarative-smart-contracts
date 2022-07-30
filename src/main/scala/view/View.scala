@@ -5,7 +5,7 @@ import datalog.Arithmetic.updateArithmeticType
 import datalog._
 import imp._
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{arithmeticToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
+import verification.Z3Helper.{arithmeticToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
 
 abstract class View {
   def rule: Rule

@@ -4,7 +4,7 @@ import com.microsoft.z3.{ArithExpr, ArithSort, ArrayExpr, ArraySort, BoolExpr, C
 import datalog.{Add, Arithmetic, Literal, Param, Relation, Rule, Sum}
 import imp.{DeleteTuple, Increment, IncrementValue, Insert, InsertTuple, OnIncrement, OnInsert, OnStatement, ReplacedByKey, Statement, Trigger}
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{arithmeticToZ3, fieldsToConst}
+import verification.Z3Helper.{arithmeticToZ3, fieldsToConst}
 
 case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)

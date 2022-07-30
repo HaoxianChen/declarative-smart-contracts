@@ -4,7 +4,7 @@ import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Exp
 import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
-import verification.Verifier.{literalToConst, functorToZ3}
+import verification.Z3Helper.{literalToConst, functorToZ3}
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]) extends View {
   require(rule.aggregators.isEmpty)
