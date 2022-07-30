@@ -227,14 +227,9 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     /** todo: support more general cases, where join exists.
      * Now this function only propagates the update.
      * */
-    if (isMaterialized) {
-      val (resultIndex, delta) = getUpdate(incrementValue)
-      val insertedLiteral = getInsertedLiteral(incrementValue.relation)
-      updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, z3Prefix)
-    }
-    else {
-      ctx.mkTrue()
-    }
+    val (resultIndex, delta) = getUpdate(incrementValue)
+    val insertedLiteral = getInsertedLiteral(incrementValue.relation)
+    updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
   }
 
   private def getUpdate(incrementValue: IncrementValue): (Int, Arithmetic) = {

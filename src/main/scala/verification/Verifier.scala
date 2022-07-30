@@ -4,7 +4,7 @@ import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BitVecSort, BoolExpr, 
 import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
-import imp.{AbstractImperativeTranslator, ImperativeAbstractProgram, InsertTuple, Trigger}
+import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
 import verification.TransitionSystem.makeStateVar
 import verification.Verifier.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
@@ -114,7 +114,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     for (t <- triggers) {
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
-        val c = ruleToExpr(rule, t, 0).simplify().asInstanceOf[BoolExpr]
+        val c = ruleToExpr(rule, t).simplify().asInstanceOf[BoolExpr]
 
         /** Add the "unchanged" constraints */
         var unchangedConstraints: List[BoolExpr] = List()
@@ -133,27 +133,35 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     ctx.mkOr(transactionConstraints.toArray:_*)
   }
 
-  private def ruleToExpr(rule: Rule, trigger: Trigger, depth: Int): BoolExpr = {
+  private def ruleToExpr(rule: Rule, trigger: Trigger): BoolExpr = {
+    var id = 0
 
-    val z3Prefix = s"d${depth}"
-    val isMaterialized = materializedRelations.contains(rule.head.relation)
-    val bodyConstraints = views(rule).getZ3Constraint(ctx, trigger, isMaterialized, z3Prefix)
-    val nextTriggers = views(rule).getNextTriggers(trigger)
+    def _ruleToExpr(rule: Rule, trigger: Trigger): (BoolExpr, Int) = {
+      val _id = id
+      id += 1
 
-    var exprs: List[BoolExpr] = List(bodyConstraints)
-    for (t <- nextTriggers) {
-      val dependentRules: Set[Rule] = getTriggeredRules(t)
-      for (dr <- dependentRules) {
-        val dependentConstraints = ruleToExpr(dr,t, depth+1)
-        val (_, from, to) = getNamingConstraints(rule, dr, depth)
-        val renamed = dependentConstraints.substitute(from,to).asInstanceOf[BoolExpr]
-        exprs +:= renamed
+      val view = views(rule)
+      val isMaterialized = materializedRelations.contains(rule.head.relation)
+      val bodyConstraints = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(_id))
+      val nextTriggers = view.getNextTriggers(trigger)
+
+      var exprs: List[BoolExpr] = List(bodyConstraints)
+      for (t <- nextTriggers) {
+        val dependentRules: Set[Rule] = getTriggeredRules(t)
+        for (dr <- dependentRules) {
+          val (dependentConstraints, nid) = _ruleToExpr(dr, t)
+          val (_, from, to) = getNamingConstraints(rule, dr, _id, nid)
+          val renamed = dependentConstraints.substitute(from, to).asInstanceOf[BoolExpr]
+          exprs +:= renamed
+        }
       }
+      (ctx.mkAnd(exprs.toArray: _*), _id)
     }
-    ctx.mkAnd(exprs.toArray:_*)
+
+    _ruleToExpr(rule,trigger)._1
   }
 
-  private def getNamingConstraints(rule: Rule, dependentRule: Rule, depth: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
+  private def getNamingConstraints(rule: Rule, dependentRule: Rule, id1: Int, id2: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
     val headLiteral = rule.head
     val bodyLiteral = views(dependentRule) match {
       case CountView(rule, primaryKeyIndices, ruleId) => ???
@@ -163,10 +171,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
         _s.head
       }
       case MaxView(rule, primaryKeyIndices, ruleId) => ???
-      case sv: SumView => {
-        val lit = sv.sum.literal
-        lit.rename(sv.sum.aggParam, sv.sum.aggResult)
-      }
+      case sv: SumView => sv.sum.literal
       case _ => ???
     }
 
@@ -175,8 +180,8 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     var to: List[Expr[_]] = List()
     for (v <- headLiteral.fields.zip(bodyLiteral.fields)) {
       if (v._1.name != "_" && v._2.name != "_") {
-        val (x1,_) = paramToConst(ctx, v._1, s"d${depth}")
-        val (x2,_) = paramToConst(ctx, v._2, s"d${depth+1}")
+        val (x1,_) = paramToConst(ctx, v._1, getPrefix(id1))
+        val (x2,_) = paramToConst(ctx, v._2, getPrefix(id2))
         expr +:= ctx.mkEq(x1,x2)
         to +:= x1
         from +:= x2
@@ -184,6 +189,8 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }
     (ctx.mkAnd(expr.toArray:_*), from.toArray, to.toArray)
   }
+
+  private def getPrefix(id: Int): String = s"i$id"
 
 }
 

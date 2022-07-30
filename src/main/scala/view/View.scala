@@ -53,12 +53,18 @@ abstract class View {
   }
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,
+                                       isMaterialized: Boolean,
                                        z3Prefix: String): BoolExpr = {
     val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
     val valueType = this.relation.sig(resultIndex)
     val deltaz3 = arithmeticToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
+    val (diffConst,_) = {
+      val _y = this.rule.head.fields(resultIndex)
+      paramToConst(ctx, _y, z3Prefix)
+    }
+    val diffEq = ctx.mkEq(diffConst, deltaz3)
 
-    if (primaryKeyIndices.nonEmpty) {
+    val updateZ3 = if (primaryKeyIndices.nonEmpty) {
       val arraySort = getSort(ctx, insertedLiteral.relation, primaryKeyIndices)
       val (v_in, v_out) = makeStateVar(ctx, relation.name, arraySort)
       val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
@@ -67,25 +73,28 @@ abstract class View {
                                       keyConstArray)
 
       val newValue = valueType.name match {
-        case "int" => ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], deltaz3.asInstanceOf[Expr[ArithSort]])
-        case "uint" => ctx.mkBVAdd(valueConst.asInstanceOf[Expr[BitVecSort]],deltaz3.asInstanceOf[Expr[BitVecSort]])
+        case "int" => ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
+        case "uint" => ctx.mkBVAdd(valueConst.asInstanceOf[Expr[BitVecSort]], diffConst.asInstanceOf[Expr[BitVecSort]])
         case _ => ???
       }
 
-      val update = ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
+      val store = ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
                                 newValue.asInstanceOf[Expr[Sort]])
-      ctx.mkEq(v_out, update)
+      ctx.mkEq(v_out, store)
     }
     else {
       assert(this.relation.isInstanceOf[SingletonRelation])
       val (v_in, v_out) = makeStateVar(ctx, relation.name, typeToSort(ctx, this.relation.sig.head))
 
       val update = valueType.name match {
-        case "int" => ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], deltaz3.asInstanceOf[Expr[ArithSort]])
-        case "uint" => ctx.mkBVAdd(v_in.asInstanceOf[Expr[BitVecSort]], deltaz3.asInstanceOf[Expr[BitVecSort]])
+        case "int" => ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
+        case "uint" => ctx.mkBVAdd(v_in.asInstanceOf[Expr[BitVecSort]], diffConst.asInstanceOf[Expr[BitVecSort]])
       }
       ctx.mkEq(v_out, update)
     }
+
+    if (isMaterialized) ctx.mkAnd(diffEq, updateZ3)
+    else diffEq
   }
 }
 object View {
