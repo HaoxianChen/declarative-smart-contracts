@@ -26,7 +26,11 @@ owner(s) :- constructor(), msgSender(s).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0, p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0, balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
+/* A bug caught by verification: n should be greater than zero,
+*  otherwise could lead to negative balance at r.
+ transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
+*/
+transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n, n>0.
 
 .decl totalOut(p: address, n: int)[0]
 .decl totalIn(p: address, n: int)[0]
