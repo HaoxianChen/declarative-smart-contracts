@@ -29,11 +29,14 @@ abstract class View {
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): BoolExpr
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
+        (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
   // def deleteRowZ3(deleteTuple: DeleteTuple): BoolExpr
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
+        (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
 
-  def getZ3Constraint(ctx: Context, trigger: Trigger, isMaterialized: Boolean, z3Prefix: String): BoolExpr = trigger match {
+  def getZ3Constraint(ctx: Context, trigger: Trigger, isMaterialized: Boolean, z3Prefix: String):
+    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = trigger match {
     case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix: String)
     case DeleteTuple(relation, keyIndices) => ???
     case ReplacedByKey(relation, keyIndices, targetRelation) => ???
@@ -54,7 +57,8 @@ abstract class View {
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,
                                        isMaterialized: Boolean,
-                                       z3Prefix: String): BoolExpr = {
+                                       z3Prefix: String): (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+
     val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
     val valueType = this.relation.sig(resultIndex)
     val deltaz3 = arithmeticToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
@@ -62,39 +66,37 @@ abstract class View {
       val _y = this.rule.head.fields(resultIndex)
       paramToConst(ctx, _y, z3Prefix)
     }
+    /** todo: the diffConst should have a better name, now it is the same as the param in rule head.
+     * H(x,s) = p(x), s = sum y: p(x,y).
+     * now the diff eq is: s = y.
+     * should be ds = y.
+     * But then need to add different constraints on the naming across dependent rules.
+     * */
     val diffEq = ctx.mkEq(diffConst, deltaz3)
 
-    val updateZ3 = if (primaryKeyIndices.nonEmpty) {
-      val arraySort = getSort(ctx, insertedLiteral.relation, primaryKeyIndices)
-      val (v_in, v_out) = makeStateVar(ctx, relation.name, arraySort)
+    val sort = getSort(ctx, this.relation, primaryKeyIndices)
+    val (v_in, v_out) = makeStateVar(ctx, relation.name, sort)
+
+    val updateExpr = if (primaryKeyIndices.nonEmpty) {
       val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
-
-      val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]],
-                                      keyConstArray)
-
+      val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray)
       val newValue = valueType.name match {
         case "int" => ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
         case "uint" => ctx.mkBVAdd(valueConst.asInstanceOf[Expr[BitVecSort]], diffConst.asInstanceOf[Expr[BitVecSort]])
         case _ => ???
       }
-
-      val store = ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
-                                newValue.asInstanceOf[Expr[Sort]])
-      ctx.mkEq(v_out, store)
+      ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray, newValue.asInstanceOf[Expr[Sort]])
     }
     else {
       assert(this.relation.isInstanceOf[SingletonRelation])
-      val (v_in, v_out) = makeStateVar(ctx, relation.name, typeToSort(ctx, this.relation.sig.head))
-
-      val update = valueType.name match {
+      valueType.name match {
         case "int" => ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
         case "uint" => ctx.mkBVAdd(v_in.asInstanceOf[Expr[BitVecSort]], diffConst.asInstanceOf[Expr[BitVecSort]])
       }
-      ctx.mkEq(v_out, update)
     }
 
-    if (isMaterialized) ctx.mkAnd(diffEq, updateZ3)
-    else diffEq
+    if (isMaterialized) (Array(diffEq), Array(Tuple3(v_in, v_out, updateExpr)))
+    else (Array(diffEq), Array())
   }
 }
 object View {

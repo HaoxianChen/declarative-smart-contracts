@@ -1,6 +1,6 @@
 package view
 
-import com.microsoft.z3.{BoolExpr, Context}
+import com.microsoft.z3.{BoolExpr, Context, Expr, Sort}
 import datalog.{Literal, Max, Param, Parameter, Relation, Rule, Variable}
 import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, Statement, Trigger}
 
@@ -42,7 +42,8 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   /** Interfaces to genreate Z3 constraints */
   def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
 
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized:Boolean, z3Prefix: String): BoolExpr = ???
+  /** Interfaces to generate Z3 constraints */
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): BoolExpr = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
 }
