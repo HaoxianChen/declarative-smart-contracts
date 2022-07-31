@@ -1,12 +1,12 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BitVecSort, BoolExpr, BoolSort, Context, Expr, Sort, Symbol, TupleSort}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BitVecSort, BoolExpr, BoolSort, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
 import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, simplifyByRenamingConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
@@ -170,7 +170,9 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
     val (exprs, updates, _) = _ruleToExpr(rule,trigger)
     val merged = mergeUpdates(updates)
-    ctx.mkAnd(exprs++merged:_*)
+    val expr = ctx.mkAnd(exprs++merged:_*)
+    val simplified = simplifyByRenamingConst(expr)
+    simplified.asInstanceOf[BoolExpr]
   }
 
   private def mergeUpdates(updates: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]): Array[BoolExpr] = {

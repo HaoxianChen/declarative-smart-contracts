@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, Symbol, TupleSort}
+import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
 import datalog.{Add, Arithmetic, Assign, BinFunctor, BinaryOperator, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, Type, Unequal, Variable, Zero}
 
 object Z3Helper {
@@ -186,6 +186,39 @@ object Z3Helper {
       case _:Unequal => ctx.mkNot(ctx.mkEq(x,y))
       case _:Equal => ctx.mkEq(x,y)
       case _:Assign => ctx.mkEq(x,y)
+    }
+  }
+
+  def simplifyByRenamingConst[T<:Sort](expr: Expr[T]): Expr[T] = {
+    var pairs = extractEq(expr)
+    var newExpr = expr
+    while (pairs.nonEmpty) {
+      val renamed = newExpr.substitute(pairs.map(_._1), pairs.map(_._2))
+      newExpr = renamed.simplify()
+      pairs = extractEq(newExpr)
+    }
+    newExpr
+  }
+
+  def extractEq(expr: Expr[_]): Array[(Expr[_], Expr[_])] = {
+    if (expr.isEq) {
+      val args = expr.getArgs
+      if (args.forall(_.isConst)) {
+        require(expr.getNumArgs == 2)
+        Array(Tuple2(args(0), args(1)))
+      }
+      else {
+        args.flatMap(extractEq)
+      }
+    }
+    else if (expr.isApp) {
+      expr.getArgs.flatMap(extractEq)
+    }
+    else if (expr.isQuantifier) {
+      extractEq(expr.asInstanceOf[Quantifier].getBody)
+    }
+    else {
+      Array()
     }
   }
 
