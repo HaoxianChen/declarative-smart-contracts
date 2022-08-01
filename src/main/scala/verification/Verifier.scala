@@ -1,13 +1,20 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BitVecSort, BoolExpr, BoolSort, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
-import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort}
+import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
+import util.Misc.crossJoin
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, simplifyByRenamingConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
+
+case class RuleZ3Constraints(ruleConstraints: BoolExpr,
+                             updateConstraint: BoolExpr,
+                             updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) {
+  def allConstraints(ctx: Context): BoolExpr = ctx.mkAnd(ruleConstraints, updateConstraint)
+}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   extends AbstractImperativeTranslator(program, isInstrument = true) {
@@ -111,68 +118,101 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }
 
     var transactionConstraints: List[BoolExpr] = List()
-    var transactionConst: List[BoolExpr] = List()
+    var transactionConst: List[Expr[IntSort]] = List()
     for (t <- triggers) {
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
-        val c = ruleToExpr(rule, t).simplify().asInstanceOf[BoolExpr]
-
-        /** Add the "unchanged" constraints */
-        var unchangedConstraints: List[BoolExpr] = List()
-        for (rel <- materializedRelations) {
-          val sort = getSort(ctx, rel, getIndices(rel))
-          val (v_in, v_out) = makeStateVar(ctx, rel.name, sort)
-          val allVars = Prove.get_vars(c)
-          if (!allVars.contains(v_out)) {
-            unchangedConstraints :+= ctx.mkEq(v_out, v_in)
-          }
+        for ((eachBranch,i) <- ruleToExpr(rule, t).zipWithIndex) {
+          /** Add the "unchanged" constraints */
+          val unchangedConstraints = getUnchangedConstraints(eachBranch)
+          /** A boolean value indicating which transaction branch gets evaluate to true */
+          val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+          transactionConst +:= trConst
+          transactionConstraints +:= ctx.mkAnd((ctx.mkEq(trConst, ctx.mkInt(1)) :: eachBranch :: unchangedConstraints).toArray: _*)
         }
-        val trConst = ctx.mkBoolConst(s"${t.relation.name}")
-        transactionConst +:= trConst
-        transactionConstraints +:= ctx.mkAnd((trConst::c::unchangedConstraints).toArray:_*)
       }
     }
 
-
     ctx.mkAnd(
-      transactionConst.foldLeft(ctx.mkFalse())(ctx.mkXor).simplify(),
+      ctx.mkAnd(transactionConst.map(c => ctx.mkOr(ctx.mkEq(c,ctx.mkInt(0)), ctx.mkEq(c,ctx.mkInt(1)))).toArray:_*),
+      ctx.mkEq(ctx.mkAdd(transactionConst.toArray:_*), ctx.mkInt(1)),
       ctx.mkOr(transactionConstraints.toArray:_*)
     )
   }
 
-  private def ruleToExpr(rule: Rule, trigger: Trigger): BoolExpr = {
+  private def getUnchangedConstraints(_expr: BoolExpr): List[BoolExpr] = {
+    var unchangedConstraints: List[BoolExpr] = List()
+    for (rel <- materializedRelations) {
+      val sort = getSort(ctx, rel, getIndices(rel))
+      val (v_in, v_out) = makeStateVar(ctx, rel.name, sort)
+      val allVars = Prove.get_vars(_expr)
+      if (!allVars.contains(v_out)) {
+        unchangedConstraints :+= ctx.mkEq(v_out, v_in)
+      }
+    }
+    unchangedConstraints
+  }
+
+  private def ruleToExpr(rule: Rule, trigger: Trigger): Array[BoolExpr] = {
     var id = 0
 
-    def _ruleToExpr(rule: Rule, trigger: Trigger): (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])], Int) = {
-      val _id = id
+    def _ruleToExpr(rule: Rule, trigger: Trigger, upstreamRule: Option[Rule], upstreamId: Option[Int]):
+      List[(BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])] = {
+      val thisId = id
       id += 1
 
       val view = views(rule)
       val isMaterialized = materializedRelations.contains(rule.head.relation)
-      val (bodyConstraints, _updateExprs) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(_id))
+      val (trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
+
+      /** Derive dependent constraints */
       val nextTriggers = view.getNextTriggers(trigger)
 
-      var exprs: Array[BoolExpr] = bodyConstraints
-      var updateExprs = _updateExprs
-      for (t <- nextTriggers) {
-        val dependentRules: Set[Rule] = getTriggeredRules(t)
-        for (dr <- dependentRules) {
-          val (dependentConstraints, dependentUpdateExprs, nid) = _ruleToExpr(dr, t)
-          val (_, from, to) = getNamingConstraints(rule, dr, _id, nid)
-          val renamed: Array[BoolExpr] = dependentConstraints.map(_.substitute(from, to).asInstanceOf[BoolExpr])
-          val renamedUpdates = dependentUpdateExprs.map(t => (t._1, t._2, t._3.substitute(from, to)))
-          exprs ++= renamed
-          updateExprs ++= renamedUpdates
-        }
+      val dependentRules: List[(Trigger,Rule)] = nextTriggers.flatMap(t => getTriggeredRules(t).map(r => (t,r))).toList
+      val dependentConstraints = dependentRules.map(t => _ruleToExpr(t._2, t._1, Some(rule), Some(thisId)))
+
+      /** Merge local branch and dependent branches via cross join */
+      var allBranches: List[(BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])] = List()
+      for (eachBranch <- crossJoin(
+                  List(Tuple2(trueBranch.allConstraints(ctx), trueBranch.updateExprs)) +: dependentConstraints)
+           ) {
+        val bodyConstraints: BoolExpr = ctx.mkAnd(eachBranch.map(_._1).toArray:_*)
+        val updateConstraints: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = eachBranch.flatMap(_._2).toArray
+        allBranches +:= Tuple2(bodyConstraints, updateConstraints)
       }
-      (exprs, updateExprs , _id)
+      /** If this rule evaluates to false, do not involve further dependent rules. */
+      if (!falseBranch.ruleConstraints.simplify().isFalse
+          && thisId > 0
+      ) {
+        allBranches +:= Tuple2(falseBranch.allConstraints(ctx), falseBranch.updateExprs)
+      }
+
+      /** Add naming constraints  */
+      def _renameConstraints(_body: BoolExpr, _updates: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]):
+      (BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+        /** Do the renaming here. */
+        val (_, from, to) = getNamingConstraints(upstreamRule.get, rule, upstreamId.get, thisId)
+        val _renamed: BoolExpr = _body.substitute(from, to).asInstanceOf[BoolExpr]
+        val _renamedUpdates = _updates.map(t => (t._1, t._2, t._3.substitute(from, to)))
+        (_renamed, _renamedUpdates)
+      }
+
+      val renamedBranches = if (upstreamRule.isDefined) {
+        allBranches.map(t => _renameConstraints(t._1, t._2))
+      }
+      else allBranches
+
+      renamedBranches
     }
 
-    val (exprs, updates, _) = _ruleToExpr(rule,trigger)
-    val merged = mergeUpdates(updates)
-    val expr = ctx.mkAnd(exprs++merged:_*)
-    val simplified = simplifyByRenamingConst(expr)
-    simplified.asInstanceOf[BoolExpr]
+    var allExprs: Array[BoolExpr] = Array()
+    for ((body, updates) <- _ruleToExpr(rule,trigger, None, None)) {
+      val merged = mergeUpdates(updates)
+      val expr = ctx.mkAnd(body+:merged:_*)
+      val simplified = simplifyByRenamingConst(expr)
+      allExprs +:= simplified.asInstanceOf[BoolExpr]
+    }
+    allExprs
   }
 
   private def mergeUpdates(updates: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]): Array[BoolExpr] = {

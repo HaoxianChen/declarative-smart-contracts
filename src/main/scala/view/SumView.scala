@@ -69,17 +69,28 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   /** Interfaces to generate Z3 constraints */
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
     val (delta, resultIndex) = getDelta(insertTuple)
     val insertedLiteral = getInsertedLiteral(insertTuple.relation)
-    updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+    val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+
+    /** todo: support more general cases, where join exists.
+     * Now this function only propagates the update.
+     * */
+    val bodyConstraint = ctx.mkTrue()
+    (bodyConstraint, updateConstraint, updateExpr)
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
     val (delta, resultIndex) = getDelta(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
-    updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+    val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+    /** todo: support more general cases, where join exists.
+     * Now this function only propagates the update.
+     * */
+    val bodyConstraint = ctx.mkTrue()
+    (bodyConstraint, updateConstraint, updateExpr)
   }
 
   def getNextTriggers(trigger: Trigger): Set[Trigger] = {

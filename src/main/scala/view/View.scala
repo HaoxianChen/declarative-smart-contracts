@@ -4,6 +4,7 @@ import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, 
 import datalog.Arithmetic.updateArithmeticType
 import datalog._
 import imp._
+import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{arithmeticToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
 
@@ -30,17 +31,24 @@ abstract class View {
 
   /** Interfaces to generate Z3 constraints */
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-        (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
+        (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
   // def deleteRowZ3(deleteTuple: DeleteTuple): BoolExpr
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-        (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
+        (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
 
   def getZ3Constraint(ctx: Context, trigger: Trigger, isMaterialized: Boolean, z3Prefix: String):
-    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = trigger match {
-    case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix: String)
-    case DeleteTuple(relation, keyIndices) => ???
-    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
-    case ic: IncrementValue => updateRowZ3(ctx, ic, isMaterialized, z3Prefix: String)
+      (RuleZ3Constraints, RuleZ3Constraints) = {
+    /** Return two branch, one is rule body evaluates to true, the other is false */
+    val (bodyConstraint, updateConstraints, updates) = trigger match {
+      case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix: String)
+      case DeleteTuple(relation, keyIndices) => ???
+      case ReplacedByKey(relation, keyIndices, targetRelation) => ???
+      case ic: IncrementValue => updateRowZ3(ctx, ic, isMaterialized, z3Prefix: String)
+    }
+
+    val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraints, updates)
+    val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array())
+    (trueBranch, falseBranch)
   }
 
   def getNextTriggers(trigger: Trigger): Set[Trigger]
@@ -57,7 +65,7 @@ abstract class View {
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,
                                        isMaterialized: Boolean,
-                                       z3Prefix: String): (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+                                       z3Prefix: String): (BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
 
     val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
     val valueType = this.relation.sig(resultIndex)
@@ -95,8 +103,8 @@ abstract class View {
       }
     }
 
-    if (isMaterialized) (Array(diffEq), Array(Tuple3(v_in, v_out, updateExpr)))
-    else (Array(diffEq), Array())
+    if (isMaterialized) (diffEq, Array(Tuple3(v_in, v_out, updateExpr)))
+    else (diffEq, Array())
   }
 }
 object View {

@@ -209,7 +209,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
 
     val insert = getInsertedLiteral(insertTuple.relation)
 
@@ -222,18 +222,24 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f,z3Prefix))
 
     val updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = if(isMaterialized) ??? else Array()
+    val updateConstraint: BoolExpr = if (isMaterialized) ??? else ctx.mkTrue()
 
-    ((exprs++functorExprs).toArray, updateExprs)
+    val bodyConstraint = ctx.mkAnd((exprs++functorExprs).toArray:_*)
+
+    (bodyConstraint, updateConstraint, updateExprs)
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    (Array[BoolExpr], Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    val (resultIndex, delta) = getUpdate(incrementValue)
+    val insertedLiteral = getInsertedLiteral(incrementValue.relation)
+    val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+
     /** todo: support more general cases, where join exists.
      * Now this function only propagates the update.
      * */
-    val (resultIndex, delta) = getUpdate(incrementValue)
-    val insertedLiteral = getInsertedLiteral(incrementValue.relation)
-    updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+    val bodyConstraint = ctx.mkTrue()
+    (bodyConstraint, updateConstraint, updateExpr)
   }
 
   private def getUpdate(incrementValue: IncrementValue): (Int, Arithmetic) = {
