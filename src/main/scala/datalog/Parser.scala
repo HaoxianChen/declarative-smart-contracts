@@ -114,7 +114,7 @@ class ArithmeticParser extends JavaTokenParsers {
     case "false" => Constant(BooleanType(), "false")
     case x => Constant(AnyType(), x)
   }
-  private def parameter: Parser[Param] = (variable | constant) ^^ { p => Param(p)}
+  private def parameter: Parser[Param] = (constant | variable ) ^^ { p => Param(p)}
 
   private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter
 
