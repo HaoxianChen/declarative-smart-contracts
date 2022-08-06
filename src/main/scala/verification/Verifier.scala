@@ -1,13 +1,13 @@
 package verification
 
 import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort}
-import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type}
+import datalog.{Constant, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
 import util.Misc.crossJoin
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{addressSize, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, simplifyByRenamingConst, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 case class RuleZ3Constraints(ruleConstraints: BoolExpr,
@@ -27,6 +27,11 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   private val materializedRelations: Set[Relation] = getMaterializedRelations(impAbsProgram, program.interfaces)
        .filterNot(_.isInstanceOf[ReservedRelation])
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
+
+  val stateVars: Set[(Expr[_], Expr[_])] = materializedRelations.map(rel => {
+    val sort = getSort(ctx, rel, getIndices(rel))
+    makeStateVar(ctx, rel.name, sort)
+  })
 
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices(sr)
@@ -62,6 +67,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     case "address" => ctx.mkBV(0, addressSize)
     case "int" => ctx.mkInt(0)
     case "uint" => ctx.mkBV(0, uintSize)
+    case "bool" => ctx.mkBool(false)
   }
 
   private def getInitConstraints(relation: Relation, const: Expr[Sort]): BoolExpr = relation match {
@@ -97,7 +103,10 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
      *  P1, P2, ... are predicates translated from each rule body literal.
      *  */
     val prefix = "p"
-    val _vars: Array[Expr[_]] = rule.body.flatMap(_.fields).toArray.map(p => paramToConst(ctx,p,prefix)._1)
+    val _vars: Array[Expr[_]] = rule.body.flatMap(_.fields).toArray.flatMap(p => p match {
+      case Constant(_type, name) => None
+      case Variable(_type, name) => Some(paramToConst(ctx,p,prefix)._1)
+    })
     val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx,f, prefix)).toArray
     ctx.mkNot(ctx.mkExists(
@@ -266,6 +275,19 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }
     (ctx.mkAnd(expr.toArray:_*), from.toArray, to.toArray)
   }
+
+  private def simplifyByRenamingConst[T<:Sort](expr: Expr[T]): Expr[T] = {
+    val exceptions = stateVars.flatMap(t=>Set(t._1,t._2))
+    var pairs = extractEq(expr, exceptions)
+    var newExpr = expr
+    while (pairs.nonEmpty) {
+      val renamed = newExpr.substitute(pairs.map(_._1), pairs.map(_._2))
+      newExpr = renamed.simplify()
+      pairs = extractEq(newExpr, exceptions)
+    }
+    newExpr
+  }
+
 
   private def getPrefix(id: Int): String = s"i$id"
 

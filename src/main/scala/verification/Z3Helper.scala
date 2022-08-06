@@ -11,6 +11,7 @@ object Z3Helper {
     case "address" => ctx.mkBitVecSort(addressSize)
     case "int" => ctx.mkIntSort()
     case "uint" => ctx.mkBitVecSort(uintSize)
+    case "bool" => ctx.mkBoolSort()
     case _ => ???
   }
 
@@ -28,6 +29,10 @@ object Z3Helper {
           case "address" => ctx.mkBV(name.toInt, addressSize)
           case "int" => ctx.mkInt(name.toInt)
           case "uint" => ctx.mkBV(name.toInt, uintSize)
+          case "bool" => name match {
+            case "true" => ctx.mkTrue()
+            case "false" => ctx.mkFalse()
+          }
           case _ => ???
         }
       }
@@ -189,33 +194,30 @@ object Z3Helper {
     }
   }
 
-  def simplifyByRenamingConst[T<:Sort](expr: Expr[T]): Expr[T] = {
-    var pairs = extractEq(expr)
-    var newExpr = expr
-    while (pairs.nonEmpty) {
-      val renamed = newExpr.substitute(pairs.map(_._1), pairs.map(_._2))
-      newExpr = renamed.simplify()
-      pairs = extractEq(newExpr)
-    }
-    newExpr
-  }
-
-  def extractEq(expr: Expr[_]): Array[(Expr[_], Expr[_])] = {
+  def extractEq(expr: Expr[_], exceptions: Set[Expr[_]]): Array[(Expr[_], Expr[_])] = {
     if (expr.isEq) {
       val args = expr.getArgs
-      if (args.forall(_.isConst)) {
+      if (args.forall(a => a.isConst)) {
         require(expr.getNumArgs == 2)
-        Array(Tuple2(args(0), args(1)))
+        if (!exceptions.contains(args(0))) {
+          Array(Tuple2(args(0), args(1)))
+        }
+        else if(!exceptions.contains(args(1))) {
+          Array(Tuple2(args(1), args(0)))
+        }
+        else {
+          Array()
+        }
       }
       else {
-        args.flatMap(extractEq)
+        args.flatMap(a => extractEq(a,exceptions))
       }
     }
     else if (expr.isApp) {
-      expr.getArgs.flatMap(extractEq)
+      expr.getArgs.flatMap(a => extractEq(a,exceptions))
     }
     else if (expr.isQuantifier) {
-      extractEq(expr.asInstanceOf[Quantifier].getBody)
+      extractEq(expr.asInstanceOf[Quantifier].getBody, exceptions)
     }
     else {
       Array()

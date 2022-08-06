@@ -54,7 +54,12 @@ abstract class View {
   def getNextTriggers(trigger: Trigger): Set[Trigger]
 
   protected def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {
-    // todo: skip deletion when the inserted literal share the same key with the head.
+    /** Conditions to delete a head tuple before inserting a new tuple P(X):
+     * 1. The relation P has index, or is a singleton relation:
+     *        this means P(X) may overwritten an old entry of P.
+     * todo: 2. If the new derived head tuple H'(Y) has the *same keys* as the old tuple H(Y),
+     *  skip deletion. Because H(Y) will be implicitly overwritten by H'(Y).
+     * */
     keyIndices.nonEmpty || relation.isInstanceOf[SingletonRelation]
   }
 
