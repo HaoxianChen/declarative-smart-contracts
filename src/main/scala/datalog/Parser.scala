@@ -109,7 +109,11 @@ class ArithmeticParser extends JavaTokenParsers {
   protected override val whiteSpace: Regex = """(\s|//.*|(?m)/\*(\*(?!/)|[^*])*\*/)+""".r
 
   private def variable: Parser[Variable] = ident ^^ {x => Variable(AnyType(), x)}
-  private def constant: Parser[Constant] = wholeNumber ^^ {x => Constant(AnyType(), x)}
+  private def constant: Parser[Constant] = (wholeNumber | "true" | "false") ^^ {
+    case "true" => Constant(BooleanType(), "true")
+    case "false" => Constant(BooleanType(), "false")
+    case x => Constant(AnyType(), x)
+  }
   private def parameter: Parser[Param] = (variable | constant) ^^ { p => Param(p)}
 
   private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter
