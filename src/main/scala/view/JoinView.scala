@@ -1,7 +1,7 @@
 package view
 
 import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort}
-import datalog.{Add, AnyType, Arithmetic, Assign, BinFunctor, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.TransitionSystem.makeStateVar
@@ -109,7 +109,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     })
   }
 
-  private def getConditionsFromFunctors(functors: Set[BinFunctor]): Condition = {
+  private def getConditionsFromFunctors(functors: Set[Functor]): Condition = {
     var cond: Condition = True()
     for (f <- functors) {
       val nextCond: Condition = f match {
@@ -176,7 +176,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val isMatchedInBody = (rule.body - literal).exists(_.fields.contains(newParam))
     val existDifferentiableFunctor = rule.functors.exists {
       case _:Greater|_:Lesser|_:datalog.Geq|_:datalog.Leq|_:datalog.Unequal|_:datalog.Equal => false
-      case datalog.Assign(_, b) => !Arithmetic.derivativeOf(b,Param(newParam)).isInstanceOf[Zero]
+      case datalog.Assign(_, b) => b match {
+        case arith: Arithmetic => !Arithmetic.derivativeOf(arith,Param(newParam)).isInstanceOf[Zero]
+        case _ => ???
+      }
     }
     existDifferentiableFunctor && !isMatchedInBody
   }
@@ -202,7 +205,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_==resultIndex)
     /** Apply the chain rule. */
     val delta: Arithmetic = {
-      val _d = Mul(Arithmetic.derivativeOf(assignment.b, x), x)
+      val _d = assignment.b match {
+        case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
+        case _ => ???
+      }
       val d = Arithmetic.simplify(_d)
       Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
     }
@@ -293,7 +299,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
     /** Apply the chain rule. */
     val delta: Arithmetic = {
-      val _d = Mul(Arithmetic.derivativeOf(assignment.b, x), x)
+      val _d = assignment.b match {
+        case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
+        case _ => ???
+      }
       val d = Arithmetic.simplify(_d)
       Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
     }

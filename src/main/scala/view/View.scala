@@ -6,7 +6,7 @@ import datalog._
 import imp._
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{arithmeticToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
+import verification.Z3Helper.{functorExprToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
 
 abstract class View {
   def rule: Rule
@@ -74,7 +74,7 @@ abstract class View {
 
     val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
     val valueType = this.relation.sig(resultIndex)
-    val deltaz3 = arithmeticToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
+    val deltaz3 = functorExprToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
     val (diffConst,_) = {
       val _y = this.rule.head.fields(resultIndex)
       paramToConst(ctx, _y, z3Prefix)

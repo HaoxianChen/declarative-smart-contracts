@@ -1,7 +1,10 @@
 package datalog
 
-sealed abstract class Arithmetic {
+sealed abstract class Expr {
   def _type: Type
+}
+
+sealed abstract class Arithmetic extends Expr {
   def _paren(e: Arithmetic): String = e match {
     case _:Param|_:One|_:Zero => s"$e"
     case _ => s"($e)"
@@ -86,43 +89,56 @@ object Arithmetic {
     } while (e2!=e1)
     e2
   }
-  def updateArithmeticType(arithmetic: Arithmetic, newType: Type): Arithmetic = arithmetic match {
-    case Zero(_type) => Zero(newType)
-    case One(_type) => One(newType)
-    case Param(p) => Param(p.setType(newType))
-    case Negative(e) => Negative(updateArithmeticType(e,newType))
-    case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
-    case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
-    case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+  def updateArithmeticType(expr: Expr, newType: Type): Arithmetic = expr match {
+    case arith: Arithmetic => arith match {
+      case Zero(_type) => Zero(newType)
+      case One(_type) => One(newType)
+      case Param(p) => Param(p.setType(newType))
+      case Negative(e) => Negative(updateArithmeticType(e,newType))
+      case binOp: BinaryOperator => binOp match {
+        case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+        case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+        case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+      }
+    }
   }
 
 }
 
-sealed abstract class Functor
+sealed abstract class Functor {
+  def args: Array[Expr]
+}
 
-sealed abstract class BinFunctor extends Functor {
+trait BinOp {
+  def a: Expr
+  def b: Expr
+  def args: Array[Expr] = Array(a,b)
+}
+
+sealed abstract class ArithOperator extends Functor with BinOp {
   def a: Arithmetic
   def b: Arithmetic
 }
-case class Greater(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+case class Greater(a: Arithmetic, b: Arithmetic) extends ArithOperator {
   override def toString: String = s"$a>$b"
 }
-case class Lesser(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+case class Lesser(a: Arithmetic, b: Arithmetic) extends ArithOperator {
   override def toString: String = s"$a<$b"
 }
-case class Geq(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+case class Geq(a: Arithmetic, b: Arithmetic) extends ArithOperator {
   override def toString: String = s"$a>=$b"
 }
-case class Leq(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+case class Leq(a: Arithmetic, b: Arithmetic) extends ArithOperator {
   override def toString: String = s"$a<=$b"
 }
-case class Unequal(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+
+case class Unequal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a!=$b"
 }
-case class Equal(a: Arithmetic, b: Arithmetic) extends BinFunctor {
+case class Equal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a==$b"
 }
-case class Assign(a: Param, b: Arithmetic) extends BinFunctor {
+case class Assign(a: Param, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a := $b"
   def updateOutputType(outputType: Type): Assign = {
     val newP = a.p.setType(outputType)

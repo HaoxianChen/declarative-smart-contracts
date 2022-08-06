@@ -20,9 +20,9 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
     }
   }
 }
-case class Assign(p: Param, arithmetic: Arithmetic) extends Statement {
+case class Assign(p: Param, expr: Expr) extends Statement {
   // override def toString: String = s"$p := $arithmetic"
-  override def toString: String = s"${p.p._type} $p = $arithmetic;"
+  override def toString: String = s"${p.p._type} $p = $expr;"
 }
 case class Seq(a: Statement, b: Statement) extends Statement {
   override def toString: String = s"$a\n$b"
@@ -364,7 +364,7 @@ case class MatchRelationField(relation: Relation, index: Int, p: Parameter) exte
     }
   }
 }
-case class Match(a: Arithmetic, b: Arithmetic) extends Condition {
+case class Match(a: Expr, b: Expr) extends Condition {
   override def toString: String = s"$a==$b"
 }
 case class Greater(a: Arithmetic, b: Arithmetic) extends Condition {
@@ -379,7 +379,7 @@ case class Geq(a: Arithmetic, b: Arithmetic) extends Condition {
 case class Leq(a: Arithmetic, b: Arithmetic) extends Condition {
   override def toString: String = s"$a<=$b"
 }
-case class Unequal(a: Arithmetic, b: Arithmetic) extends Condition {
+case class Unequal(a: Expr, b: Expr) extends Condition {
   override def toString: String = s"$a!=$b"
 }
 case class And(a: Condition, b: Condition) extends Condition {
