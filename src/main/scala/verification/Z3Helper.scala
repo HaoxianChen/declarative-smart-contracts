@@ -15,9 +15,9 @@ object Z3Helper {
     case _ => ???
   }
 
-  def makeTupleSort(ctx: Context, name: String, types: Array[Type]): TupleSort = {
+  def makeTupleSort(ctx: Context, name: String, types: Array[Type], fieldNames: Array[String]): TupleSort = {
     val sorts = types.map(t => typeToSort(ctx, t))
-    val symbols: Array[Symbol] = types.map(t => ctx.mkSymbol(t.name))
+    val symbols: Array[Symbol] = fieldNames.map(ctx.mkSymbol)
     ctx.mkTupleSort(ctx.mkSymbol(name), symbols, sorts)
   }
 
@@ -44,7 +44,7 @@ object Z3Helper {
     (_newX, sort)
   }
 
-  def fieldsToConst(ctx: Context, fields: List[Parameter], prefix: String): (Expr[_], Sort) = {
+  def fieldsToConst(ctx: Context, fields: List[Parameter], fieldNames: List[String], prefix: String): (Expr[_], Sort) = {
     if (fields.size==1) {
       paramToConst(ctx, fields.head, prefix)
     }
@@ -52,7 +52,7 @@ object Z3Helper {
       val fieldTypes = fields.map(_._type)
       val fieldTypeNames = fieldTypes.mkString(",")
       val tupleSortName: String = s"Tuple($fieldTypeNames)"
-      val tupleSort = makeTupleSort(ctx, tupleSortName, fieldTypes.toArray)
+      val tupleSort = makeTupleSort(ctx, tupleSortName, fieldTypes.toArray, fieldNames.toArray)
       val params = fields.map(f => paramToConst(ctx, f, prefix)._1).toArray
       (tupleSort.mkDecl().apply(params:_*), tupleSort)
     }
@@ -64,7 +64,7 @@ object Z3Helper {
         val keys = indices.map(i => lit.fields(i))
         val values = lit.fields.filterNot(f => keys.contains(f))
         if (keys.nonEmpty) {
-          val (valueConst, _) = fieldsToConst(ctx,values,prefix)
+          val (valueConst, _) = fieldsToConst(ctx,values,lit.relation.memberNames,prefix)
           val sort = getSort(ctx, lit.relation, indices)
           val arrayConst = ctx.mkConst(name, sort)
           val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
@@ -75,14 +75,21 @@ object Z3Helper {
         }
       }
       case SingletonRelation(name, sig, memberNames) => {
-        val (x,_) = fieldsToConst(ctx, lit.fields,prefix)
-        val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
-        ctx.mkEq(relConst, x)
+        if (memberNames.size==1) {
+          val (x,_) = paramToConst(ctx, lit.fields.head, prefix)
+          val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
+          ctx.mkEq(relConst, x)
+        }
+        else {
+          val tupleSort = getSort(ctx, lit.relation, indices).asInstanceOf[TupleSort]
+          val tuple = ctx.mkConst(name, tupleSort)
+          matchFieldstoTuple(ctx, tupleSort, tuple, lit.fields, prefix)
+        }
       }
       case reserved: ReservedRelation => {
         reserved match {
           case MsgSender() | MsgValue() | Now() => {
-            val (x,_) = fieldsToConst(ctx, lit.fields, prefix)
+            val (x,_) = paramToConst(ctx, lit.fields.head, prefix)
             val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
             ctx.mkEq(relConst, x)
           }
@@ -92,14 +99,25 @@ object Z3Helper {
     }
   }
 
-  def getArraySort(ctx: Context, keyTypes: List[Type], valueTypes: List[Type]): Sort = {
+  def matchFieldstoTuple(ctx: Context, tupleSort: TupleSort, tuple: Expr[_], fields: List[Parameter], prefix: String): BoolExpr = {
+    var eqs: Array[BoolExpr] = Array()
+    for ((p, decl) <- fields.zip(tupleSort.getFieldDecls) ) {
+      if (p.name != "_") {
+        val (pConst, _) = paramToConst(ctx, p, prefix)
+        eqs :+= ctx.mkEq(pConst, decl.apply(tuple))
+      }
+    }
+    ctx.mkAnd(eqs:_*)
+  }
+
+  def getArraySort(ctx: Context, keyTypes: List[Type], valueTypes: List[Type], fieldNames: List[String]): Sort = {
     val keySorts = keyTypes.toArray.map(t => typeToSort(ctx,t))
     val valueSort = if  (valueTypes.size == 1) {
       typeToSort(ctx,valueTypes.head)
     }
     else {
-      val fieldNames = valueTypes.mkString(",")
-      makeTupleSort(ctx, s"Tuple($fieldNames)", valueTypes.toArray)
+      val fieldNameStr = valueTypes.mkString(",")
+      makeTupleSort(ctx, s"Tuple($fieldNameStr)", valueTypes.toArray, fieldNames.toArray)
     }
     ctx.mkArraySort(keySorts, valueSort)
   }
@@ -107,12 +125,19 @@ object Z3Helper {
   def getSort(ctx: Context, relation: Relation, indices: List[Int]): Sort = relation match {
     case rel: SimpleRelation => {
       val keyTypes = indices.map(i => rel.sig(i))
-      val valueTypes = rel.sig.filterNot(t => keyTypes.contains(t))
-      getArraySort(ctx, keyTypes, valueTypes)
+      val valueIndices = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
+      val valueTypes = valueIndices.map(i=>relation.sig(i))
+      val valueNames = valueIndices.map(i=>relation.memberNames(i))
+      getArraySort(ctx, keyTypes, valueTypes, valueNames)
     }
-    case SingletonRelation(name, sig, _) => {
-      val t = sig.head
-      typeToSort(ctx, t)
+    case SingletonRelation(name, sig, memberNames) => {
+      if (sig.size==1) {
+        val t = sig.head
+        typeToSort(ctx, t)
+      }
+      else {
+        makeTupleSort(ctx, s"${name}Tuple", sig.toArray, memberNames.toArray)
+      }
     }
     case reserved :ReservedRelation => reserved match {
       case MsgSender() | MsgValue() | Now() => typeToSort(ctx, reserved.sig.head)
@@ -211,21 +236,16 @@ object Z3Helper {
   def extractEq(expr: Expr[_], exceptions: Set[Expr[_]]): Array[(Expr[_], Expr[_])] = {
     if (expr.isEq) {
       val args = expr.getArgs
-      if (args.forall(a => a.isConst)) {
+      if (args.forall(a => a.isConst && !exceptions.contains(a))) {
         require(expr.getNumArgs == 2)
-        if (!exceptions.contains(args(0))) {
-          Array(Tuple2(args(0), args(1)))
-        }
-        else if(!exceptions.contains(args(1))) {
-          Array(Tuple2(args(1), args(0)))
-        }
-        else {
-          Array()
-        }
+        Array(Tuple2(args(0), args(1)))
       }
       else {
         args.flatMap(a => extractEq(a,exceptions))
       }
+    }
+    else if (expr.isNot) {
+      Array()
     }
     else if (expr.isApp) {
       expr.getArgs.flatMap(a => extractEq(a,exceptions))

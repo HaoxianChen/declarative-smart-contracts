@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort}
+import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, TupleSort}
 import datalog.{Constant, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
@@ -79,7 +79,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       }
       else {
         val _initValues = valueTypes.toArray.map(initValue)
-        val tupleSort = makeTupleSort(ctx, s"${sr.name}Tuple", valueTypes.toArray)
+        val tupleSort = makeTupleSort(ctx, s"${sr.name}Tuple", valueTypes.toArray, relation.memberNames.toArray)
         tupleSort.mkDecl().apply(_initValues:_*)
       }
 
@@ -92,7 +92,19 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
             initValues),
         1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
     }
-    case SingletonRelation(name, sig, memberNames) => ctx.mkEq(const, initValue(sig.head))
+    case SingletonRelation(name, sig, memberNames) => {
+      if (sig.size==1) {
+        ctx.mkEq(const, initValue(sig.head))
+      }
+      else {
+        val tupleSort = makeTupleSort(ctx, name, sig.toArray, memberNames.toArray)
+        val tupleConst = ctx.mkConst(name, tupleSort)
+        val eqs = sig.zip(tupleSort.getFieldDecls).map {
+          case (t, decl) => ctx.mkEq(decl.apply(tupleConst), initValue(t))
+        }.toArray
+        ctx.mkAnd(eqs: _*)
+      }
+    }
     case rel: ReservedRelation => ???
   }
 
@@ -250,13 +262,13 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   private def getNamingConstraints(rule: Rule, dependentRule: Rule, id1: Int, id2: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
     val headLiteral = rule.head
     val bodyLiteral = views(dependentRule) match {
-      case CountView(rule, primaryKeyIndices, ruleId) => ???
       case _: JoinView => {
         val _s = dependentRule.body.filter(_.relation == rule.head.relation)
         assert(_s.size==1)
         _s.head
       }
-      case MaxView(rule, primaryKeyIndices, ruleId) => ???
+      case cv: CountView =>  cv.count.literal
+      case mv: MaxView => mv.max.literal
       case sv: SumView => sv.sum.literal
       case _ => ???
     }

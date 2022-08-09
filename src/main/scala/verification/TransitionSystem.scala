@@ -89,7 +89,7 @@ object TransitionSystem {
   def makeStateVar[T<:Sort](ctx: Context, name: String, sort: T): (Expr[T], Expr[T]) = {
     // val v_in = ctx.mkConst(s"v_${name}_in", sort)
     val v_in = ctx.mkConst(s"${name}", sort)
-    val v_out = ctx.mkConst(s"v_${name}_out", sort)
+    val v_out = ctx.mkConst(s"${name}_next", sort)
     (v_in,v_out)
   }
 

@@ -1,13 +1,17 @@
 package view
 
-import com.microsoft.z3.{BoolExpr, Context, Expr, Sort}
-import datalog.{Arithmetic, Count, Literal, Negative, One, Param, Relation, Rule, Variable}
-import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, Statement, Trigger}
+import com.microsoft.z3.{ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort}
+import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Count, Literal, Negative, NumberType, One, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
+import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, ReplacedByKey, Statement, Trigger}
+import verification.TransitionSystem.makeStateVar
+import verification.Z3Helper.{getSort, paramToConst, uintSize}
 
 case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Count])
   val count: Count = rule.aggregators.head.asInstanceOf[Count]
+  val relValueIndex: Int = rule.head.fields.indexOf(count.aggResult)
+
 
   /** Interfaces */
   def insertRow(insertTuple: InsertTuple): OnStatement = {
@@ -56,10 +60,46 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   }
 
   /** Interfaces to generate Z3 constraints */
-  def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
+  def getNextTriggers(trigger: Trigger): Set[Trigger] = trigger match {
+    case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.relation, this.primaryKeyIndices))
+    case DeleteTuple(relation, keyIndices) => ???
+    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
+    case IncrementValue(relation, keyIndices, valueIndex, delta) => ???
+  }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
+    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = {
+    val bodyConstraint = ctx.mkTrue()
+    val sort = getSort(ctx, this.relation, this.primaryKeyIndices)
+    val (v_in, v_out) = makeStateVar(ctx, this.relation.name, sort)
+    val insertedLiteral = getInsertedLiteral(insertTuple.relation)
+    val updateExpr = {
+      val relConst = ctx.mkConst(this.relation.name, sort)
+      val keyParams = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
+      val keyConsts: Array[Expr[_]] = keyParams.map(f => paramToConst(ctx,f,z3Prefix)._1).toArray
+      val oldCountConst = if (primaryKeyIndices.isEmpty) {
+        /** Only one row */
+        relConst
+      }
+      else {
+        /** Read by keys */
+        ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts)
+      }
+      val newValueExpr = this.rule.head.fields(relValueIndex)._type.name match {
+        case "uint" => ctx.mkBVAdd(oldCountConst.asInstanceOf[Expr[BitVecSort]], ctx.mkBV(1, uintSize))
+      }
+      if (primaryKeyIndices.isEmpty) {
+        newValueExpr
+      }
+      else {
+        ctx.mkStore(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts, newValueExpr.asInstanceOf[Expr[Sort]])
+      }
+
+    }
+    val updateConstraint = ctx.mkTrue()
+    (bodyConstraint, updateConstraint, Array(Tuple3(v_in, v_out, updateExpr)))
+  }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
 }

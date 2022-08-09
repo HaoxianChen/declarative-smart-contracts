@@ -1,12 +1,12 @@
 package view
 
-import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort}
 import datalog.Arithmetic.updateArithmeticType
 import datalog._
 import imp._
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{functorExprToZ3, fieldsToConst, getSort, literalToConst, paramToConst, typeToSort}
+import verification.Z3Helper.{fieldsToConst, functorExprToZ3, getSort, literalToConst, matchFieldstoTuple, paramToConst, typeToSort}
 
 abstract class View {
   def rule: Rule
@@ -111,6 +111,41 @@ abstract class View {
     if (isMaterialized) (diffEq, Array(Tuple3(v_in, v_out, updateExpr)))
     else (diffEq, Array())
   }
+
+  protected def updateZ3ConstraintOnInsert(ctx: Context, head: Literal, z3Prefix: String):
+  Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = {
+    val sort = getSort(ctx, this.relation, primaryKeyIndices)
+    val (v_in, v_out) = makeStateVar(ctx, relation.name, sort)
+    val newValueExpr = relation match {
+      case SimpleRelation(name, sig, memberNames) => {
+        val keys = primaryKeyIndices.map(i=>head.fields(i))
+        val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+        val valueParams: List[Parameter] = head.fields.filterNot(f => keys.contains(f))
+        val valueIndices = sig.indices.filterNot(i=>primaryKeyIndices.contains(i)).toList
+        val fieldNames = valueIndices.map(i=>memberNames(i))
+        val newValueConst = fieldsToConst(ctx, valueParams, fieldNames, z3Prefix)
+        ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
+          newValueConst.asInstanceOf[Expr[Sort]])
+      }
+      case SingletonRelation(name, sig, memberNames) => {
+        /** todo: should use all fields, instead of only the first field */
+        if (sig.size==1) {
+          paramToConst(ctx,head.fields.head, z3Prefix)._1
+        }
+        else {
+          val tupleSort: TupleSort = getSort(ctx, relation, primaryKeyIndices).asInstanceOf[TupleSort]
+          val paramConst = head.fields.toArray.map(f => paramToConst(ctx,f,z3Prefix)._1)
+          tupleSort.mkDecl().apply(paramConst:_*)
+        }
+      }
+      case relation: ReservedRelation => {
+        assert(false)
+        ???
+      }
+    }
+    Array(Tuple3(v_in, v_out,newValueExpr))
+  }
+
 }
 object View {
   def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]): View = {

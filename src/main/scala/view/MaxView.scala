@@ -1,13 +1,16 @@
 package view
 
-import com.microsoft.z3.{BoolExpr, Context, Expr, Sort}
-import datalog.{Literal, Max, Param, Parameter, Relation, Rule, Variable}
-import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, Statement, Trigger}
+import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort}
+import datalog.{AnyType, BooleanType, CompoundType, Literal, Max, NumberType, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
+import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
+import verification.TransitionSystem.makeStateVar
+import verification.Z3Helper.{getSort, paramToConst}
 
 case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Max])
   val max: Max = rule.aggregators.head.asInstanceOf[Max]
+  val relValueIndex: Int = rule.head.fields.indexOf(max.aggResult)
 
   /** Interfaces */
   def insertRow(insertTuple: InsertTuple): OnStatement = {
@@ -40,10 +43,58 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   }
 
   /** Interfaces to genreate Z3 constraints */
-  def getNextTriggers(trigger: Trigger): Set[Trigger] = ???
+  def getNextTriggers(trigger: Trigger): Set[Trigger] = trigger match {
+    case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.relation, this.primaryKeyIndices))
+    case DeleteTuple(relation, keyIndices) => ???
+    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
+    case IncrementValue(relation, keyIndices, valueIndex, delta) => ???
+  }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String): (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
+      (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = {
+    val insertedLiteral: Literal = this.max.literal
+    require(insertTuple.relation == insertedLiteral.relation)
+    val newValueParam: Parameter = insertedLiteral.fields(max.valueIndex)
+    /** Read the old value */
+    val oldValue: Expr[_] = oldValueZ3Const(ctx, z3Prefix)
+    val (newValue, _) = paramToConst(ctx, newValueParam, prefix = z3Prefix)
+    val bodyConstraint = newValueParam._type.name match {
+      case "int" => ctx.mkGt(newValue.asInstanceOf[Expr[ArithSort]], oldValue.asInstanceOf[Expr[ArithSort]])
+      case "uint" => ctx.mkBVSGT(newValue.asInstanceOf[Expr[BitVecSort]], oldValue.asInstanceOf[Expr[BitVecSort]])
+    }
+
+    val updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = if(isMaterialized) {
+      updateZ3ConstraintOnInsert(ctx, this.rule.head, z3Prefix)
+    } else Array()
+    val updateConstraint: BoolExpr = ctx.mkTrue()
+
+    (bodyConstraint, updateConstraint, updateExprs)
+  }
+
+  private def oldValueZ3Const(ctx: Context, z3Prefix: String): Expr[_] = {
+    val groupKeys: List[Parameter] = {
+      val allKeys = max.literal.fields.filterNot(_==max.aggParam).filterNot(_.name=="_")
+      rule.head.fields.intersect(allKeys)
+    }
+    val sort = getSort(ctx, this.relation, this.primaryKeyIndices)
+    val relConst = ctx.mkConst(this.relation.name, sort)
+    val oldValue: Expr[_] = if (groupKeys.isEmpty) {
+      relConst
+    }
+    else {
+      val keyConstArray: Array[Expr[_]] = groupKeys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+      ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]],
+        keyConstArray.asInstanceOf[Expr[Sort]])
+    }
+    /** This relation only has one row */
+    if (this.relation.sig.size == 1) {
+      oldValue
+    }
+    else {
+      sort.asInstanceOf[TupleSort].getFieldDecls.apply(this.relValueIndex).apply(oldValue)
+    }
+  }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
 }

@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{BoolSort, Context, Expr, Quantifier, Status}
+import com.microsoft.z3.{ArithSort, BoolSort, Context, Expr, Quantifier, Status}
 
 object Prove {
    def get_vars(g: Expr[_]): Set[Expr[_]] = {
@@ -89,5 +89,26 @@ object Prove {
 
     /* be kind to dispose manually and not wait for the GC. */
     ctx.close()
+  }
+
+  def testTuple(): Unit = {
+    val ctx: Context = new Context()
+    val tupleSort = ctx.mkTupleSort(ctx.mkSymbol("tuple"),
+      Array(ctx.mkSymbol("a"), ctx.mkSymbol("b")),
+      Array(ctx.getIntSort, ctx.getIntSort))
+
+    val tuple = ctx.mkConst("t1", tupleSort)
+    val n1 = tupleSort.getFieldDecls.apply(0).apply(tuple)
+    val n2 = tupleSort.getFieldDecls.apply(1).apply(tuple)
+
+    val solver = ctx.mkSolver()
+    val q1 = ctx.mkEq(n1, ctx.mkInt(3))
+    val q2 = ctx.mkGt(n2.asInstanceOf[Expr[ArithSort]], ctx.mkInt(9))
+    println(q1)
+    println(q2)
+    solver.add(q1)
+    solver.add(q2)
+    solver.check()
+    println(solver.getModel())
   }
 }

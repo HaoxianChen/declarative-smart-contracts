@@ -1,7 +1,8 @@
+import Main.outDir
 import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
-import verification.{Prove, Verifier, TransitionSystem}
+import verification.{Prove, TransitionSystem, Verifier}
 import util.Misc.createDirectory
 
 import java.nio.file.Paths
@@ -77,9 +78,31 @@ object Main extends App {
 
   }
 
+  if (args(0) == "test-verification") {
+    for (p <- List("auction.dl", "crowFunding.dl", "erc20.dl",
+      // "nft.dl",
+      "wallet.dl")) {
+      println(p)
+      val filepath = Paths.get(benchmarkDir, p).toString
+      val filename = Misc.getFileNameFromPath(filepath)
+      val dl = {
+        val parser = new Parser()
+        val inputStr = Misc.fileToString(filepath)
+        val raw = parser.parseAll(parser.program, inputStr).get
+        val typeChecker = TypeChecker()
+        typeChecker.updateTypes(raw).setName(filename.capitalize)
+      }
+      val impTranslator =ImperativeTranslator(dl, isInstrument=true)
+      val imperative = impTranslator.translate()
+      val verifier = new Verifier(dl, imperative)
+      verifier.check()
+    }
+  }
+
   if (args(0) == "testz3") {
-    TransitionSystem.testTS()
+    // TransitionSystem.testTS()
     // Prove.testZ3()
+    Prove.testTuple()
   }
 
 }

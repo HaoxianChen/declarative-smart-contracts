@@ -215,29 +215,6 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
-  private def updateZ3ConsrtaintOnInsert(ctx: Context, head: Literal, z3Prefix: String):
-    Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = {
-    val sort = getSort(ctx, this.relation, primaryKeyIndices)
-    val (v_in, v_out) = makeStateVar(ctx, relation.name, sort)
-    val newValueExpr = relation match {
-      case SimpleRelation(name, sig, memberNames) => {
-        val keys = primaryKeyIndices.map(i=>head.fields(i))
-        val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
-        val valueParams: List[Parameter] = head.fields.filterNot(f => keys.contains(f))
-        val newValueConst = fieldsToConst(ctx, valueParams, z3Prefix)
-        ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
-          newValueConst.asInstanceOf[Expr[Sort]])
-      }
-      case SingletonRelation(name, sig, memberNames) => {
-        paramToConst(ctx,head.fields.head, z3Prefix)._1
-      }
-      case relation: ReservedRelation => {
-        assert(false)
-        ???
-      }
-    }
-    Array(Tuple3(v_in, v_out,newValueExpr))
-  }
 
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
     (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
@@ -254,15 +231,15 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       sortJoinLiterals(rest)
     }
 
-    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix))
-    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f,z3Prefix))
+    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix)).toArray
+    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f,z3Prefix)).toArray
 
     val updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = if(isMaterialized) {
-      updateZ3ConsrtaintOnInsert(ctx, this.rule.head, z3Prefix)
+      updateZ3ConstraintOnInsert(ctx, this.rule.head, z3Prefix)
     } else Array()
     val updateConstraint: BoolExpr = ctx.mkTrue()
 
-    val bodyConstraint = ctx.mkAnd((exprs++functorExprs).toArray:_*)
+    val bodyConstraint = ctx.mkAnd((exprs++functorExprs):_*)
 
     (bodyConstraint, updateConstraint, updateExprs)
   }
