@@ -44,9 +44,12 @@ balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
 bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m,
             now(t1), endTime(t2), t1 < t2.
 
+.decl withdrawCount(p:address, c:uint)[0]
+withdrawCount(p,c) :- withdraw(p,_), c = count: withdraw(p,_).
+
 // withdraw(p,s) :- recv_withdrawWinner(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
-withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m.
-withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
+withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m, withdrawCount(p,0).
+withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0, withdrawCount(p,0).
 send(p,n) :- withdraw(p,n).
 
 end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2.
@@ -55,8 +58,6 @@ send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1
 // send(p,n) :- recv_endAuction(), msgSender(s), owner(s), highestBid(_,n), beneficiary(p).
 
 // Property
-.decl withdrawCount(p:address, c:uint)[0]
-withdrawCount(p,c) :- withdraw(p,_), c = count: withdraw(p,_).
 .decl repeatWithdraw(p:address,c:uint)[0]
 .violation repeatWithdraw
 repeatWithdraw(p,c) :- withdrawCount(p,c), c>1.
