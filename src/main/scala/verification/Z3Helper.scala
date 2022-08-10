@@ -15,10 +15,11 @@ object Z3Helper {
     case _ => ???
   }
 
-  def makeTupleSort(ctx: Context, name: String, types: Array[Type], fieldNames: Array[String]): TupleSort = {
+  def makeTupleSort(ctx: Context, relation: Relation, types: Array[Type], fieldNames: Array[String]): TupleSort = {
+    require(types.size == fieldNames.size)
     val sorts = types.map(t => typeToSort(ctx, t))
     val symbols: Array[Symbol] = fieldNames.map(ctx.mkSymbol)
-    ctx.mkTupleSort(ctx.mkSymbol(name), symbols, sorts)
+    ctx.mkTupleSort(ctx.mkSymbol(relToTupleName(relation)), symbols, sorts)
   }
 
   def paramToConst(ctx: Context, param: Parameter, prefix: String): (Expr[_<:Sort], Sort) = {
@@ -44,15 +45,15 @@ object Z3Helper {
     (_newX, sort)
   }
 
-  def fieldsToConst(ctx: Context, fields: List[Parameter], fieldNames: List[String], prefix: String): (Expr[_], Sort) = {
+  def relToTupleName(relation: Relation): String = s"${relation.name}Tuple"
+
+  def fieldsToConst(ctx: Context, relation: Relation, fields: List[Parameter], fieldNames: List[String], prefix: String): (Expr[_], Sort) = {
     if (fields.size==1) {
       paramToConst(ctx, fields.head, prefix)
     }
     else {
       val fieldTypes = fields.map(_._type)
-      val fieldTypeNames = fieldTypes.mkString(",")
-      val tupleSortName: String = s"Tuple($fieldTypeNames)"
-      val tupleSort = makeTupleSort(ctx, tupleSortName, fieldTypes.toArray, fieldNames.toArray)
+      val tupleSort = makeTupleSort(ctx, relation, fieldTypes.toArray, fieldNames.toArray)
       val params = fields.map(f => paramToConst(ctx, f, prefix)._1).toArray
       (tupleSort.mkDecl().apply(params:_*), tupleSort)
     }
@@ -64,7 +65,7 @@ object Z3Helper {
         val keys = indices.map(i => lit.fields(i))
         val values = lit.fields.filterNot(f => keys.contains(f))
         if (keys.nonEmpty) {
-          val (valueConst, _) = fieldsToConst(ctx,values,lit.relation.memberNames,prefix)
+          val (valueConst, _) = fieldsToConst(ctx, lit.relation, values,lit.relation.memberNames,prefix)
           val sort = getSort(ctx, lit.relation, indices)
           val arrayConst = ctx.mkConst(name, sort)
           val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
@@ -110,33 +111,33 @@ object Z3Helper {
     ctx.mkAnd(eqs:_*)
   }
 
-  def getArraySort(ctx: Context, keyTypes: List[Type], valueTypes: List[Type], fieldNames: List[String]): Sort = {
+
+  def getArraySort(ctx: Context, relation: Relation, indices: List[Int]): (Sort, Array[Sort], Sort) = {
+    val keyTypes = indices.map(i => relation.sig(i))
+    val valueIndices = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
+    val valueTypes = valueIndices.map(i=>relation.sig(i))
+    val fieldNames = valueIndices.map(i=>relation.memberNames(i))
+
     val keySorts = keyTypes.toArray.map(t => typeToSort(ctx,t))
     val valueSort = if  (valueTypes.size == 1) {
       typeToSort(ctx,valueTypes.head)
     }
     else {
-      val fieldNameStr = valueTypes.mkString(",")
-      makeTupleSort(ctx, s"Tuple($fieldNameStr)", valueTypes.toArray, fieldNames.toArray)
+      makeTupleSort(ctx, relation, valueTypes.toArray, fieldNames.toArray)
     }
-    ctx.mkArraySort(keySorts, valueSort)
+    (ctx.mkArraySort(keySorts, valueSort), keySorts, valueSort)
   }
 
+
   def getSort(ctx: Context, relation: Relation, indices: List[Int]): Sort = relation match {
-    case rel: SimpleRelation => {
-      val keyTypes = indices.map(i => rel.sig(i))
-      val valueIndices = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
-      val valueTypes = valueIndices.map(i=>relation.sig(i))
-      val valueNames = valueIndices.map(i=>relation.memberNames(i))
-      getArraySort(ctx, keyTypes, valueTypes, valueNames)
-    }
+    case rel: SimpleRelation => getArraySort(ctx, relation, indices)._1
     case SingletonRelation(name, sig, memberNames) => {
       if (sig.size==1) {
         val t = sig.head
         typeToSort(ctx, t)
       }
       else {
-        makeTupleSort(ctx, s"${name}Tuple", sig.toArray, memberNames.toArray)
+        makeTupleSort(ctx, relation, sig.toArray, memberNames.toArray)
       }
     }
     case reserved :ReservedRelation => reserved match {

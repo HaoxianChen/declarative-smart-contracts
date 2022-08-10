@@ -123,7 +123,7 @@ abstract class View {
         val valueParams: List[Parameter] = head.fields.filterNot(f => keys.contains(f))
         val valueIndices = sig.indices.filterNot(i=>primaryKeyIndices.contains(i)).toList
         val fieldNames = valueIndices.map(i=>memberNames(i))
-        val newValueConst = fieldsToConst(ctx, valueParams, fieldNames, z3Prefix)
+        val newValueConst: Expr[_] = fieldsToConst(ctx, relation, valueParams, fieldNames, z3Prefix)._1
         ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
           newValueConst.asInstanceOf[Expr[Sort]])
       }

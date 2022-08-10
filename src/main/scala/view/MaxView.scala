@@ -4,7 +4,7 @@ import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Ex
 import datalog.{AnyType, BooleanType, CompoundType, Literal, Max, NumberType, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
 import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{getSort, paramToConst}
+import verification.Z3Helper.{getArraySort, getSort, paramToConst}
 
 case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
@@ -84,15 +84,18 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     }
     else {
       val keyConstArray: Array[Expr[_]] = groupKeys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
-      ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]],
-        keyConstArray.asInstanceOf[Expr[Sort]])
+      ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConstArray)
     }
     /** This relation only has one row */
-    if (this.relation.sig.size == 1) {
+    val valueIndices = this.relation.sig.indices.filterNot(i => primaryKeyIndices.contains(i))
+    if (valueIndices.size==1) {
       oldValue
     }
     else {
-      sort.asInstanceOf[TupleSort].getFieldDecls.apply(this.relValueIndex).apply(oldValue)
+      val (_,_,rangeSort) = getArraySort(ctx, this.relation, primaryKeyIndices)
+      val valueParams = valueIndices.map(i=>this.relation.memberNames(i))
+      val i = valueParams.indexOf(this.relation.memberNames(this.relValueIndex))
+      rangeSort.asInstanceOf[TupleSort].getFieldDecls.apply(i).apply(oldValue)
     }
   }
 

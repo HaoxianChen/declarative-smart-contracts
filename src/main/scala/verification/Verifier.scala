@@ -7,7 +7,7 @@ import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
 import util.Misc.crossJoin
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 case class RuleZ3Constraints(ruleConstraints: BoolExpr,
@@ -72,18 +72,20 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
   private def getInitConstraints(relation: Relation, const: Expr[Sort]): BoolExpr = relation match {
     case sr: SimpleRelation => {
-      val keyTypes: List[Type] = indices(sr).map(i=>relation.sig(i))
-      val valueTypes: List[Type] = relation.sig.filterNot(t => keyTypes.contains(t))
-      val initValues = if (valueTypes.size == 1) {
+      val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+      val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
+      val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
+      val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+
+      val initValues = if (!valueSort.isInstanceOf[TupleSort]) {
         initValue(valueTypes.head)
       }
       else {
-        val _initValues = valueTypes.toArray.map(initValue)
-        val tupleSort = makeTupleSort(ctx, s"${sr.name}Tuple", valueTypes.toArray, relation.memberNames.toArray)
-        tupleSort.mkDecl().apply(_initValues:_*)
+        val _initValues = valueTypes.map(initValue)
+        valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*)
       }
 
-      val keyConstArray: Array[Expr[_]] = keyTypes.toArray.zipWithIndex.map{
+      val keyConstArray: Array[Expr[_]] = keyTypes.zipWithIndex.map{
           case (t,i) => ctx.mkConst(s"${t.name.toLowerCase()}$i", typeToSort(ctx,t))
       }
 
@@ -97,7 +99,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
         ctx.mkEq(const, initValue(sig.head))
       }
       else {
-        val tupleSort = makeTupleSort(ctx, name, sig.toArray, memberNames.toArray)
+        val tupleSort = makeTupleSort(ctx, relation, sig.toArray, memberNames.toArray)
         val tupleConst = ctx.mkConst(name, tupleSort)
         val eqs = sig.zip(tupleSort.getFieldDecls).map {
           case (t, decl) => ctx.mkEq(decl.apply(tupleConst), initValue(t))
