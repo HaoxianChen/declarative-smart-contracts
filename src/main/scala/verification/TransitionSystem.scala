@@ -42,44 +42,72 @@ object TransitionSystem {
 
     val p: Expr[BitVecSort] = ctx.mkConst("p", bvSort)
     val q: Expr[BitVecSort] = ctx.mkConst("q", bvSort)
-    val amount = ctx.mkIntConst("amount")
+    val amount = ctx.mkBVConst("amount", bvSize)
 
     /** Variables */
-    val (totalSuuply, totalSupplyOut) = tr.newVar("totalSupply", ctx.mkIntSort())
-    val (balances, balancesOut) = tr.newVar("balances", ctx.mkArraySort(bvSort, ctx.mkIntSort()))
+    val (totalSuuply, totalSupplyOut) = tr.newVar("totalSupply", bvSort)
+    val (totalBalance, totalBalanceOut) = tr.newVar("totalBalance", bvSort)
+    val (balances, balancesOut) = tr.newVar("balances", ctx.mkArraySort(bvSort, bvSort))
     val (allowances, allowancesOut) = tr.newVar("allowances", ctx.mkArraySort(Array(bvSort, bvSort).asInstanceOf[Array[Sort]], bvSort))
 
     /** Transitions */
     val init = ctx.mkAnd(
-      ctx.mkEq(totalSuuply,ctx.mkInt(0)),
-      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(balances,p), ctx.mkInt(0)),
+      ctx.mkEq(totalSuuply,ctx.mkBV(0, bvSize)),
+      ctx.mkEq(totalBalance,ctx.mkBV(0, bvSize)),
+      ctx.mkForall(Array(p), ctx.mkEq(ctx.mkSelect(balances,p), ctx.mkBV(0,bvSize)),
                   1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1")),
       ctx.mkForall(Array(p,q), ctx.mkEq(ctx.mkSelect(allowances, Array(p, q).asInstanceOf[Array[Expr[_]]]), ctx.mkBV(0,bvSize)),
                   1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
     )
 
-    val trMint = ctx.mkAnd(
-        ctx.mkEq(totalSupplyOut, ctx.mkAdd(totalSuuply, amount)),
-        ctx.mkGt(amount,ctx.mkInt(0)),
-      ctx.mkLt(amount,ctx.mkInt(0)),
+    // val trMint = ctx.mkAnd(
+    //     ctx.mkEq(totalSupplyOut, ctx.mkAdd(totalSuuply, amount)),
+    //     ctx.mkGt(amount,ctx.mkInt(0)),
+    //   ctx.mkLt(amount,ctx.mkInt(0)),
+    //   ctx.mkEq(balancesOut,
+    //           ctx.mkStore(balances,p,ctx.mkAdd(ctx.mkSelect(balances,p), amount)))
+    // )
+    val n = ctx.mkBVConst("n", bvSize)
+    val trTransferFrom = ctx.mkAnd(
+      ctx.mkBVSGT(amount, ctx.mkBV(0,bvSize)),
+      ctx.mkEq(allowancesOut, ctx.mkStore(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]],
+        ctx.mkBVSub(ctx.mkSelect(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]]), amount))
+      ),
       ctx.mkEq(balancesOut,
-              ctx.mkStore(balances,p,ctx.mkAdd(ctx.mkSelect(balances,p), amount)))
+        ctx.mkStore(
+          ctx.mkStore(balances, q, ctx.mkBVAdd(ctx.mkSelect(balances, q), amount)),
+          p, ctx.mkBVSub(ctx.mkSelect(balances, p), amount))
+      ),
+      ctx.mkEq(totalSupplyOut, totalSuuply),
+      ctx.mkEq(n, ctx.mkBVMul(ctx.mkBV(-1, bvSize), amount)),
+      ctx.mkEq(totalBalanceOut, ctx.mkBVAdd(ctx.mkBVAdd(totalBalance, amount), n))
     )
 
-    val trSetAllowance = ctx.mkAnd(ctx.mkEq(allowancesOut, ctx.mkStore(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]],
-                                            ctx.mkBVConst("n", bvSize))),
+    val trSetAllowance = ctx.mkAnd(
+      ctx.mkEq(allowancesOut, ctx.mkStore(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]],
+        ctx.mkBVAdd(ctx.mkSelect(allowances, Array(p,q).asInstanceOf[Array[Expr[_]]]),
+          n))
+      ),
       ctx.mkEq(balancesOut, balances),
-      ctx.mkEq(totalSupplyOut, totalSuuply))
+      ctx.mkEq(totalSupplyOut, totalSuuply),
+      ctx.mkEq(totalBalanceOut, totalBalance)
+    )
 
     tr.setInit(init)
-    tr.setTr(ctx.mkOr(trMint, trSetAllowance))
+    tr.setTr(ctx.mkOr(trTransferFrom, trSetAllowance))
     // tr.setTr(trMint)
 
-    val n = ctx.mkIntConst("n")
+    // val property = ctx.mkNot(ctx.mkExists(
+    //                           Array(p,n),
+    //                           ctx.mkAnd( ctx.mkEq(ctx.mkSelect(balances,p), n), ctx.mkBVSLT(n,ctx.mkBV(0, bvSize))),
+    //                            1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2")))
     val property = ctx.mkNot(ctx.mkExists(
-                              Array(p,n),
-                              ctx.mkAnd( ctx.mkEq(ctx.mkSelect(balances,p), n), ctx.mkLt(n,ctx.mkInt(0))),
+                              Array(p,q),
+                              ctx.mkAnd( ctx.mkEq(totalSuuply,p), ctx.mkEq(totalBalance,q),
+                                ctx.mkNot(ctx.mkEq(p,q))
+                              ),
                                1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2")))
+    // val property = ctx.mkEq(totalSuuply, totalBalance)
 
     val res = tr.inductiveProve(ctx, property)
     println(res)

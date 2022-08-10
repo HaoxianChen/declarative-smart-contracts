@@ -100,9 +100,9 @@ object Main extends App {
   }
 
   if (args(0) == "testz3") {
-    // TransitionSystem.testTS()
+    TransitionSystem.testTS()
     // Prove.testZ3()
-    Prove.testTuple()
+    // Prove.testTuple()
   }
 
 }
