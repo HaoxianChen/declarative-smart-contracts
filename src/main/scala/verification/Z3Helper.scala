@@ -200,7 +200,7 @@ object Z3Helper {
       arith match {
         case _: Greater => _type.name match {
           case "int" => ctx.mkGt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
-          case "uint" => ctx.mkBVUGE(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
+          case "uint" => ctx.mkBVUGT(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
         }
         case _: Lesser => _type.name match {
           case "int" => ctx.mkLt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])

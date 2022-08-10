@@ -141,13 +141,15 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     var transactionConstraints: List[BoolExpr] = List()
     var transactionConst: List[Expr[IntSort]] = List()
     for (t <- triggers) {
+      var i: Int = 0
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
-        for ((eachBranch,i) <- ruleToExpr(rule, t).zipWithIndex) {
+        for (eachBranch <- ruleToExpr(rule, t)) {
           /** Add the "unchanged" constraints */
           val unchangedConstraints = getUnchangedConstraints(eachBranch)
           /** A boolean value indicating which transaction branch gets evaluate to true */
           val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+          i += 1
           transactionConst +:= trConst
           transactionConstraints +:= ctx.mkAnd((ctx.mkEq(trConst, ctx.mkInt(1)) :: eachBranch :: unchangedConstraints).toArray: _*)
         }
