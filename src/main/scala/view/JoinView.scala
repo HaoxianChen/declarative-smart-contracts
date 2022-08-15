@@ -323,17 +323,20 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val keyParams = deleteTuple.keyIndices.map(i=>deletedLiteral.fields(i))
       val keyConsts: Array[Expr[_]] = keyParams.map(f => paramToConst(ctx,f, z3Prefix)._1).toArray
       val valueIndices = deleteTuple.relation.sig.indices.filterNot(i => deleteTuple.keyIndices.contains(i)).toList
-      val (sort, _, _) = getArraySort(ctx, deleteTuple.relation, deleteTuple.keyIndices)
+      val (sort, _, valueSort) = getArraySort(ctx, deleteTuple.relation, deleteTuple.keyIndices)
       val relConst = ctx.mkConst(deleteTuple.relation.name, sort)
       val read = ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts)
 
       if (valueIndices.size==1) {
         val valueParam = deletedLiteral.fields(valueIndices.head)
         val (valueConst,_) = paramToConst(ctx, valueParam, z3Prefix)
-        ctx.mkEq( valueConst, read)
+        ctx.mkEq(read, valueConst)
       }
       else {
-        ???
+        val valueParams: List[Parameter] = valueIndices.map(i=>deletedLiteral.fields(i))
+        val valueConsts = valueParams.map(p => paramToConst(ctx, p, z3Prefix)._1)
+        val tuple = valueSort.asInstanceOf[TupleSort].mkDecl().apply(valueConsts:_*)
+        ctx.mkEq(read, tuple)
       }
     }
 
