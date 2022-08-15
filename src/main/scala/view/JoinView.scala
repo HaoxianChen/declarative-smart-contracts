@@ -1,11 +1,13 @@
 package view
 
-import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, TupleSort}
 import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
+import util.Misc.crossJoin
+import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{fieldsToConst, functorToZ3, getSort, literalToConst, paramToConst}
+import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort, initValue, literalToConst, paramToConst}
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]) extends View {
   require(rule.aggregators.isEmpty)
@@ -90,7 +92,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     updates
   }
 
-  private def getInsertedLiteral(relation: Relation): Literal = {
+  def getInsertedLiteral(relation: Relation): Literal = {
     val _lits = rule.body.filter(_.relation == relation)
     require(_lits.size == 1, s"Only support rules where each relation appears at most once: $rule.")
     _lits.head
@@ -217,14 +219,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
 
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    Array[RuleZ3Constraints] = {
 
-    val insert = getInsertedLiteral(insertTuple.relation)
-
-    /** Should delete an old head literal first? */
-    val delete = if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
-      ???
-    }
+  val insert = getInsertedLiteral(insertTuple.relation)
 
     val sortedLiteral: List[Literal] = {
       val rest = rule.body.filterNot(_.relation==insert.relation)
@@ -241,20 +239,123 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
     val bodyConstraint = ctx.mkAnd((exprs++functorExprs):_*)
 
-    (bodyConstraint, updateConstraint, updateExprs)
+    val insertConstraints = makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExprs,
+      InsertTuple(this.relation, this.primaryKeyIndices))
+    insertConstraints
+
+    /** Should delete an old head literal first? */
+    // if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
+    //   val deleteConstraints = deleteRowZ3(ctx, DeleteTuple(insertTuple.relation, insertTuple.keyIndices), isMaterialized, z3Prefix)
+    //   /** Add naming constraints here */
+    //   def _mergeRuleZ3Constraints(a: RuleZ3Constraints, b: RuleZ3Constraints): RuleZ3Constraints = a.mkAnd(ctx, b)
+    //   val ret = crossJoin(List(insertConstraints.toList, deleteConstraints.toList)).map(
+    //     branches => branches.foldLeft(RuleZ3Constraints(ctx))(_mergeRuleZ3Constraints)
+    //   ).toArray
+    //   ret
+    // }
+    // else {
+    //   insertConstraints
+    // }
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
-    val (resultIndex, delta) = getUpdate(incrementValue)
+    // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    Array[RuleZ3Constraints] = {
+  val (resultIndex, delta) = getUpdate(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
 
     /** todo: support more general cases, where join exists.
      * Now this function only propagates the update.
      * */
+    require(rule.body.diff(Set(insertedLiteral)).isEmpty)
     val bodyConstraint = ctx.mkTrue()
-    (bodyConstraint, updateConstraint, updateExpr)
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr,
+      IncrementValue(relation, primaryKeyIndices, resultIndex, delta))
+  }
+
+  private def resetRelationZ3(ctx: Context, head: Literal, z3Prefix: String):
+    Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]
+  = {
+    val sort = getSort(ctx, this.relation, this.primaryKeyIndices)
+    val (v_in, v_out) = makeStateVar(ctx, this.relation.name, sort)
+    val newValueExpr = relation match {
+      case SimpleRelation(name, sig, memberNames) => {
+        val keys = primaryKeyIndices.map(i=> head.fields(i))
+        val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+        val valueParams: List[Parameter] = head.fields.filterNot(f => keys.contains(f))
+        val newValueConst: Expr[_] = if (valueParams.size==1) {
+          initValue(ctx,valueParams.head._type)
+        }
+        else {
+          ???
+        }
+        ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
+          newValueConst.asInstanceOf[Expr[Sort]])
+      }
+      case SingletonRelation(name, sig, memberNames) => {
+        /** todo: should use all fields, instead of only the first field */
+        if (sig.size==1) {
+          initValue(ctx, sig.head)
+        }
+        else {
+          val tupleSort: TupleSort = getSort(ctx, relation, primaryKeyIndices).asInstanceOf[TupleSort]
+          val paramConst = head.fields.toArray.map(f => initValue(ctx,f._type))
+          tupleSort.mkDecl().apply(paramConst:_*)
+        }
+      }
+      case relation: ReservedRelation => {
+        assert(false)
+        ???
+      }
+    }
+    Array(Tuple3(v_in, v_out, newValueExpr))
+  }
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
+    Array[RuleZ3Constraints] = {
+    val deletedLiteral = getInsertedLiteral(deleteTuple.relation)
+
+    val readOldValue = if (deleteTuple.keyIndices.isEmpty) {
+      ???
+    }
+    else {
+      val keyParams = deleteTuple.keyIndices.map(i=>deletedLiteral.fields(i))
+      val keyConsts: Array[Expr[_]] = keyParams.map(f => paramToConst(ctx,f, z3Prefix)._1).toArray
+      val valueIndices = deleteTuple.relation.sig.indices.filterNot(i => deleteTuple.keyIndices.contains(i)).toList
+      val (sort, _, _) = getArraySort(ctx, deleteTuple.relation, deleteTuple.keyIndices)
+      val relConst = ctx.mkConst(deleteTuple.relation.name, sort)
+      val read = ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts)
+
+      if (valueIndices.size==1) {
+        val valueParam = deletedLiteral.fields(valueIndices.head)
+        val (valueConst,_) = paramToConst(ctx, valueParam, z3Prefix)
+        ctx.mkEq( valueConst, read)
+      }
+      else {
+        ???
+      }
+    }
+
+    val sortedLiteral: List[Literal] = {
+      val rest = rule.body.filterNot(_.relation==deletedLiteral.relation)
+      sortJoinLiterals(rest)
+    }
+
+    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix)).toArray
+    val functorExprs = rule.functors.toList.map(f=>functorToZ3(ctx,f,z3Prefix)).toArray
+
+    val resetExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = if (isMaterialized) {
+      resetRelationZ3(ctx, this.rule.head, z3Prefix)
+    }
+    else {
+      Array()
+    }
+    val updateConstraint: BoolExpr = ctx.mkTrue()
+    val bodyConstraint = ctx.mkAnd(((readOldValue +: exprs ) ++ functorExprs):_*)
+
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, resetExprs,
+      DeleteTuple(this.relation, this.primaryKeyIndices))
   }
 
   private def getUpdate(incrementValue: IncrementValue): (Int, Arithmetic) = {
@@ -286,8 +387,16 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     (resultIndex, delta)
   }
 
-  def getNextTriggers(trigger: Trigger): Set[Trigger] = trigger match {
-    case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices))
+  private def getNextTrigger(trigger: Trigger): Set[Trigger] = trigger match {
+    case InsertTuple(relation, keyIndices) => {
+      if (isDeleteBeforeInsert(relation, keyIndices)) {
+        Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices),
+          DeleteTuple(this.rule.head.relation, this.primaryKeyIndices))
+      }
+      else {
+        Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices))
+      }
+    }
     case DeleteTuple(relation, keyIndices) => ???
     case ReplacedByKey(relation, keyIndices, targetRelation) => ???
     case ic: IncrementValue => {

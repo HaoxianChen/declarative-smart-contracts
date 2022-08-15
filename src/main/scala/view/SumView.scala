@@ -3,8 +3,9 @@ package view
 import com.microsoft.z3.{ArithExpr, ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, Sort}
 import datalog.{Add, Arithmetic, Literal, Param, Relation, Rule, Sum}
 import imp.{DeleteTuple, Increment, IncrementValue, Insert, InsertTuple, OnIncrement, OnInsert, OnStatement, ReplacedByKey, Statement, Trigger}
+import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{functorExprToZ3, fieldsToConst}
+import verification.Z3Helper.{fieldsToConst, functorExprToZ3}
 
 case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
@@ -43,7 +44,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
       increment, ruleId)
   }
 
-  protected def getInsertedLiteral(relation: Relation): Literal = {
+  def getInsertedLiteral(relation: Relation): Literal = {
     require(relation==sum.relation)
     sum.literal
   }
@@ -69,7 +70,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   /** Interfaces to generate Z3 constraints */
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    Array[RuleZ3Constraints] ={
     val (delta, resultIndex) = getDelta(insertTuple)
     val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
@@ -78,11 +79,11 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
      * Now this function only propagates the update.
      * */
     val bodyConstraint = ctx.mkTrue()
-    (bodyConstraint, updateConstraint, updateExpr)
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr, InsertTuple(this.relation, this.primaryKeyIndices))
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
+    Array[RuleZ3Constraints] ={
     val (delta, resultIndex) = getDelta(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
@@ -90,10 +91,11 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
      * Now this function only propagates the update.
      * */
     val bodyConstraint = ctx.mkTrue()
-    (bodyConstraint, updateConstraint, updateExpr)
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr,
+      IncrementValue(this.relation, this.primaryKeyIndices, resultIndex, delta))
   }
 
-  def getNextTriggers(trigger: Trigger): Set[Trigger] = {
+  private def getNextTrigger(trigger: Trigger): Set[Trigger] = {
     assert(this.rule.body.exists(_.relation==trigger.relation) || this.sum.relation == trigger.relation, s"${trigger}\n${this.rule}")
     trigger match {
       case insertTuple:InsertTuple => {
@@ -108,6 +110,9 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
       }
     }
   }
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
+    Array[RuleZ3Constraints] = ???
 
 }
 

@@ -31,36 +31,75 @@ abstract class View {
 
   /** Interfaces to generate Z3 constraints */
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-        (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
+        // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
+      Array[RuleZ3Constraints]
   // def deleteRowZ3(deleteTuple: DeleteTuple): BoolExpr
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-        (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
+        Array[RuleZ3Constraints]
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
+    Array[RuleZ3Constraints]
 
   def getZ3Constraint(ctx: Context, trigger: Trigger, isMaterialized: Boolean, z3Prefix: String):
-      (RuleZ3Constraints, RuleZ3Constraints) = {
-    /** Return two branch, one is rule body evaluates to true, the other is false */
-    val (bodyConstraint, updateConstraints, updates) = trigger match {
-      case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix: String)
-      case DeleteTuple(relation, keyIndices) => ???
+      // (RuleZ3Constraints, RuleZ3Constraints) = {
+    Array[RuleZ3Constraints] = {
+  /** Return two branch, one is rule body evaluates to true, the other is false */
+    // val (bodyConstraint, updateConstraints, updates) = trigger match {
+    trigger match {
+      case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix)
+      case dt: DeleteTuple => deleteRowZ3(ctx, dt, isMaterialized, z3Prefix)
       case ReplacedByKey(relation, keyIndices, targetRelation) => ???
-      case ic: IncrementValue => updateRowZ3(ctx, ic, isMaterialized, z3Prefix: String)
+      case ic: IncrementValue => updateRowZ3(ctx, ic, isMaterialized, z3Prefix)
     }
 
-    val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraints, updates)
-    val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array())
-    (trueBranch, falseBranch)
+    // val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraints, updates, getNextTriggers(trigger))
+    // val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array())
+    // (trueBranch, falseBranch)
   }
 
-  def getNextTriggers(trigger: Trigger): Set[Trigger]
+  // def getNextTrigger(trigger: Trigger): Trigger
 
-  protected def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {
+  def getInsertedLiteral(relation: Relation): Literal
+
+  protected def makeRuleZ3Constraints(ctx: Context, bodyConstraint: BoolExpr, updateConstraint: BoolExpr,
+                                      updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])],
+                                      nextTrigger: Trigger):
+  Array[RuleZ3Constraints] = {
+    val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraint, updateExprs,
+      Set(nextTrigger))
+    val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array(), Set())
+    if (bodyConstraint.simplify().isTrue) {
+      /** Only the true branch*/
+      Array(trueBranch)
+    }
+    else {
+      Array(trueBranch, falseBranch)
+    }
+  }
+
+  def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {
     /** Conditions to delete a head tuple before inserting a new tuple P(X):
      * 1. The relation P has index, or is a singleton relation:
      *        this means P(X) may overwritten an old entry of P.
      * todo: 2. If the new derived head tuple H'(Y) has the *same keys* as the old tuple H(Y),
      *  skip deletion. Because H(Y) will be implicitly overwritten by H'(Y).
      * */
-    keyIndices.nonEmpty || relation.isInstanceOf[SingletonRelation]
+    val insertedLiteral = getInsertedLiteral(relation)
+    val insertedLiteralKeys = keyIndices.map(i=>insertedLiteral.fields(i)).toSet
+    val headLiteralKeys = this.primaryKeyIndices.map(i=>this.rule.head.fields(i)).toSet
+
+    // keyIndices.nonEmpty || relation.isInstanceOf[SingletonRelation]
+    (keyIndices.nonEmpty && !headLiteralKeys.subsetOf(insertedLiteralKeys)) || relation.isInstanceOf[SingletonRelation]
+  }
+
+  def getTriggersForView(trigger: Trigger): Array[Trigger] = trigger match {
+    case InsertTuple(relation, keyIndices) => if (isDeleteBeforeInsert(relation, keyIndices)) {
+      Array(DeleteTuple(relation, keyIndices), InsertTuple(relation, keyIndices))
+    }
+    else {
+      Array(InsertTuple(relation, keyIndices))
+    }
+    case _ => Array(trigger)
   }
 
   protected def deleteByKeysStatement(literal: Literal, keyIndices: List[Int]): Statement = {

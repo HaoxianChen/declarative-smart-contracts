@@ -7,13 +7,26 @@ import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
 import util.Misc.crossJoin
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 case class RuleZ3Constraints(ruleConstraints: BoolExpr,
                              updateConstraint: BoolExpr,
-                             updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) {
+                             updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])],
+                             nextTriggers: Set[Trigger]) {
   def allConstraints(ctx: Context): BoolExpr = ctx.mkAnd(ruleConstraints, updateConstraint)
+
+  def mkAnd(ctx: Context, that: RuleZ3Constraints): RuleZ3Constraints = {
+    RuleZ3Constraints(
+      ctx.mkAnd(this.ruleConstraints, that.ruleConstraints),
+      ctx.mkAnd(this.updateConstraint, that.updateConstraint),
+      this.updateExprs ++ that.updateExprs,
+      this.nextTriggers ++ that.nextTriggers
+    )
+  }
+}
+object RuleZ3Constraints {
+  def apply(ctx:Context): RuleZ3Constraints = RuleZ3Constraints(ctx.mkTrue(), ctx.mkTrue(), Array(), Set())
 }
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
@@ -34,7 +47,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   })
 
   private def getIndices(relation: Relation): List[Int] = relation match {
-    case sr:SimpleRelation => indices(sr)
+    case sr:SimpleRelation => indices.getOrElse(sr, List())
     case SingletonRelation(name, sig, memberNames) => List()
     case relation: ReservedRelation => ???
   }
@@ -63,13 +76,6 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }
   }
 
-  private def initValue(_type: Type): Expr[_<:Sort] = _type.name match {
-    case "address" => ctx.mkBV(0, addressSize)
-    case "int" => ctx.mkInt(0)
-    case "uint" => ctx.mkBV(0, uintSize)
-    case "bool" => ctx.mkBool(false)
-  }
-
   private def getInitConstraints(relation: Relation, const: Expr[Sort]): BoolExpr = relation match {
     case sr: SimpleRelation => {
       val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
@@ -78,10 +84,10 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
 
       val initValues = if (!valueSort.isInstanceOf[TupleSort]) {
-        initValue(valueTypes.head)
+        initValue(ctx,valueTypes.head)
       }
       else {
-        val _initValues = valueTypes.map(initValue)
+        val _initValues = valueTypes.map(t => initValue(ctx,t))
         valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*)
       }
 
@@ -96,13 +102,13 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }
     case SingletonRelation(name, sig, memberNames) => {
       if (sig.size==1) {
-        ctx.mkEq(const, initValue(sig.head))
+        ctx.mkEq(const, initValue(ctx, sig.head))
       }
       else {
         val tupleSort = makeTupleSort(ctx, relation, sig.toArray, memberNames.toArray)
         val tupleConst = ctx.mkConst(name, tupleSort)
         val eqs = sig.zip(tupleSort.getFieldDecls).map {
-          case (t, decl) => ctx.mkEq(decl.apply(tupleConst), initValue(t))
+          case (t, decl) => ctx.mkEq(decl.apply(tupleConst), initValue(ctx,t))
         }.toArray
         ctx.mkAnd(eqs: _*)
       }
@@ -181,57 +187,67 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   private def ruleToExpr(rule: Rule, trigger: Trigger): Array[BoolExpr] = {
     var id = 0
 
-    def _ruleToExpr(rule: Rule, trigger: Trigger, upstreamRule: Option[Rule], upstreamId: Option[Int]):
-      List[(BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])] = {
+    def _ruleToExpr(rule: Rule, trigger: Trigger):
+      (Int, List[(BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])]) = {
       val thisId = id
       id += 1
 
       val view = views(rule)
       val isMaterialized = materializedRelations.contains(rule.head.relation)
-      val (trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
 
-      /** Derive dependent constraints */
-      val nextTriggers = view.getNextTriggers(trigger)
-
-      val dependentRules: List[(Trigger,Rule)] = nextTriggers.flatMap(t => getTriggeredRules(t).map(r => (t,r))).toList
-      val dependentConstraints = dependentRules.map(t => _ruleToExpr(t._2, t._1, Some(rule), Some(thisId)))
-
-      /** Merge local branch and dependent branches via cross join */
       var allBranches: List[(BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])] = List()
-      for (eachBranch <- crossJoin(
-                  List(Tuple2(trueBranch.allConstraints(ctx), trueBranch.updateExprs)) +: dependentConstraints)
-           ) {
-        val bodyConstraints: BoolExpr = ctx.mkAnd(eachBranch.map(_._1).toArray:_*)
-        val updateConstraints: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = eachBranch.flatMap(_._2).toArray
-        allBranches +:= Tuple2(bodyConstraints, updateConstraints)
-      }
-      /** If this rule evaluates to false, do not involve further dependent rules. */
-      if (!falseBranch.ruleConstraints.simplify().isFalse
-          && thisId > 0
-      ) {
-        allBranches +:= Tuple2(falseBranch.allConstraints(ctx), falseBranch.updateExprs)
+      val allLocalBranches = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
+      for (eachBranch <- allLocalBranches) {
+
+        if (eachBranch.nextTriggers.nonEmpty) {
+          val dependentRulesAndTriggers: List[(Trigger,Rule)] = {
+            var ret: List[(Trigger,Rule)] = List()
+            for (t <- eachBranch.nextTriggers) {
+              for (tr <- getTriggeredRules(t)) {
+                for (nt <- views(tr).getTriggersForView(t)) {
+                  ret :+= (nt, tr)
+                }
+              }
+            }
+            ret
+          }
+          val dependentConstraints = dependentRulesAndTriggers.map(t => {
+            val (_trigger, _dr) = t
+            val (nextId, _dcs) = _ruleToExpr(_dr, _trigger)
+            _dcs.map { case (_body, _updates) => _renameConstraints(_trigger, nextId, _dr, _body, _updates) }
+          }).toArray
+
+          for (eachDependentBranch <- crossJoin(
+            List(Tuple2(eachBranch.allConstraints(ctx), eachBranch.updateExprs)) +: dependentConstraints.toList
+          )) {
+            val bodyConstraints: BoolExpr = ctx.mkAnd(eachDependentBranch.map(_._1).toArray:_*)
+            val updateConstraints: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = eachDependentBranch.flatMap(_._2).toArray
+
+            allBranches +:= Tuple2(bodyConstraints, updateConstraints)
+          }
+        }
+
+        if (!eachBranch.ruleConstraints.simplify().isFalse && thisId > 0) {
+          allBranches +:= Tuple2(eachBranch.allConstraints(ctx), eachBranch.updateExprs)
+        }
       }
 
       /** Add naming constraints  */
-      def _renameConstraints(_body: BoolExpr, _updates: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]):
+      def _renameConstraints(trigger: Trigger, nextId: Int, dependentRule: Rule, _body: BoolExpr,
+                             _updates: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]):
       (BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
-        /** Do the renaming here. */
-        val (_, from, to) = getNamingConstraints(upstreamRule.get, rule, upstreamId.get, thisId)
+        val (_, from, to) = getNamingConstraints(rule, dependentRule, trigger, thisId, nextId)
         val _renamed: BoolExpr = _body.substitute(from, to).asInstanceOf[BoolExpr]
         val _renamedUpdates = _updates.map(t => (t._1, t._2, t._3.substitute(from, to)))
         (_renamed, _renamedUpdates)
       }
 
-      val renamedBranches = if (upstreamRule.isDefined) {
-        allBranches.map(t => _renameConstraints(t._1, t._2))
-      }
-      else allBranches
-
-      renamedBranches
+      (thisId, allBranches)
     }
 
     var allExprs: Array[BoolExpr] = Array()
-    for ((body, updates) <- _ruleToExpr(rule,trigger, None, None)) {
+    val (_, allBranches) = _ruleToExpr(rule,trigger)
+    for ((body, updates) <- allBranches) {
       val merged = mergeUpdates(updates)
       val expr = ctx.mkAnd(body+:merged:_*)
       val simplified = simplifyByRenamingConst(expr)
@@ -263,7 +279,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     }.toArray
   }
 
-  private def getNamingConstraints(rule: Rule, dependentRule: Rule, id1: Int, id2: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
+  private def getNamingConstraints(rule: Rule, dependentRule: Rule, trigger: Trigger, id1: Int, id2: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {
     val headLiteral = rule.head
     val bodyLiteral = views(dependentRule) match {
       case _: JoinView => {
@@ -277,11 +293,15 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       case _ => ???
     }
 
+    /** If the trigger is delete tuple, rename the index variables only. */
+    val indexOnly = trigger.isInstanceOf[DeleteTuple]
+    val _indices = getIndices(headLiteral.relation)
+
     var expr: List[BoolExpr] = List()
     var from: List[Expr[_]] = List()
     var to: List[Expr[_]] = List()
-    for (v <- headLiteral.fields.zip(bodyLiteral.fields)) {
-      if (v._1.name != "_" && v._2.name != "_") {
+    for ((v,i) <- headLiteral.fields.zip(bodyLiteral.fields).zipWithIndex) {
+      if (v._1.name != "_" && v._2.name != "_" && (_indices.contains(i) || !indexOnly)) {
         val (x1,_) = paramToConst(ctx, v._1, getPrefix(id1))
         val (x2,_) = paramToConst(ctx, v._2, getPrefix(id2))
         expr +:= ctx.mkEq(x1,x2)

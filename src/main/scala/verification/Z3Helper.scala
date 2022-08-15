@@ -16,7 +16,7 @@ object Z3Helper {
   }
 
   def makeTupleSort(ctx: Context, relation: Relation, types: Array[Type], fieldNames: Array[String]): TupleSort = {
-    require(types.size == fieldNames.size)
+    require(types.length == fieldNames.length, s"${relation.name}, ${types.mkString(",")}, ${types.length}, ${fieldNames.mkString(",")}, ${fieldNames.length}")
     val sorts = types.map(t => typeToSort(ctx, t))
     val symbols: Array[Symbol] = fieldNames.map(ctx.mkSymbol)
     ctx.mkTupleSort(ctx.mkSymbol(relToTupleName(relation)), symbols, sorts)
@@ -48,6 +48,7 @@ object Z3Helper {
   def relToTupleName(relation: Relation): String = s"${relation.name}Tuple"
 
   def fieldsToConst(ctx: Context, relation: Relation, fields: List[Parameter], fieldNames: List[String], prefix: String): (Expr[_], Sort) = {
+    require(fields.size == fieldNames.size)
     if (fields.size==1) {
       paramToConst(ctx, fields.head, prefix)
     }
@@ -63,9 +64,12 @@ object Z3Helper {
     lit.relation match {
       case SimpleRelation(name, sig, memberNames) => {
         val keys = indices.map(i => lit.fields(i))
-        val values = lit.fields.filterNot(f => keys.contains(f))
+        val valueIndices = lit.fields.indices.filterNot(i=>indices.contains(i)).toList
+        val values = valueIndices.map(i=>lit.fields(i))
+        val fieldNames = valueIndices.map(i => lit.relation.memberNames(i))
+
         if (keys.nonEmpty) {
-          val (valueConst, _) = fieldsToConst(ctx, lit.relation, values,lit.relation.memberNames,prefix)
+          val (valueConst, _) = fieldsToConst(ctx, lit.relation, values, fieldNames, prefix)
           val sort = getSort(ctx, lit.relation, indices)
           val arrayConst = ctx.mkConst(name, sort)
           val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
@@ -258,5 +262,13 @@ object Z3Helper {
       Array()
     }
   }
+
+  def initValue(ctx: Context, _type: Type): Expr[_<:Sort] = _type.name match {
+    case "address" => ctx.mkBV(0, addressSize)
+    case "int" => ctx.mkInt(0)
+    case "uint" => ctx.mkBV(0, uintSize)
+    case "bool" => ctx.mkBool(false)
+  }
+
 
 }

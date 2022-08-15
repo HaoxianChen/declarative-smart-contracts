@@ -3,6 +3,7 @@ package view
 import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort}
 import datalog.{AnyType, BooleanType, CompoundType, Literal, Max, NumberType, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
 import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
+import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{getArraySort, getSort, paramToConst}
 
@@ -36,14 +37,14 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   def updateRow(incrementValue: IncrementValue): OnStatement = ???
 
-  protected def getInsertedLiteral(relation: Relation): Literal = {
+  def getInsertedLiteral(relation: Relation): Literal = {
     val lit = rule.body.head
     require(lit.relation==relation)
     lit
   }
 
   /** Interfaces to genreate Z3 constraints */
-  def getNextTriggers(trigger: Trigger): Set[Trigger] = trigger match {
+  private def getNextTrigger(trigger: Trigger): Set[Trigger] = trigger match {
     case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.relation, this.primaryKeyIndices))
     case DeleteTuple(relation, keyIndices) => ???
     case ReplacedByKey(relation, keyIndices, targetRelation) => ???
@@ -52,7 +53,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   /** Interfaces to generate Z3 constraints */
   def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-      (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = {
+    Array[RuleZ3Constraints] = {
     val insertedLiteral: Literal = this.max.literal
     require(insertTuple.relation == insertedLiteral.relation)
     val newValueParam: Parameter = insertedLiteral.fields(max.valueIndex)
@@ -69,7 +70,8 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     } else Array()
     val updateConstraint: BoolExpr = ctx.mkTrue()
 
-    (bodyConstraint, updateConstraint, updateExprs)
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExprs,
+      InsertTuple(this.relation, this.primaryKeyIndices))
   }
 
   private def oldValueZ3Const(ctx: Context, z3Prefix: String): Expr[_] = {
@@ -99,5 +101,9 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     }
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String): (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])]) = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
+    Array[RuleZ3Constraints] = ???
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
+    Array[RuleZ3Constraints] = ???
 }
