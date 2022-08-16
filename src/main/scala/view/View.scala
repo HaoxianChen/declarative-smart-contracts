@@ -67,7 +67,10 @@ abstract class View {
   Array[RuleZ3Constraints] = {
     val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraint, updateExprs,
       Set(nextTrigger))
-    val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array(), Set())
+    val falseBranch = {
+      val _updateExprs = updateExprs.map(t => Tuple3(t._1, t._2, t._1.asInstanceOf[Expr[_<:Sort]]))
+      RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), _updateExprs, Set())
+    }
     if (bodyConstraint.simplify().isTrue) {
       /** Only the true branch*/
       Array(trueBranch)
