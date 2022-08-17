@@ -69,8 +69,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] ={
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) = {
     val (delta, resultIndex) = getDelta(insertTuple)
     val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
@@ -82,8 +81,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr, InsertTuple(this.relation, this.primaryKeyIndices))
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] ={
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = {
     val (delta, resultIndex) = getDelta(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
@@ -95,24 +93,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
       IncrementValue(this.relation, this.primaryKeyIndices, resultIndex, delta))
   }
 
-  private def getNextTrigger(trigger: Trigger): Set[Trigger] = {
-    assert(this.rule.body.exists(_.relation==trigger.relation) || this.sum.relation == trigger.relation, s"${trigger}\n${this.rule}")
-    trigger match {
-      case insertTuple:InsertTuple => {
-        val (delta, resultIndex) = getDelta(insertTuple)
-        Set(IncrementValue(relation, primaryKeyIndices, resultIndex, delta))
-      }
-      case DeleteTuple(relation, keyIndices) => ???
-      case ReplacedByKey(relation, keyIndices, targetRelation) => ???
-      case incremeantValue:IncrementValue => {
-        val (delta, resultIndex) = getDelta(incremeantValue)
-        Set(IncrementValue(relation, primaryKeyIndices, resultIndex, delta))
-      }
-    }
-  }
-
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = ???
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 
 }
 

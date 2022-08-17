@@ -43,17 +43,8 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     lit
   }
 
-  /** Interfaces to genreate Z3 constraints */
-  private def getNextTrigger(trigger: Trigger): Set[Trigger] = trigger match {
-    case InsertTuple(relation, keyIndices) => Set(InsertTuple(this.relation, this.primaryKeyIndices))
-    case DeleteTuple(relation, keyIndices) => ???
-    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
-    case IncrementValue(relation, keyIndices, valueIndex, delta) => ???
-  }
-
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) = {
     val insertedLiteral: Literal = this.max.literal
     require(insertTuple.relation == insertedLiteral.relation)
     val newValueParam: Parameter = insertedLiteral.fields(max.valueIndex)
@@ -101,9 +92,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     }
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = ???
 
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = ???
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 }

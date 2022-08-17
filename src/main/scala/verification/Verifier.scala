@@ -217,26 +217,34 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       id += 1
 
       val view = views(rule)
-      val isMaterialized = materializedRelations.contains(rule.head.relation)
+      val thisRelation = rule.head.relation
+      val isMaterialized = materializedRelations.contains(thisRelation)
 
       val thisVersion = versions.getOrElse(rule.head.relation, 0)
       if (isMaterialized) {
         versions = versions.updated(rule.head.relation, thisVersion+1)
       }
+      /** Add naming constraints  */
+      def _renameConstraints(trigger: Trigger, nextId: Int, dependentRule: Rule, _body: BoolExpr):
+      BoolExpr = {
+        val (_, from, to) = getNamingConstraints(rule, dependentRule, trigger, thisId, nextId)
+        val _renamed: BoolExpr = _body.substitute(from, to).asInstanceOf[BoolExpr]
+        _renamed
+      }
 
-      var allBranches: List[BoolExpr] = List()
-      val allLocalBranches = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
-      for (eachBranch <- allLocalBranches) {
 
+      val (trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
+
+      val trueBranchWithDependentConstraints = {
         val versionedConstraint = {
-          val _rel = rule.head.relation
-          eachBranch.getVersionedConstraint(ctx, _rel, getIndices(_rel), thisVersion)
+          trueBranch.getVersionedConstraint(ctx, thisRelation, getIndices(thisRelation), thisVersion)
         }
 
-        if (eachBranch.nextTriggers.nonEmpty) {
+        if (trueBranch.nextTriggers.nonEmpty) {
+
           val dependentRulesAndTriggers: List[(Trigger,Rule)] = {
             var ret: List[(Trigger,Rule)] = List()
-            for (t <- eachBranch.nextTriggers) {
+            for (t <- trueBranch.nextTriggers) {
               for (tr <- getTriggeredRules(t)) {
                 for (nt <- views(tr).getTriggersForView(t)) {
                   ret :+= (nt, tr)
@@ -253,23 +261,25 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
             allDependentConstraints :+= renamedConstraint
           }
 
-          allBranches +:= ctx.mkAnd(versionedConstraint :: allDependentConstraints :_*)
+          val _dependentConstraints = ctx.mkAnd(allDependentConstraints :_*)
+
+          ctx.mkImplies(versionedConstraint, _dependentConstraints)
         }
-        else if (!eachBranch.ruleConstraints.simplify().isFalse && thisId > 0) {
-          allBranches +:= versionedConstraint
+        else {
+          versionedConstraint
         }
       }
 
-      /** Add naming constraints  */
-      def _renameConstraints(trigger: Trigger, nextId: Int, dependentRule: Rule, _body: BoolExpr,
-                            ):
-        BoolExpr = {
-        val (_, from, to) = getNamingConstraints(rule, dependentRule, trigger, thisId, nextId)
-        val _renamed: BoolExpr = _body.substitute(from, to).asInstanceOf[BoolExpr]
-        _renamed
+
+
+      val allConstraints = if (!falseBranch.ruleConstraints.simplify().isFalse && thisId > 0) {
+        ctx.mkXor(trueBranchWithDependentConstraints,
+          falseBranch.getVersionedConstraint(ctx, thisRelation, getIndices(thisRelation), thisVersion))
+      }
+      else {
+        trueBranchWithDependentConstraints
       }
 
-      val allConstraints = ctx.mkOr(allBranches.toArray:_*).simplify().asInstanceOf[BoolExpr]
       (thisId, allConstraints)
     }
 

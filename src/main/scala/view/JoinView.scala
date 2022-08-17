@@ -4,7 +4,6 @@ import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Exp
 import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
-import util.Misc.crossJoin
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort, initValue, literalToConst, paramToConst}
@@ -218,9 +217,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
 
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
-    Array[RuleZ3Constraints] = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) = {
 
   val insert = getInsertedLiteral(insertTuple.relation)
 
@@ -242,25 +239,9 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val insertConstraints = makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExprs,
       InsertTuple(this.relation, this.primaryKeyIndices))
     insertConstraints
-
-    /** Should delete an old head literal first? */
-    // if (isDeleteBeforeInsert(insertTuple.relation, insertTuple.keyIndices)) {
-    //   val deleteConstraints = deleteRowZ3(ctx, DeleteTuple(insertTuple.relation, insertTuple.keyIndices), isMaterialized, z3Prefix)
-    //   /** Add naming constraints here */
-    //   def _mergeRuleZ3Constraints(a: RuleZ3Constraints, b: RuleZ3Constraints): RuleZ3Constraints = a.mkAnd(ctx, b)
-    //   val ret = crossJoin(List(insertConstraints.toList, deleteConstraints.toList)).map(
-    //     branches => branches.foldLeft(RuleZ3Constraints(ctx))(_mergeRuleZ3Constraints)
-    //   ).toArray
-    //   ret
-    // }
-    // else {
-    //   insertConstraints
-    // }
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
-    Array[RuleZ3Constraints] = {
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = {
   val (resultIndex, delta) = getUpdate(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
@@ -312,8 +293,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     Array(Tuple3(v_in, v_out, newValueExpr))
   }
 
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = {
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = {
     val deletedLiteral = getInsertedLiteral(deleteTuple.relation)
 
     val readOldValue = if (deleteTuple.keyIndices.isEmpty) {
@@ -389,23 +369,4 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     }
     (resultIndex, delta)
   }
-
-  private def getNextTrigger(trigger: Trigger): Set[Trigger] = trigger match {
-    case InsertTuple(relation, keyIndices) => {
-      if (isDeleteBeforeInsert(relation, keyIndices)) {
-        Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices),
-          DeleteTuple(this.rule.head.relation, this.primaryKeyIndices))
-      }
-      else {
-        Set(InsertTuple(this.rule.head.relation, this.primaryKeyIndices))
-      }
-    }
-    case DeleteTuple(relation, keyIndices) => ???
-    case ReplacedByKey(relation, keyIndices, targetRelation) => ???
-    case ic: IncrementValue => {
-      val (valueIndex, delta) = getUpdate(ic)
-      Set(IncrementValue(relation, primaryKeyIndices, valueIndex, delta))
-    }
-  }
-
 }

@@ -30,54 +30,39 @@ abstract class View {
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-        // (BoolExpr, BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])])
-      Array[RuleZ3Constraints]
-  // def deleteRowZ3(deleteTuple: DeleteTuple): BoolExpr
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-        Array[RuleZ3Constraints]
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String)
+                 :(RuleZ3Constraints, RuleZ3Constraints)
 
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints]
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String)
+    :(RuleZ3Constraints, RuleZ3Constraints)
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String)
+    :(RuleZ3Constraints, RuleZ3Constraints)
 
   def getZ3Constraint(ctx: Context, trigger: Trigger, isMaterialized: Boolean, z3Prefix: String):
-      // (RuleZ3Constraints, RuleZ3Constraints) = {
-    Array[RuleZ3Constraints] = {
-  /** Return two branch, one is rule body evaluates to true, the other is false */
-    // val (bodyConstraint, updateConstraints, updates) = trigger match {
+      (RuleZ3Constraints, RuleZ3Constraints) = {
+    /** Return two branch, one is rule body evaluates to true, the other is false */
     trigger match {
       case it: InsertTuple => insertRowZ3(ctx, it, isMaterialized, z3Prefix)
       case dt: DeleteTuple => deleteRowZ3(ctx, dt, isMaterialized, z3Prefix)
       case ReplacedByKey(relation, keyIndices, targetRelation) => ???
       case ic: IncrementValue => updateRowZ3(ctx, ic, isMaterialized, z3Prefix)
     }
-
-    // val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraints, updates, getNextTriggers(trigger))
-    // val falseBranch = RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), Array())
-    // (trueBranch, falseBranch)
   }
-
-  // def getNextTrigger(trigger: Trigger): Trigger
 
   def getInsertedLiteral(relation: Relation): Literal
 
   protected def makeRuleZ3Constraints(ctx: Context, bodyConstraint: BoolExpr, updateConstraint: BoolExpr,
                                       updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])],
                                       nextTrigger: Trigger):
-  Array[RuleZ3Constraints] = {
+  (RuleZ3Constraints, RuleZ3Constraints) = {
     val trueBranch = RuleZ3Constraints(bodyConstraint, updateConstraint, updateExprs,
       Set(nextTrigger))
     val falseBranch = {
       val _updateExprs = updateExprs.map(t => Tuple3(t._1, t._2, t._1.asInstanceOf[Expr[_<:Sort]]))
       RuleZ3Constraints(ctx.mkNot(bodyConstraint), ctx.mkTrue(), _updateExprs, Set())
     }
-    if (bodyConstraint.simplify().isTrue) {
-      /** Only the true branch*/
-      Array(trueBranch)
-    }
-    else {
-      Array(trueBranch, falseBranch)
-    }
+    (trueBranch, falseBranch)
   }
 
   def isDeleteBeforeInsert(relation: Relation, keyIndices: List[Int]): Boolean = {

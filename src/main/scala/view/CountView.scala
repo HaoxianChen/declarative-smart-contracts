@@ -69,8 +69,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) = {
     val bodyConstraint = ctx.mkTrue()
     val sort = getSort(ctx, this.relation, this.primaryKeyIndices)
     val (v_in, v_out) = makeStateVar(ctx, this.relation.name, sort)
@@ -103,9 +102,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
       InsertTuple(this.relation, this.primaryKeyIndices))
   }
 
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = ???
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = ???
 
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String):
-    Array[RuleZ3Constraints] = ???
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 }
