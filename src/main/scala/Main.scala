@@ -80,7 +80,7 @@ object Main extends App {
 
   if (args(0) == "test-verification") {
     for (p <- List("auction.dl", "crowFunding.dl", "erc20.dl",
-      // "nft.dl",
+      "nft.dl",
       "wallet.dl")) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString

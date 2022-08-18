@@ -244,15 +244,19 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = {
   val (resultIndex, delta) = getUpdate(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
-    val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
+    if (isUpdatable(incrementValue)) {
+      val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)
 
-    /** todo: support more general cases, where join exists.
-     * Now this function only propagates the update.
-     * */
-    require(rule.body.diff(Set(insertedLiteral)).isEmpty)
-    val bodyConstraint = ctx.mkTrue()
-    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr,
-      IncrementValue(relation, primaryKeyIndices, resultIndex, delta))
+      /** todo: support more general cases, where join exists.
+       * Now this function only propagates the update.
+       * */
+      val bodyConstraint = ctx.mkTrue()
+      makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr,
+        IncrementValue(relation, primaryKeyIndices, resultIndex, delta))
+    }
+    else {
+      ???
+    }
   }
 
   private def resetRelationZ3(ctx: Context, head: Literal, z3Prefix: String):

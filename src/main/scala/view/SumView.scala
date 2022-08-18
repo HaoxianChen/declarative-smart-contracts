@@ -78,7 +78,8 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
      * Now this function only propagates the update.
      * */
     val bodyConstraint = ctx.mkTrue()
-    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr, InsertTuple(this.relation, this.primaryKeyIndices))
+    makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, updateExpr,
+      IncrementValue(this.relation, this.primaryKeyIndices, resultIndex, delta))
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = {

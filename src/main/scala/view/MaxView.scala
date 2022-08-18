@@ -5,7 +5,7 @@ import datalog.{AnyType, BooleanType, CompoundType, Literal, Max, NumberType, Pa
 import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{getArraySort, getSort, paramToConst}
+import verification.Z3Helper.{getArraySort, getSort, makeTupleSort, paramToConst}
 
 case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
   require(rule.aggregators.size==1)
@@ -85,7 +85,10 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
       oldValue
     }
     else {
-      val (_,_,rangeSort) = getArraySort(ctx, this.relation, primaryKeyIndices)
+      //  val (_,_,rangeSort) = getArraySort(ctx, this.relation, primaryKeyIndices)
+      val valueTypes = valueIndices.map(i=>relation.sig(i))
+      val fieldNames = valueIndices.map(i=>relation.memberNames(i))
+      val rangeSort = makeTupleSort(ctx, relation, valueTypes.toArray, fieldNames.toArray)
       val valueParams = valueIndices.map(i=>this.relation.memberNames(i))
       val i = valueParams.indexOf(this.relation.memberNames(this.relValueIndex))
       rangeSort.asInstanceOf[TupleSort].getFieldDecls.apply(i).apply(oldValue)

@@ -16,17 +16,17 @@ case class RuleZ3Constraints(ruleConstraints: BoolExpr,
                              nextTriggers: Set[Trigger]) {
   def allConstraints(ctx: Context): BoolExpr = ctx.mkAnd(ruleConstraints, updateConstraint)
 
-  def getVersionedConstraint(ctx: Context, relation: Relation, indices: List[Int], version: Int): BoolExpr = {
+  def getVersionedUpdateConstraint(ctx: Context, relation: Relation, indices: List[Int], version: Int): BoolExpr = {
     if (updateExprs.nonEmpty) {
       val allUpdates = {
         val _exprs: Array[BoolExpr] = updateExprs.map(t => ctx.mkEq(t._2, t._3))
         ctx.mkAnd(_exprs:_*)
       }
       val versionedUpdates: BoolExpr = versionUpdateExpr(ctx, allUpdates, relation, indices, version).asInstanceOf[BoolExpr]
-      ctx.mkAnd(ruleConstraints, updateConstraint, versionedUpdates)
+      ctx.mkAnd(updateConstraint, versionedUpdates)
     }
     else {
-      ctx.mkAnd(ruleConstraints, updateConstraint)
+      ctx.mkAnd(updateConstraint).simplify().asInstanceOf[BoolExpr]
     }
   }
 
@@ -69,7 +69,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices.getOrElse(sr, List())
     case SingletonRelation(name, sig, memberNames) => List()
-    case relation: ReservedRelation => ???
+    case relation: ReservedRelation => List()
   }
 
   def check(): Unit = {
@@ -236,9 +236,6 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       val (trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
 
       val trueBranchWithDependentConstraints = {
-        val versionedConstraint = {
-          trueBranch.getVersionedConstraint(ctx, thisRelation, getIndices(thisRelation), thisVersion)
-        }
 
         if (trueBranch.nextTriggers.nonEmpty) {
 
@@ -263,18 +260,25 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
           val _dependentConstraints = ctx.mkAnd(allDependentConstraints :_*)
 
-          ctx.mkImplies(versionedConstraint, _dependentConstraints)
+          val updateAndDependentConstraints = ctx.mkAnd(trueBranch.getVersionedUpdateConstraint(ctx, thisRelation, getIndices(thisRelation), thisVersion),
+            _dependentConstraints)
+
+          if (thisId == 0) {
+            ctx.mkAnd(trueBranch.ruleConstraints, updateAndDependentConstraints)
+          }
+          else {
+            ctx.mkImplies(trueBranch.ruleConstraints, updateAndDependentConstraints)
+          }
         }
         else {
-          versionedConstraint
+          trueBranch.ruleConstraints
         }
       }
 
 
 
       val allConstraints = if (!falseBranch.ruleConstraints.simplify().isFalse && thisId > 0) {
-        ctx.mkXor(trueBranchWithDependentConstraints,
-          falseBranch.getVersionedConstraint(ctx, thisRelation, getIndices(thisRelation), thisVersion))
+        ctx.mkXor(trueBranchWithDependentConstraints, falseBranch.ruleConstraints)
       }
       else {
         trueBranchWithDependentConstraints
