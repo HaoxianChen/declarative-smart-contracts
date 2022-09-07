@@ -11,7 +11,7 @@ object Main extends App {
   val outDir = "solidity/dsc"
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
-  val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl")
+  val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl", "vestingWallet.dl")
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
     createDirectory(outDir)
@@ -72,7 +72,7 @@ object Main extends App {
     }
     val impTranslator =ImperativeTranslator(dl, isInstrument=true)
     val imperative = impTranslator.translate()
-    // println(imperative)
+    println(imperative)
     val verifier = new Verifier(dl, imperative)
     verifier.check()
 
@@ -81,7 +81,8 @@ object Main extends App {
   if (args(0) == "test-verification") {
     for (p <- List("auction.dl", "crowFunding.dl", "erc20.dl",
       "nft.dl",
-      "wallet.dl")) {
+      "wallet.dl",
+      "vestingWallet.dl")) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val filename = Misc.getFileNameFromPath(filepath)

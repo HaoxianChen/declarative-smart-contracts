@@ -1,7 +1,7 @@
 package verification
 
 import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
-import datalog.{Add, ArithOperator, Arithmetic, Assign, BinaryOperator, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, Type, Unequal, Variable, Zero}
+import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, Type, Unequal, Variable, Zero}
 
 object Z3Helper {
   val uintSize: Int = 32
@@ -93,7 +93,7 @@ object Z3Helper {
       }
       case reserved: ReservedRelation => {
         reserved match {
-          case MsgSender() | MsgValue() | Now() => {
+          case MsgSender() | MsgValue() | Now() | Balance() => {
             val (x,_) = paramToConst(ctx, lit.fields.head, prefix)
             val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
             ctx.mkEq(relConst, x)
@@ -146,7 +146,7 @@ object Z3Helper {
       }
     }
     case reserved :ReservedRelation => reserved match {
-      case MsgSender() | MsgValue() | Now() => typeToSort(ctx, reserved.sig.head)
+      case MsgSender() | MsgValue() | Now() | Balance() => typeToSort(ctx, reserved.sig.head)
       case Send() => ???
     }
   }
@@ -189,6 +189,10 @@ object Z3Helper {
           case _:Mul => _type.name match {
             case "int" => ctx.mkMul(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
             case "uint" => ctx.mkBVMul(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
+          }
+          case _:Div => _type.name match {
+            case "int" => ctx.mkDiv(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
+            case "uint" => ctx.mkBVUDiv(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
           }
         }
       }

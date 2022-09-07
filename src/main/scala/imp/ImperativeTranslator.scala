@@ -23,9 +23,10 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
   protected def getRulesToEvaluate() : Set[Rule] = {
     val targetRelations: Set[Relation] = {
       val _v = if (isInstrument) program.violations else Set()
+      val sendRelation = program.relations.filter(_ == Send())
       val transactionRules = program.rules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
       val viewRelations = program.interfaces.map(_.relation)
-      viewRelations ++ transactionRules.map(_.head.relation) ++ _v
+      viewRelations ++ transactionRules.map(_.head.relation) ++ _v  ++ sendRelation
     }
     var toEvaluate: Set[Rule] = Set()
     var _nextTargetRelations: Set[Relation] = targetRelations

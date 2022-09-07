@@ -33,13 +33,18 @@ sealed abstract class Relation {
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    MsgSender(), MsgValue(), Now(), Send()
+    MsgSender(), MsgValue(), Now(), Send(), Balance()
   )
 }
 
 case class SimpleRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
 case class SingletonRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation
 sealed abstract class ReservedRelation extends Relation
+case class Balance() extends ReservedRelation {
+  def name: String = "thisBalance"
+  def sig: List[Type] = List(Type.uintType)
+  def memberNames: List[String] = List("n")
+}
 case class MsgSender() extends ReservedRelation {
   def name: String = "msgSender"
   def sig: List[Type] = List(Type.addressType)

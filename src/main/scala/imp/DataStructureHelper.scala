@@ -1,6 +1,6 @@
 package imp
 
-import datalog.{Add, AnyType, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
+import datalog.{Add, AnyType, Balance, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, Type, UnitType, Variable}
 import imp.DataStructureHelper.{getUpdateName, invalidBit, validBit, validField}
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
@@ -20,6 +20,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       case MsgValue() => UnitType()
       case Send() => UnitType()
       case Now() => UnitType()
+      case Balance() => UnitType()
     }
   }
 

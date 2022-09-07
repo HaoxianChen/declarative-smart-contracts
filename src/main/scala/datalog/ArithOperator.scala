@@ -53,6 +53,11 @@ case class Mul(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
   val _type = a._type
   override def toString: String = s"${_paren(a)}*${_paren(b)}"
 }
+case class Div(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
+  require(a._type == b._type, s"$a,$b")
+  val _type = a._type
+  override def toString: String = s"${_paren(a)}/${_paren(b)}"
+}
 object Arithmetic {
   def derivativeOf(e: Arithmetic, x: Param): Arithmetic = e match {
     case Zero(t) => Zero(t)
@@ -62,6 +67,7 @@ object Arithmetic {
     case Add(a,b) => Add(derivativeOf(a,x), derivativeOf(b,x))
     case Sub(a,b) => Sub(derivativeOf(a,x), derivativeOf(b,x))
     case Mul(a,b) => Mul(derivativeOf(a,x), derivativeOf(b,x))
+    case Div(a,b) => ???
   }
   def simplify(expr: Arithmetic): Arithmetic = {
     def _simplify(expr: Arithmetic): Arithmetic = expr match {
@@ -74,11 +80,22 @@ object Arithmetic {
       case Sub(Zero(_),b) => Negative(_simplify(b))
       case Sub(a, Zero(_)) => _simplify(a)
       case Sub(a,b) => Sub(_simplify(a),_simplify(b))
+
       case Mul(One(_),b) => _simplify(b)
       case Mul(Negative(One(_)),b) => Negative(_simplify(b))
       case Mul(a,One(_)) => _simplify(a)
+      case Mul(_,Zero(t)) => Zero(t)
+      case Mul(Zero(t),_) => Zero(t)
+      case Mul(_,Negative(Zero(t))) => Zero(t)
+      case Mul(Negative(Zero(t)),_) => Zero(t)
       case Mul(a, Negative(One(_))) => Negative(_simplify(a))
       case Mul(a,b) => Mul(_simplify(a),_simplify(b))
+
+      case Div(a, One(_)) => _simplify(a)
+      case Div(a, Negative(One(_))) => Negative(_simplify(a))
+      case Div(Zero(t), _) => Zero(t)
+      case Div(Negative(Zero(t)), _) => Zero(t)
+      case Div(a,b) => Div(_simplify(a),_simplify(b))
     }
 
     var e1 = expr
@@ -99,6 +116,7 @@ object Arithmetic {
         case Add(a, b) => Add(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
         case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
         case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+        case Div(a, b) => Div(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
       }
     }
   }

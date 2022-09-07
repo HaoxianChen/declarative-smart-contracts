@@ -26,6 +26,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     (memberNames, types)
   }
   def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[List[String]]): ParsingContext = {
+    require(!this.relsByName.keySet.contains(name), s"Relation name conflict: $name.")
     val (memberNames, types) = getTypes(schema)
     val relation = SimpleRelation(name, types, memberNames)
     optIndexStr match {
@@ -118,10 +119,12 @@ class ArithmeticParser extends JavaTokenParsers {
 
   private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter
 
-  def expr: Parser[Arithmetic] = term ~ rep("[+-]".r ~ term) ^^ {
+  def expr: Parser[Arithmetic] = term ~ rep(("+"|"-"|"*"|"/") ~ term) ^^ {
     case t ~ ts => ts.foldLeft(t) {
       case (t1, "+" ~ t2) => Add(t1, t2)
       case (t1, "-" ~ t2) => Sub(t1, t2)
+      case (t1, "*" ~ t2) => Mul(t1, t2)
+      case (t1, "/" ~ t2) => Div(t1, t2)
     }
   }
 

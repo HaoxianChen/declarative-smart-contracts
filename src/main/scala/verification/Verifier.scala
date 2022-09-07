@@ -341,12 +341,12 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
   private def simplifyByRenamingConst[T<:Sort](expr: Expr[T]): Expr[T] = {
     val exceptions = stateVars.flatMap(t=>Set(t._1,t._2))
-    var pairs = extractEq(expr, exceptions)
+    var pairs = extractEq(expr, exceptions).filter(_._1.getSExpr.startsWith("i"))
     var newExpr = expr
     while (pairs.nonEmpty) {
       val renamed = newExpr.substitute(pairs.map(_._1), pairs.map(_._2))
       newExpr = renamed.simplify()
-      pairs = extractEq(newExpr, exceptions)
+      pairs = extractEq(newExpr, exceptions).filter(_._1.getSExpr.startsWith("i"))
     }
     newExpr
   }
