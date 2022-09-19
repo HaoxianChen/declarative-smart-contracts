@@ -42,20 +42,17 @@ balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
 
 // Transaction conditions
 bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m,
-            now(t1), endTime(t2), t1 < t2.
+            now(t1), endTime(t2), t1 < t2, end(false).
 
 .decl withdrawCount(p:address, c:uint)[0]
 withdrawCount(p,c) :- withdraw(p,_), c = count: withdraw(p,_).
 
-// withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m
-// withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0
-// Add the last predicate withdrawCount(p,0) to make the property inductive.
-withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n-m> 0, s:=n-m, withdrawCount(p,0).
-withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0, withdrawCount(p,0).
+withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n>m, s:=n-m.
+withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
 send(p,n) :- withdraw(p,n).
 
-end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2.
-send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p).
+end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
+send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p), end(false).
 
 // Property
 .decl repeatWithdraw(p:address,c:uint)[0]
