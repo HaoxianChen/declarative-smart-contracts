@@ -11,7 +11,7 @@ object Main extends App {
   val outDir = "solidity/dsc"
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
-  val allBenchmarks = List("auction.dl", "crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl", "vestingWallet.dl")
+  val allBenchmarks = List("crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl", "vestingWallet.dl", "auction.dl")
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
     createDirectory(outDir)
@@ -79,10 +79,10 @@ object Main extends App {
   }
 
   if (args(0) == "test-verification") {
-    for (p <- List("auction.dl", "crowFunding.dl", "erc20.dl",
+    for (p <- List("crowFunding.dl", "erc20.dl",
       "nft.dl",
       "wallet.dl",
-      "vestingWallet.dl")) {
+      "vestingWallet.dl", "auction.dl")) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val filename = Misc.getFileNameFromPath(filepath)

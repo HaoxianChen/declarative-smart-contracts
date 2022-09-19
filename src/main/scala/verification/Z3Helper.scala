@@ -243,25 +243,25 @@ object Z3Helper {
     }
   }
 
-  def extractEq(expr: Expr[_], exceptions: Set[Expr[_]]): Array[(Expr[_], Expr[_])] = {
+  def extractEq(expr: Expr[_], constOnly: Boolean=true): Array[(Expr[_], Expr[_])] = {
     if (expr.isEq) {
       val args = expr.getArgs
-      if (args.forall(a => a.isConst && !exceptions.contains(a))) {
+      if (args.forall(a => a.isConst) || !constOnly) {
         require(expr.getNumArgs == 2)
         Array(Tuple2(args(0), args(1)))
       }
       else {
-        args.flatMap(a => extractEq(a,exceptions))
+        args.flatMap(a => extractEq(a,constOnly))
       }
     }
     else if (expr.isNot) {
       Array()
     }
     else if (expr.isApp) {
-      expr.getArgs.flatMap(a => extractEq(a,exceptions))
+      expr.getArgs.flatMap(a => extractEq(a,constOnly))
     }
     else if (expr.isQuantifier) {
-      extractEq(expr.asInstanceOf[Quantifier].getBody, exceptions)
+      extractEq(expr.asInstanceOf[Quantifier].getBody, constOnly)
     }
     else {
       Array()

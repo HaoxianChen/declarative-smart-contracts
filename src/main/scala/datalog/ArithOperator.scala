@@ -2,6 +2,7 @@ package datalog
 
 sealed abstract class Expr {
   def _type: Type
+  def getParameters(): Set[Parameter]
 }
 
 sealed abstract class Arithmetic extends Expr {
@@ -17,6 +18,7 @@ case class Zero(_type: Type) extends Arithmetic {
     case BooleanType() => s"false"
     case compoundType: CompoundType => throw new Exception(s"illegal type $compoundType for Zero.")
   }
+  def getParameters(): Set[Parameter] = Set()
 }
 case class One(_type: Type) extends Arithmetic {
   override def toString: String = _type match {
@@ -25,18 +27,22 @@ case class One(_type: Type) extends Arithmetic {
     case BooleanType() => s"true"
     case compoundType: CompoundType => throw new Exception(s"illegal type $compoundType for Zero.")
   }
+  def getParameters(): Set[Parameter] = Set()
 }
 case class Param(p: Parameter) extends Arithmetic {
   val _type = p._type
   override def toString: String = p.toString
+  def getParameters(): Set[Parameter] = Set(p)
 }
 case class Negative(e: Arithmetic) extends Arithmetic {
   val _type = e._type
   override def toString: String = s"-${_paren(e)}"
+  def getParameters(): Set[Parameter] = e.getParameters()
 }
 sealed abstract class BinaryOperator extends Arithmetic {
   def a: Arithmetic
   def b: Arithmetic
+  def getParameters(): Set[Parameter] = a.getParameters() ++ b.getParameters()
 }
 case class Add(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
   require(a._type == b._type)

@@ -12,6 +12,9 @@ case class TransitionSystem(name: String, ctx: Context) {
   def setInit(_init: BoolExpr): Unit = init = _init
   def setTr(_tr: BoolExpr): Unit = tr = _tr
 
+  def getInit(): BoolExpr = init
+  def getTr(): BoolExpr = tr
+
   def newVar[T<:Sort](name: String, sort: T): (Expr[T], Expr[T]) = {
     val (v_in,v_out) = makeStateVar(ctx, name, sort)
     variables += Tuple2(v_in, v_out)
@@ -22,13 +25,9 @@ case class TransitionSystem(name: String, ctx: Context) {
   def toPost(f: Expr[BoolSort]): Expr[BoolSort] = {
     val vs = variables.toArray
     f.substitute(vs.map(_._1), vs.map(_._2))
-  }
 
-  def inductiveProve(ctx: Context, property: BoolExpr): (Status, Status) = {
-    val resInit = prove(ctx, ctx.mkImplies(init, property))
-    val f2 = ctx.mkImplies(ctx.mkAnd(property, tr), toPost(property))
-    val resTr = prove(ctx, f2)
-    (resInit, resTr)
+    /** Rename the remaining free variables */
+
   }
 }
 
@@ -109,8 +108,8 @@ object TransitionSystem {
                                1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2")))
     // val property = ctx.mkEq(totalSuuply, totalBalance)
 
-    val res = tr.inductiveProve(ctx, property)
-    println(res)
+    // val res = tr.inductiveProve(ctx, property)
+    // println(res)
 
   }
 

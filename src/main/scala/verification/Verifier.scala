@@ -1,13 +1,14 @@
 package verification
 
-import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, TupleSort}
-import datalog.{Constant, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
+import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import datalog.{Constant, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
+import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 case class RuleZ3Constraints(ruleConstraints: BoolExpr,
@@ -53,6 +54,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
   extends AbstractImperativeTranslator(program, isInstrument = true) {
 
   private val ctx: Context = new Context()
+  private val invariantGenerator: InvariantGenerator = InvariantGenerator(program.rules, impAbsProgram.indices)
 
   protected val relations: Set[Relation] = program.relations
   protected val indices: Map[SimpleRelation, List[Int]] = impAbsProgram.indices
@@ -80,7 +82,8 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     for (rel <- materializedRelations) {
       val sort = getSort(ctx, rel, getIndices(rel))
       val (v_in, _) = tr.newVar(rel.name, sort)
-      initConditions :+= getInitConstraints(rel, v_in)
+      val (_init, _,_) = getInitConstraints(rel, v_in)
+      initConditions :+= _init
     }
     tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
 
@@ -89,14 +92,190 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
     for (vr <- violationRules) {
       val property = getProperty(ctx, vr)
-      val (resInit, resTr) = tr.inductiveProve(ctx, property)
       println(property)
+
+      val (resInit, _resTr) = inductiveProve(ctx, tr, property)
+      // val (resInit, resTr) = tr.inductiveProve(ctx, property, lemma)
+      val resTr = _resTr match {
+        case Status.UNSATISFIABLE => _resTr
+        case Status.UNKNOWN | Status.SATISFIABLE => {
+          findInvariant(tr, vr) match {
+            case Some(inv) => {
+              validateInvariant(inv, tr, property)
+              println(s"invariant: ${inv}")
+              Status.UNSATISFIABLE
+            }
+            case None => _resTr
+          }
+        }
+      }
       println(s"Init: $resInit")
       println(s"Tr: $resTr")
     }
   }
 
-  private def getInitConstraints(relation: Relation, const: Expr[Sort]): BoolExpr = relation match {
+
+  def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr): (Status, Status) = {
+    val resInit = prove(ctx, ctx.mkImplies(ts.getInit(), property))
+    val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.getTr()), ts.toPost(property))
+    val resTr = prove(ctx, f2)
+    (resInit, resTr)
+  }
+
+
+  def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr, lemma: BoolExpr): (Status, Status) = {
+    val resInit = prove(ctx, ctx.mkImplies(ts.getInit(), property))
+    val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.getTr(), lemma), ts.toPost(property))
+    val resTr = prove(ctx, f2)
+    (resInit, resTr)
+  }
+
+
+  private def _refuteInvariant(inv: BoolExpr, candidates: Set[BoolExpr], tr: TransitionSystem): Boolean = {
+    val f = ctx.mkImplies(ctx.mkAnd((tr.getTr() +: candidates.toArray):_*), tr.toPost(inv))
+    val s = ctx.mkSolver()
+    val p = ctx.mkParams()
+    p.add("timeout", 1000)
+    s.setParameters(p)
+
+    val res = s.check(ctx.mkNot(f))
+    res != Status.UNSATISFIABLE
+  }
+
+  private def findInvariant(tr: TransitionSystem, propertyRule: Rule): Option[BoolExpr] = {
+    val prefix = "i"
+    val candidates = generateCandidateInvariants(ctx, propertyRule, prefix)
+    println(s"${candidates.size} candidate invariants.")
+
+    // debug
+    // val lemma: Set[BoolExpr] = {
+    //   val addrSort = ctx.mkBitVecSort(addressSize)
+    //   val uintSort = ctx.mkBitVecSort(uintSize)
+    //   val p = ctx.mkConst("p", addrSort)
+    //   val n = ctx.mkConst("n", uintSort)
+    //   val balance = ctx.mkConst("balance", ctx.mkArraySort(addrSort, uintSort))
+    //   val highestBidTupleSort = ctx.mkTupleSort(ctx.mkSymbol("highestBidTuple"),
+    //                           Array(ctx.mkSymbol("bidder"), ctx.mkSymbol("amount")), Array(addrSort, uintSort))
+    //   val highestBid = ctx.mkConst("highestBid", highestBidTupleSort)
+    //   val withdrawCount = ctx.mkConst("withdrawCount", ctx.mkArraySort(addrSort, uintSort))
+    //   val premise = ctx.mkNot(ctx.mkEq(ctx.mkSelect(withdrawCount, p), ctx.mkBV(0,uintSize)))
+    //   val _l1 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkAnd(premise, ctx.mkEq(p, highestBidTupleSort.getFieldDecls.apply(0).apply(highestBid))),
+    //     ctx.mkEq(ctx.mkSelect(balance, p), highestBidTupleSort.getFieldDecls.apply(1).apply(highestBid))
+    //     ),
+    //     1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
+
+    //   val _l2 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkAnd(premise, ctx.mkNot(ctx.mkEq(p, highestBidTupleSort.getFieldDecls.apply(0).apply(highestBid)))),
+    //     ctx.mkEq(ctx.mkSelect(balance, p), ctx.mkBV(0,uintSize))
+    //     ),
+    //     1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
+
+    //   val end = ctx.mkConst("end", ctx.mkBoolSort())
+    //   val _l3 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkNot(ctx.mkEq(ctx.mkSelect(withdrawCount, p), ctx.mkBV(0,uintSize))),
+    //     end),
+    //     1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2"))
+    //   Set(_l1,_l2, _l3)
+    // }
+    // val inv = findInvariant(tr, lemma)
+    // val inv = findInvariant(tr, candidates ++ lemma)
+    val inv = findInvariant(tr, candidates)
+    inv
+  }
+
+  private def validateInvariant(inv: BoolExpr, tr: TransitionSystem, property: BoolExpr): Unit = {
+    val (initRes, trRes) = inductiveProve(ctx, tr, inv)
+    assert(initRes==Status.UNSATISFIABLE)
+    assert(trRes==Status.UNSATISFIABLE)
+    val (initRes2, trRes2) = inductiveProve(ctx, tr, property, inv)
+    assert(initRes2 == Status.UNSATISFIABLE)
+    assert(trRes2 == Status.UNSATISFIABLE)
+  }
+
+  private def findInvariant(tr: TransitionSystem, candidates: Set[BoolExpr]): Option[BoolExpr] = {
+
+    println(s"${candidates.size} candidate invariants remain.")
+    if (candidates.isEmpty) return None
+    for (inv <- candidates) {
+      if (_refuteInvariant(inv, candidates, tr)) {
+        return findInvariant(tr, candidates - inv)
+      }
+    }
+    Some(ctx.mkAnd(candidates.toArray:_*))
+  }
+
+  private def generateCandidateInvariants(ctx: Context, propertyRule: Rule, prefix: String): Set[BoolExpr] = {
+    val transactionRules: Set[Rule] = program.rules.filter(r => r.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+
+    var candidates: Set[BoolExpr] = Set()
+
+    for (rule <- transactionRules) {
+      val _preds = invariantGenerator.extractPredicates(ctx,rule,prefix)
+      val predicates: Set[BoolExpr] = _preds.map(
+          p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
+
+      val (premise, keyConsts, keyTypes) = {
+        var initConditions: Array[BoolExpr] = Array()
+        var _keyConsts: Array[Expr[_]] = Array()
+        var _keyTypes: Array[Type] = Array()
+        for (rel <- materializedRelations.intersect(propertyRule.body.map(_.relation))) {
+          val sort = getSort(ctx, rel, getIndices(rel))
+          val (v_in, _) = makeStateVar(ctx, rel.name, sort)
+
+          val (_init, _keys, _kts) = getInitConstraints(rel, v_in, isQuantified = false)
+          initConditions :+= _init
+          _keyConsts ++= _keys
+          _keyTypes ++= _kts
+        }
+        (ctx.mkNot(ctx.mkAnd(initConditions:_*)), _keyConsts, _keyTypes)
+      }
+
+      /** Conjunct the premise with predicates form rules */
+      val predicatesOnKeys: Set[BoolExpr] = {
+        val _preds = keyTypes.flatMap(kt =>
+          invariantGenerator.extractPredicates(ctx, rule, kt, prefix)).toSet
+        _preds.map(p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
+      }
+
+      val conditionalPremises: Set[BoolExpr] = predicatesOnKeys.map(p => ctx.mkAnd(premise, p))
+
+      /** Bind the key variable to predicates */
+      var from: Array[Expr[_]] = Array()
+      var to: Array[Expr[_]] = Array()
+      for ((k,t) <- keyConsts.zip(keyTypes)) {
+        val params = rule.body.flatMap(_.fields).filter(_._type == t)
+        for (p <- params) {
+          val (_const, _) = paramToConst(ctx,p, prefix)
+          from :+= _const
+          to :+= k
+        }
+      }
+
+      /** Generate invariants in the form of implications */
+      for (eachPremise <- conditionalPremises+premise) {
+        for (eachPred <- predicates) {
+          val conclusion = ctx.mkNot(eachPred).simplify()
+          val inv = if (keyConsts.nonEmpty) {
+            val renamedPremise = eachPremise.substitute(from, to)
+            val renamedConclusion = conclusion.substitute(from, to)
+            ctx.mkForall(
+              keyConsts,
+              ctx.mkImplies(renamedPremise, renamedConclusion),
+              1, null, null, ctx.mkSymbol(s"Qinv${candidates.size}"), ctx.mkSymbol(s"skidinv${candidates.size}")
+            )
+          }
+          else {
+            ctx.mkImplies(eachPremise, conclusion)
+          }
+          candidates += inv
+        }
+      }
+    }
+    candidates
+  }
+
+  private def getInitConstraints(relation: Relation, const: Expr[Sort], isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
     case sr: SimpleRelation => {
       val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
       val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
@@ -115,13 +294,19 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
           case (t,i) => ctx.mkConst(s"${t.name.toLowerCase()}$i", typeToSort(ctx,t))
       }
 
-      ctx.mkForall(keyConstArray, ctx.mkEq(
-            ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray),
-            initValues),
-        1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+      val initConstraints = if (isQuantified) {
+        ctx.mkForall(keyConstArray, ctx.mkEq(
+          ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray),
+          initValues),
+          1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+      }
+      else {
+        ctx.mkEq(ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray), initValues)
+      }
+      (initConstraints, keyConstArray, keyTypes)
     }
     case SingletonRelation(name, sig, memberNames) => {
-      if (sig.size==1) {
+      val initConstraints = if (sig.size==1) {
         ctx.mkEq(const, initValue(ctx, sig.head))
       }
       else {
@@ -132,6 +317,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
         }.toArray
         ctx.mkAnd(eqs: _*)
       }
+      (initConstraints, Array(), Array())
     }
     case rel: ReservedRelation => ???
   }
@@ -339,14 +525,39 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
     (ctx.mkAnd(expr.toArray:_*), from.toArray, to.toArray)
   }
 
-  private def simplifyByRenamingConst[T<:Sort](expr: Expr[T]): Expr[T] = {
-    val exceptions = stateVars.flatMap(t=>Set(t._1,t._2))
-    var pairs = extractEq(expr, exceptions).filter(_._1.getSExpr.startsWith("i"))
+  private def simplifyByRenamingConst[T<:Sort](expr: Expr[T], constOnly:Boolean=true, exceptions: Set[Expr[_]]= Set()): Expr[T] = {
+    def _isTempVar(e: Expr[_]): Boolean = {
+      if (e.isApp) {
+        if (e.getArgs.length == 0) {
+          e.getSExpr.startsWith("i")
+        }
+        else false
+      }
+      else false
+    }
+    def _filterEquation(pair: (Expr[_], Expr[_])): Option[(Expr[_], Expr[_])] = {
+      val (e1,e2) = pair
+      if (_isTempVar(e1) && !exceptions.contains(e1)) {
+        Some(pair)
+      }
+      else if (_isTempVar(e2) && !exceptions.contains(e2)) {
+        Some(Tuple2(e2,e1))
+      }
+      else None
+    }
+    // val exceptions = stateVars.flatMap(t=>Set(t._1,t._2))
+    // var pairs = extractEq(expr, exceptions).filter(_._1.getSExpr.startsWith("i"))
+    var pairs = {
+      val _ps = extractEq(expr,constOnly)
+      val _filtered = _ps.flatMap(_filterEquation)
+      _filtered
+    }
     var newExpr = expr
     while (pairs.nonEmpty) {
       val renamed = newExpr.substitute(pairs.map(_._1), pairs.map(_._2))
       newExpr = renamed.simplify()
-      pairs = extractEq(newExpr, exceptions).filter(_._1.getSExpr.startsWith("i"))
+      // pairs = extractEq(newExpr, exceptions).filter(_._1.getSExpr.startsWith("i"))
+      pairs = extractEq(newExpr,constOnly).flatMap(_filterEquation)
     }
     newExpr
   }
