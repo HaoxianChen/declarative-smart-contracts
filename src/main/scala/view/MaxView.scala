@@ -51,10 +51,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     /** Read the old value */
     val oldValue: Expr[_] = oldValueZ3Const(ctx, z3Prefix)
     val (newValue, _) = paramToConst(ctx, newValueParam, prefix = z3Prefix)
-    val bodyConstraint = newValueParam._type.name match {
-      case "int" => ctx.mkGt(newValue.asInstanceOf[Expr[ArithSort]], oldValue.asInstanceOf[Expr[ArithSort]])
-      case "uint" => ctx.mkBVSGT(newValue.asInstanceOf[Expr[BitVecSort]], oldValue.asInstanceOf[Expr[BitVecSort]])
-    }
+    val bodyConstraint = ctx.mkGt(newValue.asInstanceOf[Expr[ArithSort]], oldValue.asInstanceOf[Expr[ArithSort]])
 
     val updateExprs: Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])] = if(isMaterialized) {
       updateZ3ConstraintOnInsert(ctx, this.rule.head, z3Prefix)

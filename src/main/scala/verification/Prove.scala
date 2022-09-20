@@ -29,6 +29,11 @@ object Prove {
 
    def prove(ctx: Context, f: Expr[BoolSort]): Status = {
      val solver = ctx.mkSolver()
+
+     val p = ctx.mkParams()
+     p.add("timeout", 1000)
+     solver.setParameters(p)
+
      solver.add(ctx.mkNot(f))
      val res = solver.check()
      if (res == Status.SATISFIABLE) {

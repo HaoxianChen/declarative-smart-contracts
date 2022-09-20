@@ -82,7 +82,9 @@ object Main extends App {
     for (p <- List("crowFunding.dl", "erc20.dl",
       "nft.dl",
       "wallet.dl",
-      "vestingWallet.dl", "auction.dl")) {
+      "vestingWallet.dl",
+      "paymentSplitter.dl",
+      "auction.dl")) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val filename = Misc.getFileNameFromPath(filepath)

@@ -9,8 +9,7 @@ object Z3Helper {
 
   def typeToSort(ctx: Context, t: Type): Sort = t.name match {
     case "address" => ctx.mkBitVecSort(addressSize)
-    case "int" => ctx.mkIntSort()
-    case "uint" => ctx.mkBitVecSort(uintSize)
+    case "int"|"uint" => ctx.mkIntSort()
     case "bool" => ctx.mkBoolSort()
     case _ => ???
   }
@@ -28,8 +27,7 @@ object Z3Helper {
       case Constant(_type, name) => {
         _type.name match {
           case "address" => ctx.mkBV(name.toInt, addressSize)
-          case "int" => ctx.mkInt(name.toInt)
-          case "uint" => ctx.mkBV(name.toInt, uintSize)
+          case "int"|"uint" => ctx.mkInt(name.toInt)
           case "bool" => name match {
             case "true" => ctx.mkTrue()
             case "false" => ctx.mkFalse()
@@ -154,46 +152,19 @@ object Z3Helper {
   def functorExprToZ3(ctx: Context, expr: datalog.Expr, prefix: String): Expr[_] = {
     val sort = typeToSort(ctx, expr._type)
     expr match {
-      case Zero(_type) => _type.name match {
-        case "int" => ctx.mkInt(0).asInstanceOf[Expr[ArithSort]]
-        case "uint" => ctx.mkBV(0,uintSize).asInstanceOf[Expr[ArithSort]]
-        case _ => ???
-      }
-      case One(_type) => _type.name match {
-        case "int" => ctx.mkInt(1).asInstanceOf[Expr[ArithSort]]
-        case "uint" => ctx.mkBV(1,uintSize).asInstanceOf[Expr[ArithSort]]
-        case _ => ???
-      }
-      case Param(p) => {
-        paramToConst(ctx, p, prefix)._1.asInstanceOf[Expr[ArithSort]]
-        // ctx.mkConst(s"${prefix}_${p.name}", sort).asInstanceOf[Expr[ArithSort]]
-      }
-      case Negative(e) => {
-        // assert(e._type.name == "int")
-        functorExprToZ3(ctx, Sub(Zero(e._type),e), prefix)
-      }
+      case Zero(_) => ctx.mkInt(0)
+      case One(_) => ctx.mkInt(0)
+      case Param(p) => paramToConst(ctx, p, prefix)._1.asInstanceOf[Expr[ArithSort]]
+      case Negative(e) => functorExprToZ3(ctx, Sub(Zero(e._type),e), prefix)
       case operator: BinaryOperator => {
         require(operator.a._type==operator.b._type)
-        val _type = operator.a._type
         val x = functorExprToZ3(ctx, operator.a, prefix)
         val y = functorExprToZ3(ctx, operator.b, prefix)
         operator match {
-          case _:Add => _type.name match {
-            case "int" => ctx.mkAdd(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-            case "uint" => ctx.mkBVAdd(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
-          }
-          case _:Sub =>_type.name match {
-            case "int" => ctx.mkSub(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-            case "uint" => ctx.mkBVSub(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
-          }
-          case _:Mul => _type.name match {
-            case "int" => ctx.mkMul(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-            case "uint" => ctx.mkBVMul(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
-          }
-          case _:Div => _type.name match {
-            case "int" => ctx.mkDiv(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-            case "uint" => ctx.mkBVUDiv(x.asInstanceOf[Expr[BitVecSort]],y.asInstanceOf[Expr[BitVecSort]])
-          }
+          case _:Add => ctx.mkAdd(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
+          case _:Sub => ctx.mkSub(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
+          case _:Mul => ctx.mkMul(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
+          case _:Div => ctx.mkDiv(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
         }
       }
     }
@@ -202,28 +173,15 @@ object Z3Helper {
   def functorToZ3(ctx: Context, functor: Functor, prefix: String): BoolExpr = functor match {
     case arith: ArithOperator => {
       require(arith.a._type == arith.b._type)
-      val _type = arith.a._type
 
       val x = functorExprToZ3(ctx, arith.a, prefix)
       val y = functorExprToZ3(ctx, arith.b, prefix)
 
       arith match {
-        case _: Greater => _type.name match {
-          case "int" => ctx.mkGt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
-          case "uint" => ctx.mkBVUGT(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
-        }
-        case _: Lesser => _type.name match {
-          case "int" => ctx.mkLt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
-          case "uint" => ctx.mkBVULT(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
-        }
-        case _: Geq => _type.name match {
-          case "int" => ctx.mkGe(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
-          case "uint" => ctx.mkBVUGE(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
-        }
-        case _: Leq => _type.name match {
-          case "int" => ctx.mkLe(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
-          case "uint" => ctx.mkBVULE(x.asInstanceOf[Expr[BitVecSort]], y.asInstanceOf[Expr[BitVecSort]])
-        }
+        case _: Greater => ctx.mkGt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
+        case _: Lesser => ctx.mkLt(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
+        case _: Geq => ctx.mkGe(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
+        case _: Leq => ctx.mkLe(x.asInstanceOf[Expr[ArithSort]], y.asInstanceOf[Expr[ArithSort]])
       }
     }
     case Unequal(a,b) => {
@@ -270,8 +228,7 @@ object Z3Helper {
 
   def initValue(ctx: Context, _type: Type): Expr[_<:Sort] = _type.name match {
     case "address" => ctx.mkBV(0, addressSize)
-    case "int" => ctx.mkInt(0)
-    case "uint" => ctx.mkBV(0, uintSize)
+    case "int" | "uint" => ctx.mkInt(0)
     case "bool" => ctx.mkBool(false)
   }
 

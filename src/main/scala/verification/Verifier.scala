@@ -95,7 +95,6 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
       println(property)
 
       val (resInit, _resTr) = inductiveProve(ctx, tr, property)
-      // val (resInit, resTr) = tr.inductiveProve(ctx, property, lemma)
       val resTr = _resTr match {
         case Status.UNSATISFIABLE => _resTr
         case Status.UNKNOWN | Status.SATISFIABLE => {
@@ -133,12 +132,7 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
 
   private def _refuteInvariant(inv: BoolExpr, candidates: Set[BoolExpr], tr: TransitionSystem): Boolean = {
     val f = ctx.mkImplies(ctx.mkAnd((tr.getTr() +: candidates.toArray):_*), tr.toPost(inv))
-    val s = ctx.mkSolver()
-    val p = ctx.mkParams()
-    p.add("timeout", 1000)
-    s.setParameters(p)
-
-    val res = s.check(ctx.mkNot(f))
+    val res = prove(ctx, f)
     res != Status.UNSATISFIABLE
   }
 
@@ -328,19 +322,35 @@ class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
      *  where V is the set of variable appears in the rule body,
      *  P1, P2, ... are predicates translated from each rule body literal.
      *  */
-    val prefix = "p"
-    val _vars: Array[Expr[_]] = rule.body.flatMap(_.fields).toArray.flatMap(p => p match {
-      case Constant(_type, name) => None
-      case Variable(_type, name) => Some(paramToConst(ctx,p,prefix)._1)
-    })
+    val prefix = "i"
     val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx,f, prefix)).toArray
-    ctx.mkNot(ctx.mkExists(
-        _vars,
-        ctx.mkAnd(bodyConstraints++functorConstraints:_*),
+
+    val keyConsts: Array[Expr[_]] = {
+      var keys: Set[Parameter] = Set()
+      for (lit <- rule.body) {
+        val _indicies = getIndices(lit.relation)
+        keys ++= _indicies.map(i=>lit.fields(i)).toSet
+      }
+      keys.map(p => paramToConst(ctx,p,prefix)._1).toArray
+    }
+    val constraints = {
+      val _c = ctx.mkAnd(bodyConstraints++functorConstraints:_*)
+      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
+      renamed
+    }
+
+    if (keyConsts.nonEmpty) {
+      ctx.mkNot(ctx.mkExists(
+        keyConsts,
+        constraints,
         1, null, null, ctx.mkSymbol("Q"), ctx.mkSymbol("skid2")
+        )
       )
-    )
+    }
+    else {
+      ctx.mkNot(constraints)
+    }
   }
 
   private def getTransitionConstraints(): BoolExpr = {

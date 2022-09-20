@@ -1,6 +1,6 @@
 package view
 
-import com.microsoft.z3.{ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort}
 import datalog.{AnyType, Arithmetic, BooleanType, CompoundType, Count, Literal, Negative, NumberType, One, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
 import imp.{DeleteTuple, Empty, Increment, IncrementValue, Insert, InsertTuple, OnDelete, OnInsert, OnStatement, ReplacedByKey, Statement, Trigger}
 import verification.RuleZ3Constraints
@@ -86,9 +86,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
         /** Read by keys */
         ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts)
       }
-      val newValueExpr = this.rule.head.fields(relValueIndex)._type.name match {
-        case "uint" => ctx.mkBVAdd(oldCountConst.asInstanceOf[Expr[BitVecSort]], ctx.mkBV(1, uintSize))
-      }
+      val newValueExpr = ctx.mkAdd(oldCountConst.asInstanceOf[Expr[ArithSort]], ctx.mkInt(1))
       if (primaryKeyIndices.isEmpty) {
         newValueExpr
       }
