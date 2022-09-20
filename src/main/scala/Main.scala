@@ -84,6 +84,7 @@ object Main extends App {
       "wallet.dl",
       "vestingWallet.dl",
       "paymentSplitter.dl",
+      "erc777.dl",
       "auction.dl")) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString

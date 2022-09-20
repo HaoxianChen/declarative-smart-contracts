@@ -1,12 +1,24 @@
 package verification
 
-import com.microsoft.z3.{BoolExpr, Context, Expr}
-import datalog.{Constant, Functor, Literal, Parameter, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
-import Z3Helper.{functorToZ3, literalToConst, paramToConst}
+import com.microsoft.z3.{BoolExpr, Context, Expr, Status}
+import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type}
 import imp.SolidityTranslator.transactionRelationPrefix
-import verification.Prove.get_vars
+import verification.Prove.prove
+import verification.TransitionSystem.makeStateVar
+import verification.Z3Helper.{getSort, paramToConst}
+import Verifier.{getInitConstraints, simplifyByRenamingConst}
 
-case class InvariantGenerator(rules: Set[Rule], indices: Map[SimpleRelation, List[Int]]) {
+case class InvariantGenerator(ctx: Context, program: Program,
+                              materializedRelations: Set[Relation],
+                              indices: Map[SimpleRelation, List[Int]]) {
+
+  private val predicateExtractor = PredicateExtractor(program.rules, indices)
+
+  private def _refuteInvariant(inv: BoolExpr, candidates: Set[BoolExpr], tr: TransitionSystem): Boolean = {
+    val f = ctx.mkImplies(ctx.mkAnd((tr.getTr() +: candidates.toArray):_*), tr.toPost(inv))
+    val res = prove(ctx, f)
+    res != Status.UNSATISFIABLE
+  }
 
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices.getOrElse(sr, List())
@@ -14,88 +26,129 @@ case class InvariantGenerator(rules: Set[Rule], indices: Map[SimpleRelation, Lis
     case relation: ReservedRelation => List()
   }
 
-  def extractPredicates(ctx: Context, rule: Rule, _type: Type, prefix: String): Set[BoolExpr] = {
-    val consts: Set[Expr[_]] = {
-      val params = rule.body.flatMap(_.fields).filter(p => p._type==_type && p.name != "_")
-      params.map(p=>paramToConst(ctx, p,prefix)._1)
-    }
-    val allPreds: Set[BoolExpr] = extractPredicates(ctx,rule,prefix)
-    allPreds.filter(f => get_vars(f).intersect(consts).nonEmpty)
+  def findInvariant(tr: TransitionSystem, propertyRule: Rule): Option[BoolExpr] = {
+    val prefix = "i"
+    val candidates = generateCandidateInvariants(ctx, propertyRule, prefix)
+    println(s"${candidates.size} candidate invariants.")
+
+    // debug
+    // val lemma: Set[BoolExpr] = {
+    //   val addrSort = ctx.mkBitVecSort(addressSize)
+    //   val uintSort = ctx.mkBitVecSort(uintSize)
+    //   val p = ctx.mkConst("p", addrSort)
+    //   val n = ctx.mkConst("n", uintSort)
+    //   val balance = ctx.mkConst("balance", ctx.mkArraySort(addrSort, uintSort))
+    //   val highestBidTupleSort = ctx.mkTupleSort(ctx.mkSymbol("highestBidTuple"),
+    //                           Array(ctx.mkSymbol("bidder"), ctx.mkSymbol("amount")), Array(addrSort, uintSort))
+    //   val highestBid = ctx.mkConst("highestBid", highestBidTupleSort)
+    //   val withdrawCount = ctx.mkConst("withdrawCount", ctx.mkArraySort(addrSort, uintSort))
+    //   val premise = ctx.mkNot(ctx.mkEq(ctx.mkSelect(withdrawCount, p), ctx.mkBV(0,uintSize)))
+    //   val _l1 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkAnd(premise, ctx.mkEq(p, highestBidTupleSort.getFieldDecls.apply(0).apply(highestBid))),
+    //     ctx.mkEq(ctx.mkSelect(balance, p), highestBidTupleSort.getFieldDecls.apply(1).apply(highestBid))
+    //     ),
+    //     1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
+
+    //   val _l2 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkAnd(premise, ctx.mkNot(ctx.mkEq(p, highestBidTupleSort.getFieldDecls.apply(0).apply(highestBid)))),
+    //     ctx.mkEq(ctx.mkSelect(balance, p), ctx.mkBV(0,uintSize))
+    //     ),
+    //     1, null, null, ctx.mkSymbol("Q1"), ctx.mkSymbol("skid1"))
+
+    //   val end = ctx.mkConst("end", ctx.mkBoolSort())
+    //   val _l3 = ctx.mkForall(Array(p), ctx.mkImplies(
+    //     ctx.mkNot(ctx.mkEq(ctx.mkSelect(withdrawCount, p), ctx.mkBV(0,uintSize))),
+    //     end),
+    //     1, null, null, ctx.mkSymbol("Q2"), ctx.mkSymbol("skid2"))
+    //   Set(_l1,_l2, _l3)
+    // }
+    // val inv = findInvariant(tr, lemma)
+    // val inv = findInvariant(tr, candidates ++ lemma)
+    val inv = findInvariant(tr, candidates)
+    inv
   }
 
-  def extractPredicates(ctx: Context, rule: Rule, prefix: String): Set[BoolExpr] = {
-    val candidateLiterals = rule.body.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).toList
-    val _p = extractMatchingPredicates(ctx, candidateLiterals, prefix)
-    val _m = rule.functors.flatMap(f => extractComparisonPredicates(ctx,f,rule.body.toList,prefix))
-    _p ++ _m
+
+  private def findInvariant(tr: TransitionSystem, candidates: Set[BoolExpr]): Option[BoolExpr] = {
+
+    println(s"${candidates.size} candidate invariants remain.")
+    if (candidates.isEmpty) return None
+    for (inv <- candidates) {
+      if (_refuteInvariant(inv, candidates, tr)) {
+        return findInvariant(tr, candidates - inv)
+      }
+    }
+    Some(ctx.mkAnd(candidates.toArray:_*))
   }
 
-  def extractPredicates(ctx: Context, prefix: String): Set[BoolExpr] = {
-    val triggerRules = rules.filter(r => r.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
-    triggerRules.flatMap(r => extractPredicates(ctx,r,prefix))
-  }
+  private def generateCandidateInvariants(ctx: Context, propertyRule: Rule, prefix: String): Set[BoolExpr] = {
+    val transactionRules: Set[Rule] = program.rules.filter(r => r.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
 
-  private def extractComparisonPredicates(ctx: Context, functor: Functor, literals: List[Literal], prefix: String): Set[BoolExpr] = {
-    val p = functorToZ3(ctx, functor, prefix)
-    val params: Set[Parameter] = functor.args.flatMap(_.getParameters()).toSet
+    var candidates: Set[BoolExpr] = Set()
 
-    val freeVars: List[Variable] = params.flatMap {
-      case _:Constant => None
-      case v:Variable => Some(v)
-    }.toList
+    for (rule <- transactionRules) {
+      val _preds = predicateExtractor.extractPredicates(ctx,rule,prefix)
+      val predicates: Set[BoolExpr] = _preds.map(
+        p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
 
-    if (freeVars.isEmpty) {
-      Set(p)
+      val (premise, keyConsts, keyTypes) = {
+        var initConditions: Array[BoolExpr] = Array()
+        var _keyConsts: Array[Expr[_]] = Array()
+        var _keyTypes: Array[Type] = Array()
+        for (rel <- materializedRelations.intersect(propertyRule.body.map(_.relation))) {
+          val sort = getSort(ctx, rel, getIndices(rel))
+          val (v_in, _) = makeStateVar(ctx, rel.name, sort)
+
+          val (_init, _keys, _kts) = getInitConstraints(ctx, rel, v_in, indices, isQuantified = false)
+          initConditions :+= _init
+          _keyConsts ++= _keys
+          _keyTypes ++= _kts
+        }
+        (ctx.mkNot(ctx.mkAnd(initConditions:_*)), _keyConsts, _keyTypes)
+      }
+
+      /** Conjunct the premise with predicates form rules */
+      val predicatesOnKeys: Set[BoolExpr] = {
+        val _preds = keyTypes.flatMap(kt =>
+          predicateExtractor.extractPredicates(ctx, rule, kt, prefix)).toSet
+        _preds.map(p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
+      }
+
+      val conditionalPremises: Set[BoolExpr] = predicatesOnKeys.map(p => ctx.mkAnd(premise, p))
+
+      /** Bind the key variable to predicates */
+      var from: Array[Expr[_]] = Array()
+      var to: Array[Expr[_]] = Array()
+      for ((k,t) <- keyConsts.zip(keyTypes)) {
+        val params = rule.body.flatMap(_.fields).filter(_._type == t)
+        for (p <- params) {
+          val (_const, _) = paramToConst(ctx,p, prefix)
+          from :+= _const
+          to :+= k
+        }
+      }
+
+      /** Generate invariants in the form of implications */
+      for (eachPremise <- conditionalPremises+premise) {
+        for (eachPred <- predicates) {
+          val conclusion = ctx.mkNot(eachPred).simplify()
+          val inv = if (keyConsts.nonEmpty) {
+            val renamedPremise = eachPremise.substitute(from, to)
+            val renamedConclusion = conclusion.substitute(from, to)
+            ctx.mkForall(
+              keyConsts,
+              ctx.mkImplies(renamedPremise, renamedConclusion),
+              1, null, null, ctx.mkSymbol(s"Qinv${candidates.size}"), ctx.mkSymbol(s"skidinv${candidates.size}")
+            )
+          }
+          else {
+            ctx.mkImplies(eachPremise, conclusion)
+          }
+          candidates += inv
+        }
+      }
     }
-    else {
-      val matchingPredicates = _getMatchingLiteralPredicates(ctx, freeVars, literals, prefix)
-      matchingPredicates.map(f => ctx.mkAnd(p, f))
-    }
-  }
-
-  private def extractMatchingPredicates(ctx: Context, literals: List[Literal], prefix: String): Set[BoolExpr] = literals match {
-    case Nil => Set()
-    case head::next => {
-      _extractMatchingPredicates(ctx, head, next, prefix) ++ extractMatchingPredicates(ctx, next, prefix)
-    }
-  }
-
-  private def _extractMatchingPredicates(ctx: Context, literal: Literal, body: List[Literal], prefix: String): Set[BoolExpr] = {
-    val thisIndices = getIndices(literal.relation)
-    val keys = thisIndices.map(i=>literal.fields(i))
-    val values: List[Parameter] = literal.fields.diff(keys)
-
-    val p1 = literalToConst(ctx, literal, thisIndices, prefix)
-
-    val freeVars: List[Variable] = values.flatMap{
-      case v:Variable => if (v.name!="_") Some(v) else None
-      case _:Constant => None
-    }
-
-    if (freeVars.isEmpty) {
-      Set(p1)
-    }
-    else {
-      val matchingPredicates = freeVars.flatMap(v=>_getMatchingLiteralPredicates(ctx,v,body,prefix)).toSet
-      matchingPredicates.map(f => ctx.mkAnd(p1, f))
-    }
-  }
-
-  private def _getMatchingLiteralPredicates(ctx: Context, freeVars: List[Variable], literals: List[Literal],
-                                              prefix: String): Set[BoolExpr] = freeVars match {
-    case Nil => Set(ctx.mkTrue())
-    case head::next => {
-      val preds = _getMatchingLiteralPredicates(ctx, head, literals, prefix)
-      val tails = _getMatchingLiteralPredicates(ctx, next, literals, prefix)
-      preds.flatMap(p => tails.map(f => ctx.mkAnd(p,f)))
-    }
-  }
-
-  private def _getMatchingLiteralPredicates(ctx: Context, v: Variable, literals: List[Literal], prefix: String): Set[BoolExpr] = {
-    val matchedLiterals = literals.filter(_.fields.contains(v))
-    matchedLiterals.map (_lit =>
-      literalToConst(ctx, _lit, getIndices(_lit.relation), prefix)
-    ).toSet
+    candidates
   }
 
 }
