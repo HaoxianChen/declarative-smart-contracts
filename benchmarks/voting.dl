@@ -1,0 +1,34 @@
+.decl recv_vote(proposal: uint)
+.decl vote(p: address, proposal: uint)
+
+.public recv_vote
+
+.decl isVoter(v: address, b: bool)[0]
+.public isVoter(1)
+.decl votes(proposal: uint, c: uint)[0]
+.public votes(1)
+.decl wins(proposal: uint, b: bool)[0]
+.public wins(1)
+.decl voted(p: address, b: bool)[0]
+.public voted(1)
+.decl *winningProposal(proposal: uint)
+.public winningProposal(0)
+
+.decl *hasWinner(b: bool)
+.public hasWinner(0)
+
+.decl *quorumSize(q: uint)
+
+vote(v,p) :- recv_vote(p), msgSender(v), hasWinner(false), voted(v, false), isVoter(v, true).
+
+votes(p,c) :- vote(_,p), c = count: vote(_,p).
+
+wins(p, true) :- votes(p,c), quorumSize(q), c >= q.
+hasWinner(true) :- wins(_,b), b==true.
+winningProposal(p) :- wins(p,b), b==true.
+
+voted(v,true) :- vote(v,_).
+
+.decl inconsistency(p1: uint, p2: uint)[0,1]
+.violation inconsistency
+inconsistency(p1,p2) :- wins(p1,true),wins(p2,true),p1!=p2.
