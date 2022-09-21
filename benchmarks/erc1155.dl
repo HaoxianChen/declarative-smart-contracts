@@ -1,0 +1,84 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl totalSupply(tokenId: uint, n: uint)[0]
+.decl balanceOf(tokenId: uint, p: address, n: uint)[0,1]
+.decl constructor()
+
+// New views
+.decl allowance(tokenId: uint, p: address, s: address, n:uint)[0,1,2]
+
+// Transactions
+.decl mint(tokenId: uint, p: address, amount: uint)
+.decl recv_mint(tokenId: uint, p: address, amount: uint)
+.decl burn(tokenId: uint, p: address, amount: uint)
+.decl recv_burn(tokenId: uint, p: address, amount: uint)
+.decl transfer(tokenId: uint, from: address, to: address, amount: uint)
+.decl recv_transfer(tokenId: uint, to: address, amount: uint)
+
+// New transactions
+.decl recv_transferFrom(tokenId: uint, from: address, to: address, amount: uint)
+.decl increaseAllowance(tokenId: uint, p: address, s: address, n:uint)
+.decl recv_approve(tokenId: uint, s: address, n:uint)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(2)
+.public totalSupply(1)
+
+// New interfaces
+.public recv_approve
+.public recv_transferFrom
+.public allowance(3)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+// totalSupply(0) :- constructor().
+
+mint(t,p,n) :- recv_mint(t,p,n), msgSender(s), owner(s), p!=0.
+burn(t,p,n) :- recv_burn(t,p,n), msgSender(s), owner(s), p!=0 ,balanceOf(t,p,m), n<=m.
+transfer(t,s,r,n) :- recv_transfer(t,r,n), msgSender(s), balanceOf(t,s,m), n<=m.
+
+.decl totalMint(tokenId: uint, p: address, n: uint)[0,1]
+.decl totalBurn(tokenId: uint, p: address, n: uint)[0,1]
+.decl totalOut(tokenId: uint, p: address, n: uint)[0,1]
+.decl totalIn(tokenId: uint, p: address, n: uint)[0,1]
+totalOut(t,p,s) :- transfer(t,p,_,_), s = sum n: transfer(t,p,_,n).
+totalIn(t,p,s) :- transfer(t,_,p,_), s = sum n: transfer(t,_,p,n).
+totalMint(t,p,s) :- mint(t,p,_), s = sum n: mint(t,p,n).
+totalBurn(t,p,s) :- burn(t,p,_), s = sum n: burn(t,p,n).
+balanceOf(t,p,s) :- totalMint(t,p,n), totalBurn(t,p,m), totalOut(t,p,o), totalIn(t,p,i), s:=n+i-m-o.
+
+.decl allMint(tokenId: uint, n: uint)[0]
+.decl allBurn(tokenId: uint, n: uint)[0]
+allMint(t,s) :- s = sum n: mint(t,_,n).
+allBurn(t,s) :- s = sum n: burn(t,_,n).
+totalSupply(t,n) :- allMint(t,m), allBurn(t,b), n := m - b.
+
+// New rules
+.decl transferFrom(tokenId: uint,from: address, to: address, spender: address, amount: uint)
+transferFrom(t,o,r,s,n) :- recv_transferFrom(t,o,r,n),
+                    balanceOf(t,o,m), m>=n,
+                    msgSender(s), allowance(t,o,s,k), k>=n.
+transfer(t,o,r,n) :- transferFrom(t,o,r,_,n).
+
+increaseAllowance(t,o,s,d) :- recv_approve(t,s,n), msgSender(o), allowance(t,o,s,m), d:=n-m.
+
+.decl allowanceTotal(tokenId: uint, o:address, s:address, m:uint)[0,1,2]
+.decl spentTotal(tokenId: uint, o:address, s:address, m:uint)[0,1,2]
+allowanceTotal(t,o,s,m) :- increaseAllowance(t,o,s,_), m = sum n: increaseAllowance(t,o,s,n).
+spentTotal(t,o,s,m) :- transferFrom(t,o,_,s,_), m = sum n: transferFrom(t,o,_,s,n).
+
+allowance(t,o,s,n) :- allowanceTotal(t,o,s,m), spentTotal(t,o,s,l), n := m-l.
+
+// Properties
+.decl totalBalances(tokenId: uint, m: uint)[0]
+.decl unequalBalance(tokenId: uint, s: uint, n: uint)[0]
+
+.violation unequalBalance
+
+totalBalances(t,s) :- s = sum n: balanceOf(t,_,n).
+unequalBalance(t,s,n) :- totalBalances(t,s), totalSupply(t,n), s!=n.
