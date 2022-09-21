@@ -26,7 +26,7 @@ case class PredicateExtractor(rules: Set[Rule], indices: Map[SimpleRelation, Lis
   def extractPredicates(ctx: Context, rule: Rule, prefix: String): Set[BoolExpr] = {
     val candidateLiterals = rule.body.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).toList
     val _p = extractMatchingPredicates(ctx, candidateLiterals, prefix)
-    val _m = rule.functors.flatMap(f => extractComparisonPredicates(ctx,f,rule.body.toList,prefix))
+    val _m = rule.functors.flatMap(f => extractComparisonPredicates(ctx,f,candidateLiterals,prefix))
     _p ++ _m
   }
 

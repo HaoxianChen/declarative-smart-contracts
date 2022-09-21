@@ -13,14 +13,19 @@ import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort,
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
-  extends AbstractImperativeTranslator(program, isInstrument = true) {
+  extends AbstractImperativeTranslator(program, isInstrument = true, monitorViolations = false) {
 
   private val ctx: Context = new Context()
   protected val relations: Set[Relation] = program.relations
   protected val indices: Map[SimpleRelation, List[Int]] = impAbsProgram.indices
 
-  private val materializedRelations: Set[Relation] = getMaterializedRelations(impAbsProgram, program.interfaces)
-       .filterNot(_.isInstanceOf[ReservedRelation])
+  private val materializedRelations: Set[Relation] = {
+    val fromStatements = getMaterializedRelations(impAbsProgram, program.interfaces)
+    val violationRules = program.rules.filter(r => program.violations.contains(r.head.relation))
+    val readByViolationRules = violationRules.flatMap(r => r.body.map(_.relation))
+    (fromStatements++readByViolationRules).filterNot(_.isInstanceOf[ReservedRelation])
+  }
+
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
 
   val stateVars: Set[(Expr[_], Expr[_])] = materializedRelations.map(rel => {

@@ -7,7 +7,7 @@ import view.View
 /** Generate imperative program from Datalog rules
  * */
 
-abstract class AbstractImperativeTranslator(program: Program, isInstrument: Boolean) {
+abstract class AbstractImperativeTranslator(program: Program, isInstrument: Boolean, monitorViolations: Boolean) {
   protected val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
     case rel: SimpleRelation => rel -> program.relationIndices.getOrElse(rel, List())
     case rel: SingletonRelation => rel -> List()
@@ -37,7 +37,12 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
         .diff(toEvaluate.map(_.head.relation))
       toEvaluate ++= _dependentRules
     }
-    toEvaluate
+    if (monitorViolations) {
+      toEvaluate
+    }
+    else {
+      toEvaluate.filterNot(r => program.violations.contains(r.head.relation))
+    }
   }
 
   protected def getTrigger(statement: Statement): Set[Trigger] = statement match {
@@ -74,8 +79,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
 
 }
 
-case class ImperativeTranslator(program: Program, isInstrument: Boolean)
-    extends AbstractImperativeTranslator(program, isInstrument) {
+case class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViolations: Boolean)
+    extends AbstractImperativeTranslator(program, isInstrument, monitorViolations: Boolean) {
   def ruleSize: Int = rulesToEvaluate.size
 
   def translate(): ImperativeAbstractProgram = {

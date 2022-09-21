@@ -11,9 +11,17 @@ object Main extends App {
   val outDir = "solidity/dsc"
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
-  val allBenchmarks = List("crowFunding.dl", "erc20.dl", "nft.dl", "wallet.dl", "vestingWallet.dl", "auction.dl")
+  val allBenchmarks = List("crowFunding.dl", "erc20.dl",
+    "nft.dl",
+    "wallet.dl",
+    "vestingWallet.dl",
+    "paymentSplitter.dl",
+    "erc777.dl",
+    "erc1155.dl",
+    "voting.dl",
+    "auction.dl")
 
-  def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean): Unit = {
+  def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = {
@@ -23,9 +31,9 @@ object Main extends App {
       val typeChecker = TypeChecker()
       typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
-    val impTranslator =ImperativeTranslator(dl, isInstrument)
+    val impTranslator = ImperativeTranslator(dl, isInstrument, monitorViolations)
     val imperative = impTranslator.translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,isInstrument).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,monitorViolations).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -40,14 +48,14 @@ object Main extends App {
     val filepath = args(1)
     val isInstrument = args(2).toBoolean
     val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
-    run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument)
+    run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument, monitorViolations = false)
   }
   if (args(0) == "test") {
     val _outDir = outDir
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false, outDir=_outDir, isInstrument = false)
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = false, monitorViolations = false)
     }
   }
   if (args(0) == "test-instrument") {
@@ -55,7 +63,7 @@ object Main extends App {
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false, outDir=_outDir, isInstrument = true)
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = true, monitorViolations = true)
     }
   }
 
@@ -70,7 +78,7 @@ object Main extends App {
       val typeChecker = TypeChecker()
       typeChecker.updateTypes(raw).setName(filename.capitalize)
     }
-    val impTranslator =ImperativeTranslator(dl, isInstrument=true)
+    val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
     val imperative = impTranslator.translate()
     println(imperative)
     val verifier = new Verifier(dl, imperative)
@@ -79,13 +87,7 @@ object Main extends App {
   }
 
   if (args(0) == "test-verification") {
-    for (p <- List("crowFunding.dl", "erc20.dl",
-      "nft.dl",
-      "wallet.dl",
-      "vestingWallet.dl",
-      "paymentSplitter.dl",
-      "erc777.dl",
-      "auction.dl")) {
+    for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val filename = Misc.getFileNameFromPath(filepath)
@@ -96,7 +98,7 @@ object Main extends App {
         val typeChecker = TypeChecker()
         typeChecker.updateTypes(raw).setName(filename.capitalize)
       }
-      val impTranslator =ImperativeTranslator(dl, isInstrument=true)
+      val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
       val imperative = impTranslator.translate()
       val verifier = new Verifier(dl, imperative)
       verifier.check()

@@ -34,8 +34,8 @@ object Translator {
 }
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
-                              violations: Set[Relation], isInstrument: Boolean)
-      extends Translator(program, interfaces, violations, isInstrument) {
+                              violations: Set[Relation], monitorViolation: Boolean)
+      extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
   private val payableRelations: Set[Relation] = {
@@ -53,7 +53,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }.toMap
   private val materializedRelations: Set[Relation] = {
     val sendRelation = program.relations.filter(_ == Send())
-    val _v = if (isInstrument) violations else Set()
+    val _v = if (monitorViolation) violations else Set()
     getMaterializedRelations(program,interfaces) ++ _v ++ sendRelation
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
@@ -83,7 +83,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         // .map(flattenIfStatement)
       Statement.makeSeq((translatedDecls++updateFunctions).toList:_*)
     }
-    val checkViolations = if (isInstrument) {
+    val checkViolations = if (monitorViolation) {
       val _all = violations.map(violationHelper.getViolationCheckingFunction)
       val declModifier = violationHelper.getViolationCheckingModifier()
       Statement.makeSeq(_all.toList:+declModifier:_*)
@@ -133,10 +133,15 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         case _ => Empty()
       }
     }.toList
-    val violationKeyStructDefs = violationHelper.getViolationKeyStructTypes().map {
+    val violationKeyStructDefs = if (monitorViolation) {
+      violationHelper.getViolationKeyStructTypes().map {
         case st: StructType => DefineStruct(st.name, st)
         case _ => Empty()
-    }.toList
+      }.toList
+    }
+    else {
+      List()
+    }
     Statement.makeSeq((tupleStructDefs++violationKeyStructDefs):_*)
   }
 
@@ -272,7 +277,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       statement = Statement.makeSeq(statement, checkResults)
 
       var modifiers: Set[String] = Set()
-      if (isInstrument) modifiers += ViolationHelper.violationCheckingFunctionName
+      if (monitorViolation) modifiers += ViolationHelper.violationCheckingFunctionName
       if (payableRelations.contains(iface.relation)) modifiers += "payable"
 
       DeclFunction(funcName, params, returnType = iface.returnType, statement,
