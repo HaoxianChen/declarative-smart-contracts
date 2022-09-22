@@ -69,11 +69,18 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   }
 
   /** Interfaces to generate Z3 constraints */
-  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) = {
+  def insertRowZ3(ctx: Context, insertTuple: InsertTuple, isMaterialized: Boolean, z3Prefix: String) =
+    _insertOrDeleteRowZ3(ctx, z3Prefix, isInsert = true)
+
+  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = ???
+
+  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) =
+    _insertOrDeleteRowZ3(ctx, z3Prefix, isInsert = false)
+
+  def _insertOrDeleteRowZ3(ctx: Context, z3Prefix: String, isInsert: Boolean) = {
     val bodyConstraint = ctx.mkTrue()
     val sort = getSort(ctx, this.relation, this.primaryKeyIndices)
     val (v_in, v_out) = makeStateVar(ctx, this.relation.name, sort)
-    val insertedLiteral = getInsertedLiteral(insertTuple.relation)
     val updateExpr = {
       val relConst = ctx.mkConst(this.relation.name, sort)
       val keyParams = primaryKeyIndices.map(i=>this.rule.head.fields(i))
@@ -86,7 +93,15 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
         /** Read by keys */
         ctx.mkSelect(relConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts)
       }
-      val newValueExpr = ctx.mkAdd(oldCountConst.asInstanceOf[Expr[ArithSort]], ctx.mkInt(1))
+      val newValueExpr = if (isInsert) {
+        /** Increment count by one on insertion */
+        ctx.mkAdd(oldCountConst.asInstanceOf[Expr[ArithSort]], ctx.mkInt(1))
+      }
+      else {
+        /** Decrement count by one on deletion */
+        ctx.mkSub(oldCountConst.asInstanceOf[Expr[ArithSort]], ctx.mkInt(1))
+      }
+
       if (primaryKeyIndices.isEmpty) {
         newValueExpr
       }
@@ -99,8 +114,4 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
     makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, Array(Tuple3(v_in, v_out, updateExpr)),
       InsertTuple(this.relation, this.primaryKeyIndices))
   }
-
-  def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = ???
-
-  def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 }
