@@ -33,7 +33,7 @@ sealed abstract class Relation {
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    MsgSender(), MsgValue(), Now(), Send(), Balance()
+    MsgSender(), MsgValue(), Now(), Send(), Balance(), Receive()
   )
 }
 
@@ -62,6 +62,11 @@ case class Now() extends ReservedRelation {
 }
 case class Send() extends ReservedRelation {
   def name: String = "send"
+  def sig: List[Type] = List(Type.addressType, Type.uintType)
+  def memberNames: List[String] = List("p", "amount")
+}
+case class Receive() extends ReservedRelation {
+  def name: String = "receive"
   def sig: List[Type] = List(Type.addressType, Type.uintType)
   def memberNames: List[String] = List("p", "amount")
 }
@@ -126,4 +131,6 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
 
   def transactionRules(): Set[Rule] = rules.filter(_.body.exists(
                                          _.relation.name.startsWith(transactionRelationPrefix)))
+
+  def addRules(newRules: Set[Rule]): Program = this.copy(rules = this.rules++newRules)
 }

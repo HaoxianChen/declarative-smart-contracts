@@ -22,7 +22,7 @@ send(p,n) :- release(p,n).
 
 totalReleased(s) :- s = sum e: release(_,e).
 released(p,s) :- release(p,_), s = sum n: release(p,n).
-// totalReceived(r) :- thisBalance(n), totalReleased(e), r:= n+e.
+totalReceived(r) :- thisBalance(n), totalReleased(e), r:= n+e.
 
 .decl overpaid(p: address, n: uint)[0]
 .violation overpaid

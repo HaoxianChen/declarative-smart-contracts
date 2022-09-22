@@ -1,5 +1,7 @@
 package util
 
+import datalog.{Parser, Program, TypeChecker}
+
 import java.io.{BufferedWriter, File, FileWriter}
 import scala.io.Source
 
@@ -23,6 +25,15 @@ object Misc {
   def createDirectory(path: String): Boolean = {
     val dir = new File(path)
     dir.mkdirs()
+  }
+
+  def parseProgram(filepath: String): Program = {
+    val filename = Misc.getFileNameFromPath(filepath)
+    val parser = new Parser()
+    val inputStr = Misc.fileToString(filepath)
+    val raw = parser.parseAll(parser.program, inputStr).get
+    val typeChecker = TypeChecker()
+    typeChecker.updateTypes(raw).setName(filename.capitalize)
   }
 
 }

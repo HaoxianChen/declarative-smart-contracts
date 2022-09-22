@@ -1,19 +1,22 @@
 package verification
 
-import com.microsoft.z3.{ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
-import datalog.{Constant, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type, Variable}
+import com.microsoft.z3.{ArithSort, ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
+import util.Misc.parseProgram
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{simplifyByRenamingConst, getInitConstraints}
+import verification.Verifier.{addBuiltInRules, getInitConstraints, simplifyByRenamingConst}
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
-class Verifier(program: Program, impAbsProgram: ImperativeAbstractProgram)
-  extends AbstractImperativeTranslator(program, isInstrument = true, monitorViolations = false) {
+class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram)
+  extends AbstractImperativeTranslator(addBuiltInRules(_program), isInstrument = true, monitorViolations = false) {
+
+  private val program = addBuiltInRules(_program)
 
   private val ctx: Context = new Context()
   protected val relations: Set[Relation] = program.relations
@@ -414,4 +417,8 @@ object Verifier {
   }
 
 
+  def addBuiltInRules(p: Program): Program = {
+     val builtInRules: Set[Rule] = parseProgram("src/main/scala/verification/builtInRules.dl").rules
+     p.addRules(builtInRules)
+  }
 }

@@ -17,6 +17,7 @@ case class GroundVar(p: Parameter, relation: Relation, index: Int) extends State
       case _:MsgValue => s"${p._type} $p = msg.value;"
       case _:Now => s"${p._type} $p = block.timestamp;"
       case _:Send => throw new Exception("Send should not appear in body.")
+      case _:Receive => ???
       case _:SimpleRelation => s"${p._type} $p = ${relation.name}Tuple.${relation.memberNames(index)};"
     }
   }
@@ -355,6 +356,7 @@ case class MatchRelationField(relation: Relation, index: Int, p: Parameter) exte
       case _: MsgValue => s"$p==msg.value"
       case _: Now => s"$p==block.timestamp"
       case _: Send => throw new Exception(s"Send relation should not be matched.")
+      case _: Receive => ???
       case _:SingletonRelation => {
         val key = relation.memberNames(index)
         s"$p==${relation.name}.$key"

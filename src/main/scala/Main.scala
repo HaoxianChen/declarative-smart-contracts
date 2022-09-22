@@ -3,7 +3,7 @@ import datalog.{Parser, TypeChecker}
 import imp.{ImperativeTranslator, SolidityTranslator}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
-import util.Misc.createDirectory
+import util.Misc.{createDirectory, parseProgram}
 
 import java.nio.file.Paths
 
@@ -24,13 +24,7 @@ object Main extends App {
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
-    val dl = {
-      val parser = new Parser()
-      val inputStr = Misc.fileToString(filepath)
-      val raw = parser.parseAll(parser.program, inputStr).get
-      val typeChecker = TypeChecker()
-      typeChecker.updateTypes(raw).setName(filename.capitalize)
-    }
+    val dl = parseProgram(filepath)
     val impTranslator = ImperativeTranslator(dl, isInstrument, monitorViolations)
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,monitorViolations).translate()
@@ -70,14 +64,7 @@ object Main extends App {
   if (args(0) == "verify") {
     val filepath = args(1)
 
-    val filename = Misc.getFileNameFromPath(filepath)
-    val dl = {
-      val parser = new Parser()
-      val inputStr = Misc.fileToString(filepath)
-      val raw = parser.parseAll(parser.program, inputStr).get
-      val typeChecker = TypeChecker()
-      typeChecker.updateTypes(raw).setName(filename.capitalize)
-    }
+    val dl = parseProgram(filepath)
     val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
     val imperative = impTranslator.translate()
     println(imperative)
@@ -90,14 +77,7 @@ object Main extends App {
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      val filename = Misc.getFileNameFromPath(filepath)
-      val dl = {
-        val parser = new Parser()
-        val inputStr = Misc.fileToString(filepath)
-        val raw = parser.parseAll(parser.program, inputStr).get
-        val typeChecker = TypeChecker()
-        typeChecker.updateTypes(raw).setName(filename.capitalize)
-      }
+      val dl = parseProgram(filepath)
       val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
       val imperative = impTranslator.translate()
       val verifier = new Verifier(dl, imperative)

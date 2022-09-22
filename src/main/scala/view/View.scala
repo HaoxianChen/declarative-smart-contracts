@@ -125,7 +125,7 @@ abstract class View {
       ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray, newValue.asInstanceOf[Expr[Sort]])
     }
     else {
-      assert(this.relation.isInstanceOf[SingletonRelation])
+      assert(this.relation.isInstanceOf[SingletonRelation] || this.relation.isInstanceOf[ReservedRelation])
       ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
     }
 
