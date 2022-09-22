@@ -13,7 +13,7 @@ import verification.Verifier.{addBuiltInRules, getInitConstraints, simplifyByRen
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
-class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram)
+class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
   extends AbstractImperativeTranslator(addBuiltInRules(_program), isInstrument = true, monitorViolations = false) {
 
   private val program = addBuiltInRules(_program)
@@ -85,16 +85,16 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram)
   }
 
   def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr): (Status, Status) = {
-    val resInit = prove(ctx, ctx.mkImplies(ts.getInit(), property))
+    val (resInit,_) = prove(ctx, ctx.mkImplies(ts.getInit(), property))
     val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.getTr()), ts.toPost(property))
-    val resTr = prove(ctx, f2)
+    val (resTr,_) = prove(ctx, f2)
     (resInit, resTr)
   }
 
   def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr, lemma: BoolExpr): (Status, Status) = {
-    val resInit = prove(ctx, ctx.mkImplies(ts.getInit(), property))
+    val (resInit,_) = prove(ctx, ctx.mkImplies(ts.getInit(), property))
     val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.getTr(), lemma), ts.toPost(property))
-    val resTr = prove(ctx, f2)
+    val (resTr,_) = prove(ctx, f2)
     (resInit, resTr)
   }
 

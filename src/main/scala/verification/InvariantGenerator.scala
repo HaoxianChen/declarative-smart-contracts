@@ -10,13 +10,14 @@ import Verifier.{getInitConstraints, simplifyByRenamingConst}
 
 case class InvariantGenerator(ctx: Context, program: Program,
                               materializedRelations: Set[Relation],
-                              indices: Map[SimpleRelation, List[Int]]) {
+                              indices: Map[SimpleRelation, List[Int]],
+                              debug: Boolean=false) {
 
   private val predicateExtractor = PredicateExtractor(program.rules, indices)
 
   private def _refuteInvariant(inv: BoolExpr, candidates: Set[BoolExpr], tr: TransitionSystem): Boolean = {
     val f = ctx.mkImplies(ctx.mkAnd((tr.getTr() +: candidates.toArray):_*), tr.toPost(inv))
-    val res = prove(ctx, f)
+    val (res,_) = prove(ctx, f)
     res != Status.UNSATISFIABLE
   }
 
@@ -29,7 +30,9 @@ case class InvariantGenerator(ctx: Context, program: Program,
   def findInvariant(tr: TransitionSystem, propertyRule: Rule): Option[BoolExpr] = {
     val prefix = "i"
     val candidates = generateCandidateInvariants(ctx, propertyRule, prefix)
-    println(s"${candidates.size} candidate invariants.")
+    if (debug) {
+      println(s"${candidates.size} candidate invariants.")
+    }
 
     // debug
     // val lemma: Set[BoolExpr] = {
@@ -71,7 +74,9 @@ case class InvariantGenerator(ctx: Context, program: Program,
 
   private def findInvariant(tr: TransitionSystem, candidates: Set[BoolExpr]): Option[BoolExpr] = {
 
-    println(s"${candidates.size} candidate invariants remain.")
+    if (debug) {
+      println(s"${candidates.size} candidate invariants remain.")
+    }
     if (candidates.isEmpty) return None
     for (inv <- candidates) {
       if (_refuteInvariant(inv, candidates, tr)) {

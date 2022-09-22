@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, BoolSort, Context, Expr, Quantifier, Status}
+import com.microsoft.z3.{ArithSort, BoolSort, Context, Expr, Model, Quantifier, Status}
 
 object Prove {
    def get_vars(g: Expr[_]): Set[Expr[_]] = {
@@ -27,7 +27,7 @@ object Prove {
      )
    }
 
-   def prove(ctx: Context, f: Expr[BoolSort]): Status = {
+   def prove(ctx: Context, f: Expr[BoolSort]): (Status, Option[Model]) = {
      val solver = ctx.mkSolver()
 
      val p = ctx.mkParams()
@@ -36,11 +36,13 @@ object Prove {
 
      solver.add(ctx.mkNot(f))
      val res = solver.check()
-     if (res == Status.SATISFIABLE) {
-       println(f)
-       println(solver.getModel)
+     val model = if (res == Status.SATISFIABLE) {
+       Some(solver.getModel)
      }
-     res
+     else {
+       None
+     }
+     (res, model)
    }
 
   def testSimplification(): Unit = {
@@ -89,7 +91,7 @@ object Prove {
       ctx.mkLe(y,ctx.mkInt(4)))
     val q = ctx.mkGe(x,y)
 
-    val res = prove(ctx,ctx.mkImplies(p,q))
+    val (res,_) = prove(ctx,ctx.mkImplies(p,q))
     println(res)
 
     /* be kind to dispose manually and not wait for the GC. */
