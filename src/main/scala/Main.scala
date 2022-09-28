@@ -44,7 +44,7 @@ object Main extends App {
     val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument, monitorViolations = false)
   }
-  if (args(0) == "test") {
+  else if (args(0) == "test") {
     val _outDir = outDir
     for (p <- allBenchmarks) {
       println(p)
@@ -52,7 +52,7 @@ object Main extends App {
       run(filepath, displayResult = false, outDir=_outDir, isInstrument = false, monitorViolations = false)
     }
   }
-  if (args(0) == "test-instrument") {
+  else if (args(0) == "test-instrument") {
     val _outDir = outDirWithInstrumentations
     for (p <- allBenchmarks) {
       println(p)
@@ -61,19 +61,19 @@ object Main extends App {
     }
   }
 
-  if (args(0) == "verify") {
+  else if (args(0) == "verify") {
     val filepath = args(1)
 
     val dl = parseProgram(filepath)
     val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
     val imperative = impTranslator.translate()
-    println(imperative)
+    // println(imperative)
     val verifier = new Verifier(dl, imperative)
     verifier.check()
 
   }
 
-  if (args(0) == "test-verification") {
+  else if (args(0) == "test-verification") {
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
@@ -85,10 +85,14 @@ object Main extends App {
     }
   }
 
-  if (args(0) == "testz3") {
+  else if (args(0) == "testz3") {
     TransitionSystem.testTS()
     // Prove.testZ3()
     // Prove.testTuple()
+  }
+
+  else {
+    println(s"Unrecognized command: ${args(0)}")
   }
 
 }
