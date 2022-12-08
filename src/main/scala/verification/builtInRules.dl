@@ -1,7 +1,0 @@
-.decl *receiveTotal(n: uint)
-.decl *sendTotal(n: uint)
-
-receiveTotal(s) :- s = sum n: receive(_,n).
-sendTotal(s) :- s = sum n: send(_,n).
-
-thisBalance(n) :- receiveTotal(m), sendTotal(l), n := m - l.

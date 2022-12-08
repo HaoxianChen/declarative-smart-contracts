@@ -29,11 +29,16 @@ object Misc {
 
   def parseProgram(filepath: String): Program = {
     val filename = Misc.getFileNameFromPath(filepath)
-    val parser = new Parser()
     val inputStr = Misc.fileToString(filepath)
+    parseProgramFromRawString(inputStr).setName(filename.capitalize)
+  }
+
+  def parseProgramFromRawString(inputStr: String): Program = {
+    val parser = new Parser()
     val raw = parser.parseAll(parser.program, inputStr).get
     val typeChecker = TypeChecker()
-    typeChecker.updateTypes(raw).setName(filename.capitalize)
+    typeChecker.updateTypes(raw)
   }
+
 
 }

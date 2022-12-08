@@ -5,7 +5,7 @@ import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelatio
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
-import util.Misc.parseProgram
+import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
@@ -418,7 +418,7 @@ object Verifier {
 
 
   def addBuiltInRules(p: Program): Program = {
-     val builtInRules: Set[Rule] = parseProgram("src/main/scala/verification/builtInRules.dl").rules
+     val builtInRules = parseProgramFromRawString(BuiltInRules.ruleStr).rules
      p.addRules(builtInRules)
   }
 }
