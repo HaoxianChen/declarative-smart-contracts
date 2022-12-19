@@ -122,7 +122,13 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         case _: ReservedRelation => Empty()
       }
     }
-    stmt = Statement.makeSeq(stmt, violationHelper.getViolationKeyArrayDecl())
+    stmt = if (monitorViolation) {
+      Statement.makeSeq(stmt, violationHelper.getViolationKeyArrayDecl())
+    }
+    else {
+      stmt
+
+    }
     stmt
   }
 
