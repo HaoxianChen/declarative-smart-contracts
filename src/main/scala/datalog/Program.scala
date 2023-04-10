@@ -17,6 +17,10 @@ case class Constant(_type: Type, name: String) extends Parameter {
     case _ => s"$name"
   }
 }
+object Constant {
+  val CTrue = Constant(BooleanType(), "true")
+  val CFalse = Constant(BooleanType(), "false")
+}
 case class Variable(_type: Type, name: String) extends Parameter {
   def setType(newType: Type): Variable = this.copy(_type=newType)
 }
@@ -117,6 +121,7 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
   }
 }
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, List[Int]],
+                   functions: Set[Relation],
                    violations: Set[Relation],
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)

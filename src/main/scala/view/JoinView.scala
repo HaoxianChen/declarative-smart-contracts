@@ -2,15 +2,17 @@ package view
 
 import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, TupleSort}
 import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
-import imp.{Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
+import imp.{BooleanFunction, Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort, initValue, literalToConst, paramToConst}
 
-case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]) extends View {
+case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
+                    functions: Set[Relation]) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
+  val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
     val delete = getInsertedLiteral(deleteTuple.relation)
@@ -76,20 +78,38 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       }
     )
 
-    // Check conditions
-    val condition: Condition = getConditionsFromFunctors(rule.functors)
+    val condition = _getConditions()
     val IfStatement: If = If(condition, Statement.makeSeq(assignStatements,updateStatement))
 
     // Join
     val groundedParams: Set[Parameter] = insert.fields.toSet
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.filterNot(_.relation==insert.relation)
+      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
       sortJoinLiterals(rest)
     }
-    val updates = _getJoinStatements(rule.head, groundedParams, sortedLiteral, IfStatement)
+    val updates = _getJoinStatements(groundedParams, sortedLiteral, IfStatement)
     // OnInsert(insert, rule.head.relation, updates)
     updates
   }
+
+  def getQueryStatement(): Statement = {
+    val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
+    val groundedParams: Set[Parameter] = rule.head.fields.toSet
+    val sortedLiteral: List[Literal] = {
+      val rest = rule.body.diff(functionLiterals)
+      sortJoinLiterals(rest)
+    }
+    _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
+  }
+
+  private def _getConditions(): Condition = {
+    // Check conditions
+    val functorCondition: Condition = getConditionsFromFunctors(rule.functors)
+    // Check functions
+    val functionCondition: Condition = getConditionFromBooleanFunctions(functionLiterals)
+    Condition.conjunction(functorCondition,functionCondition)
+  }
+
 
   def getInsertedLiteral(relation: Relation): Literal = {
     val _lits = rule.body.filter(_.relation == relation)
@@ -126,7 +146,13 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     }
     cond
   }
-  private def _getJoinStatements(ruleHead: Literal, groundedParams: Set[Parameter], remainingLiterals: List[Literal],
+
+  private def getConditionFromBooleanFunctions(functionLiterals: Set[Literal]): Condition = {
+    val conditions: Set[Condition] = functionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
+    Condition.makeConjunction(conditions.toList:_*)
+  }
+
+  private def _getJoinStatements(groundedParams: Set[Parameter], remainingLiterals: List[Literal],
                                  innerStatement: Statement): Statement = {
     def _getCondition(grounded: Set[Parameter], literal: Literal): Set[MatchRelationField] = {
       literal.fields.zipWithIndex.flatMap {
@@ -161,7 +187,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       case head::tail => {
         val newGroundedParams = (groundedParams ++ head.fields.toSet).filterNot(_.name=="_")
         val declareNewVars: Statement = _groundVariables(groundedParams, head)
-        val nextStatements = _getJoinStatements(ruleHead, newGroundedParams, tail, innerStatement)
+        val nextStatements = _getJoinStatements(newGroundedParams, tail, innerStatement)
         val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
         Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))
       }

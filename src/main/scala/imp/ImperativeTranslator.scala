@@ -15,7 +15,7 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
   }.toMap
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
-    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices))
+    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, program.functions))
   }.toMap
 
   protected val rulesToEvaluate: Set[Rule] = getRulesToEvaluate()
@@ -46,7 +46,7 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
   }
 
   protected def getTrigger(statement: Statement): Set[Trigger] = statement match {
-    case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement => Set()
+    case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement | _:Query => Set()
     case Seq(a,b) => getTrigger(a) ++ getTrigger(b)
     case If(_,s) => getTrigger(s)
     case o: OnStatement => getTrigger(o.statement)
@@ -68,6 +68,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
       r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
     ).filterNot( /** transaction rules are only triggered by new transaction.  */
       r => isTransactionRule(r) && !isTransactionTrigger(trigger)
+    ).filterNot( /** relations that declared as functions are not triggered */
+      r=>program.functions.contains(r.head.relation)
     )
 
     trigger match {
@@ -139,9 +141,27 @@ case class ImperativeTranslator(program: Program, isInstrument: Boolean, monitor
         case (k,v) => k -> v.map(_._2)
       }
     }
+
+    val queryDefs = program.functions.map(getQueryDef)
+
     /** todo: check recursions on the dependency map */
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
-      constructors++allUpdates, dependencyMap, program.rules)
+      constructors++allUpdates,
+      queryDefs,
+      dependencyMap, program.rules)
+  }
+
+  private def getQueryDef(relation: Relation): Query = {
+    require(program.functions.contains(relation))
+
+    val defRules = program.rules.filter(_.head.relation==relation)
+
+    val ruleStatements = Statement.makeSeq(
+      defRules.map(r => views(r).getQueryStatement()).toSeq:_*
+    )
+    val statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
+
+    Query(defRules.head.head, statement)
   }
 
   private def getConstructor(constructorRel: Relation, rules: Set[Rule]): (Set[OnStatement], Set[Relation]) = {

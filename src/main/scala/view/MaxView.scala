@@ -95,4 +95,6 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = ???
 
   def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
+
+  def getQueryStatement(): Statement = ???
 }

@@ -7,13 +7,14 @@ import scala.util.parsing.combinator.JavaTokenParsers
 
 case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces: Set[Interface],
                           violations: Set[Relation],
+                          functions: Set[Relation],
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
                           relationIndices: Map[SimpleRelation, List[Int]]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
-  def getProgram(): Program = Program(rules, interfaces, relationIndices, violations)
+  def getProgram(): Program = Program(rules, interfaces, relationIndices, functions, violations)
   private def getTypes(schema: List[(String, String)]) :(List[String], List[Type]) = {
     val memberNames = schema.map(_._1)
     val types = schema.map ( s => s._2 match {
@@ -59,6 +60,8 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     this.copy(interfaces=interfaces+interface)
   }
 
+  def addFunction(name: String): ParsingContext = this.copy(functions=functions+relsByName(name))
+
   def addViolation(name: String): ParsingContext = {
     val relation = relsByName(name)
     this.copy(violations=violations+relation)
@@ -99,7 +102,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Map())
+  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Map())
 }
 
 class ArithmeticParser extends JavaTokenParsers {
@@ -125,6 +128,7 @@ class ArithmeticParser extends JavaTokenParsers {
       case (t1, "-" ~ t2) => Sub(t1, t2)
       case (t1, "*" ~ t2) => Mul(t1, t2)
       case (t1, "/" ~ t2) => Div(t1, t2)
+      case _ => ???
     }
   }
 
@@ -168,6 +172,13 @@ class Parser extends ArithmeticParser {
       case name ~ optOutIndex => {
         pc => pc.addInterface(name, optOutIndex)
     }
+    }
+
+  def functionDecl: Parser[ParsingContext => ParsingContext] =
+    (".function" ~> ident) ^^ {
+      case name => {
+        pc => pc.addFunction(name)
+      }
     }
 
   def violationDecl: Parser[ParsingContext => ParsingContext] =
@@ -217,6 +228,7 @@ class Parser extends ArithmeticParser {
         }
       }
   def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | violationDecl
+    | functionDecl
     | ruleDecl ).* ^^ {
     fs => {
       val parsingContext = fs.foldLeft(ParsingContext()) {case (pc, f) => f(pc)}

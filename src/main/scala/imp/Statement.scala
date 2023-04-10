@@ -69,6 +69,13 @@ case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int
 }""".stripMargin
   }
 }
+case class Query(literal: Literal, statement: Statement) extends Statement {
+  val relation: Relation = literal.relation
+  override def toString: String =
+    e"""on query $literal {
+  $statement
+}""".stripMargin
+}
 // Update
 sealed abstract class UpdateStatement extends Statement {
   def relation: Relation
@@ -392,6 +399,12 @@ case class And(a: Condition, b: Condition) extends Condition {
 case class Or(a: Condition, b: Condition) extends Condition {
   override def toString: String = s"$a || $b"
 }
+case class BooleanFunction(name: String, parameters: List[Parameter]) extends Condition {
+  override def toString: String = {
+    val paramStr = parameters.mkString(",")
+    s"$name($paramStr)"
+  }
+}
 object Condition {
   def conjunction(a: Condition, b: Condition): Condition = a match {
     case _: False => False()
@@ -416,7 +429,8 @@ object Condition {
 
 case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
                                      onStatements: Set[OnStatement],
+                                     queryDefs: Set[Query],
                                      dependencies: Map[Relation, Set[Relation]],
                                      rules: Set[Rule]) {
-  override def toString: String = onStatements.mkString("\n")
+  override def toString: String = onStatements.mkString("\n") + "\n" + queryDefs.mkString("\n")
 }

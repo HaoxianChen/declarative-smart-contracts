@@ -7,7 +7,6 @@ case class FunctionHelper(onStatement: OnStatement) {
   val isTransaction: Boolean = onStatement.relation.name.startsWith(SolidityTranslator.transactionRelationPrefix)
   val inRel = onStatement.relation
   val updateTarget = onStatement.updateTarget
-  private val functionDeclaration: DeclFunction = getFunctionDeclaration()
   private val functionName: String = {
     val action: String = onStatement match {
       case _:OnInsert => "Insert"

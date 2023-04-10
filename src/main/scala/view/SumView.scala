@@ -96,5 +96,6 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 
+  def getQueryStatement(): Statement = ???
 }
 

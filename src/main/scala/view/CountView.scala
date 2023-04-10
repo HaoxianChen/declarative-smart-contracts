@@ -114,4 +114,6 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
     makeRuleZ3Constraints(ctx, bodyConstraint, updateConstraint, Array(Tuple3(v_in, v_out, updateExpr)),
       InsertTuple(this.relation, this.primaryKeyIndices))
   }
+
+  def getQueryStatement(): Statement = ???
 }

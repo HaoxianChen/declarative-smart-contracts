@@ -19,6 +19,8 @@ abstract class View {
   def deleteRow(deleteTuple: DeleteTuple): OnStatement
   def updateRow(incrementValue: IncrementValue): OnStatement
 
+  def getQueryStatement(): Statement
+
   def getUpdateStatement(trigger: Trigger): OnStatement = trigger match {
     case it: InsertTuple => insertRow(it)
     case dt: DeleteTuple => deleteRow(dt)
@@ -169,10 +171,11 @@ abstract class View {
 
 }
 object View {
-  def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]]): View = {
+  def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
+            functions: Set[Relation]): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
-      JoinView(rule, primaryKeyIndices, ruleId, allIndices)
+      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions)
     }
     else {
       rule.aggregators.head match {

@@ -16,8 +16,9 @@ abstract class Translator(program: ImperativeAbstractProgram, interfaces: Set[In
 object Translator {
   def getMaterializedRelations(program: ImperativeAbstractProgram, interfaces: Set[Interface]): Set[Relation] = {
     val fromStatements = program.onStatements.flatMap(relationsToMaterialize)
+    val fromQueryDefs = program.queryDefs.flatMap(relationsToMaterialize)
     val viewRelations = interfaces.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).map(_.relation)
-    fromStatements ++ viewRelations
+    fromStatements ++ fromQueryDefs ++ viewRelations
   }
 
   protected def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
@@ -28,6 +29,7 @@ object Translator {
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
     case on: OnStatement => relationsToMaterialize(on.statement)
     case inc: IncrementAndInsert => Set(inc.relation)
+    case Query(_,_statement) => relationsToMaterialize(_statement)
     case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
   }
 
@@ -78,7 +80,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val interfaces: Statement = makeInterfaces()
     val functions = {
       val decls = program.onStatements.map(on => functionHelpers(on).getFunctionDeclaration())
-      val translatedDecls = decls.map(translateStatement)
+      val queryDecls = program.queryDefs.map(queryToDecl)
+      val translatedDecls = (decls++queryDecls).map(translateStatement)
       val updateFunctions = getUpdateFunctionDeclarations()
         // .map(flattenIfStatement)
       Statement.makeSeq((translatedDecls++updateFunctions).toList:_*)
@@ -91,6 +94,13 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     else Empty()
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     DeclContract(name, definitions)
+  }
+
+  private def queryToDecl(query: Query): DeclFunction = {
+    DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement,
+        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+        modifiers = Set()))
+
   }
 
   private def getUpdateFunctionDeclarations(): Set[DeclFunction] = {
@@ -161,6 +171,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case DeclFunction(name,lit,target,stmt, publicity) => DeclFunction(name,lit,target,translateStatement(stmt), publicity)
     case u: UpdateStatement => translateUpdateStatement(u)
     case UpdateDependentRelations(u) => getCallDependentFunctionsStatement(u)
+    case query: Query => ???
     case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
 
