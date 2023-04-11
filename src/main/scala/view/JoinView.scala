@@ -248,7 +248,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   val insert = getInsertedLiteral(insertTuple.relation)
 
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.filterNot(_.relation==insert.relation)
+      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
       sortJoinLiterals(rest)
     }
 
@@ -398,5 +398,15 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
     }
     (resultIndex, delta)
+  }
+
+  def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr = {
+    val sortedLiteral = {
+      val rest = rule.body.diff(functionLiterals)
+      sortJoinLiterals(rest)
+    }
+    val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix)).toArray
+    val functorExprs = rule.functors.map(f => functorToZ3(ctx,f,z3Prefix)).toArray
+    ctx.mkAnd(exprs++functorExprs:_*)
   }
 }

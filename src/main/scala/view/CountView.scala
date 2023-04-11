@@ -116,4 +116,6 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
   }
 
   def getQueryStatement(): Statement = ???
+
+  def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr = ???
 }

@@ -39,6 +39,25 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
   private val invariantGenerator: InvariantGenerator = InvariantGenerator(ctx, program,
                                               materializedRelations, impAbsProgram.indices)
 
+  private val queryConstraints: Map[Relation, BoolExpr] = program.functions.map(
+    rel => (rel -> generateQueryConstraints(rel))).toMap
+
+  private def generateQueryConstraints(relation: Relation): BoolExpr = {
+    val allDefRules = program.rules.filter(_.head.relation==relation)
+    val allConstraints = allDefRules.zipWithIndex.map {
+      case (rule,i) => {
+        val prefix = s"q$i"
+        val expr = views(rule).getZ3QueryConstraint(ctx,prefix)
+        /** rename following head variable */
+        val from: Array[Expr[_]] = rule.head.fields.map(p => paramToConst(ctx,p,prefix)._1).toArray
+        val to: Array[Expr[_]] = rule.head.fields.map(p => paramToConst(ctx,p,"")._1).toArray
+        expr.substitute(from,to)
+        /** todo: call this method recursively to generate query constraints */
+      }
+    }
+    ctx.mkOr(allConstraints.toSeq:_*)
+  }
+
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices.getOrElse(sr, List())
     case SingletonRelation(name, sig, memberNames) => List()
@@ -220,7 +239,10 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       }
 
 
-      val (trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
+      val queryConstraints: BoolExpr = getQueryConstraints(rule, getPrefix(thisId))
+
+      val (_trueBranch, falseBranch) = view.getZ3Constraint(ctx, trigger, isMaterialized, getPrefix(thisId))
+      val trueBranch = _trueBranch.copy(ruleConstraints = ctx.mkAnd(_trueBranch.ruleConstraints, queryConstraints))
 
       val trueBranchWithDependentConstraints = {
 
@@ -291,6 +313,21 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
     val simplified = simplifyByRenamingConst(renamed)
     simplified.asInstanceOf[BoolExpr]
+  }
+
+  private def getQueryConstraints(rule: Rule, prefix: String): BoolExpr = {
+    val queries = rule.body.filter(lit=>program.functions.contains(lit.relation))
+
+    val exprs = queries.map {
+      case lit => {
+        val expr = queryConstraints(lit.relation)
+        /** rename */
+        val from: Array[Expr[_]] = lit.relation.paramList.map(p => paramToConst(ctx, p, "")._1).toArray
+        val to: Array[Expr[_]] = lit.fields.map(p => paramToConst(ctx, p, prefix)._1).toArray
+        expr.substitute(from, to)
+      }
+    }
+    ctx.mkAnd(exprs.toSeq:_*)
   }
 
   private def getNamingConstraints(rule: Rule, dependentRule: Rule, trigger: Trigger, id1: Int, id2: Int): (BoolExpr, Array[Expr[_]], Array[Expr[_]]) = {

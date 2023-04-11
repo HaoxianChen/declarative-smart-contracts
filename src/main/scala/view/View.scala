@@ -52,6 +52,8 @@ abstract class View {
     }
   }
 
+  def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr
+
   def getInsertedLiteral(relation: Relation): Literal
 
   protected def makeRuleZ3Constraints(ctx: Context, bodyConstraint: BoolExpr, updateConstraint: BoolExpr,

@@ -97,4 +97,6 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = ???
 
   def getQueryStatement(): Statement = ???
+
+  def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr = ???
 }
