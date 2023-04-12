@@ -104,7 +104,7 @@ abstract class View {
                                        isMaterialized: Boolean,
                                        z3Prefix: String): (BoolExpr, Array[(Expr[Sort], Expr[Sort], Expr[_<:Sort])]) = {
 
-    val keys = primaryKeyIndices.map(i=>insertedLiteral.fields(i))
+    val keys = primaryKeyIndices.map(i=>rule.head.fields(i))
     val valueType = this.relation.sig(resultIndex)
     val deltaz3 = functorExprToZ3(ctx, updateArithmeticType(delta, valueType), z3Prefix)
     val (diffConst,_) = {
