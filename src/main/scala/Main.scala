@@ -18,6 +18,8 @@ object Main extends App {
     "paymentSplitter.dl",
     "erc777.dl",
     "erc1155.dl",
+    "controllable.dl",
+    "tokenPartition.dl",
     "voting.dl",
     "auction.dl")
 
