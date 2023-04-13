@@ -1,0 +1,103 @@
+// Adopted from Etherscan: https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: uint)
+.decl balanceOf(p: address, n: uint)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:uint)[0,1]
+.decl isBlackListed(p: address, b:bool)[0]
+
+// Transactions
+.decl issue(p: address, amount: uint)
+.decl recv_issue(p: address, amount: uint)
+.decl redeem(p: address, amount: uint)
+.decl recv_redeem(p: address, amount: uint)
+.decl transfer(from: address, to: address, amount: uint)
+.decl recv_transfer(to: address, amount: uint)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_approve(s: address, n:uint)
+
+.decl destroyBlackFund(p:address,n:uint)
+.decl recv_destroyBlackFund(p:address)
+
+destroyBlackFund(p,n) :- recv_destroyBlackFund(p),msgSender(s),owner(s),
+                        isBlackListed(p,true),
+                        balanceOf(p,n), p!=0, n>0.
+redeem(p,n) :- destroyBlackFund(p,n).
+
+// Interfaces
+.public recv_issue
+.public recv_redeem
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+.public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+totalSupply(0) :- constructor().
+
+issue(p,n) :- recv_issue(p,n), msgSender(s), owner(s), p!=0.
+redeem(p,n) :- recv_redeem(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+                  isBlackListed(s,false).
+
+.decl recv_addBlackList(p:address)
+.decl addBlackList(p:address)
+addBlackList(p) :- recv_addBlackList(p),msgSender(s),owner(s).
+isBlackListed(p,true) :- addBlackList(p).
+
+.decl totalIssue(p: address, n: uint)[0]
+.decl totalRedeem(p: address, n: uint)[0]
+.decl totalOut(p: address, n: uint)[0]
+.decl totalIn(p: address, n: uint)[0]
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalIssue(p,s) :- issue(p,_), s = sum n: issue(p,n).
+totalRedeem(p,s) :- redeem(p,_), s = sum n: redeem(p,n).
+balanceOf(p,s) :- totalIssue(p,n), totalRedeem(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
+
+.decl *allIssue(n: uint)
+.decl *allRedeem(n: uint)
+allIssue(s) :- s = sum n: issue(_,n).
+allRedeem(s) :- s = sum n: redeem(_,n).
+totalSupply(n) :- allIssue(m), allRedeem(b), n := m - b.
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: uint)
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+                    balanceOf(o,m), m>=n,
+                    msgSender(s), allowance(o,s,k), k>=n,
+                    isBlackListed(o,false).
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+
+increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+
+.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl spentTotal(o:address, s:address, m:uint)[0,1]
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+
+// Properties
+.decl *totalBalances(m: uint)
+.decl *unequalBalance(s: uint, n: uint)
+
+.violation unequalBalance
+
+totalBalances(0) :- constructor().
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
