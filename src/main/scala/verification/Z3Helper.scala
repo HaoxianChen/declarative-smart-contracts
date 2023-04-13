@@ -152,10 +152,9 @@ object Z3Helper {
   }
 
   def functorExprToZ3(ctx: Context, expr: datalog.Expr, prefix: String): Expr[_] = {
-    val sort = typeToSort(ctx, expr._type)
     expr match {
       case Zero(_) => ctx.mkInt(0)
-      case One(_) => ctx.mkInt(0)
+      case One(_) => ctx.mkInt(1)
       case Param(p) => paramToConst(ctx, p, prefix)._1.asInstanceOf[Expr[ArithSort]]
       case Negative(e) => functorExprToZ3(ctx, Sub(Zero(e._type),e), prefix)
       case operator: BinaryOperator => {
