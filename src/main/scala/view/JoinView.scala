@@ -268,7 +268,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def updateRowZ3(ctx: Context, incrementValue: IncrementValue, isMaterialized: Boolean, z3Prefix: String) = {
-  val (resultIndex, delta) = getUpdate(incrementValue)
+    val (resultIndex, delta) = getUpdate(incrementValue)
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     if (isUpdatable(incrementValue)) {
       val (updateConstraint, updateExpr) = updateTargetRelationZ3(ctx, insertedLiteral, delta, resultIndex, isMaterialized, z3Prefix)

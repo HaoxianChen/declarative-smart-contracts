@@ -15,7 +15,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   /** Interfaces */
   def insertRow(insertTuple: InsertTuple): OnStatement = {
-    val insertedLiteral: Literal = rule.body.head
+    val insertedLiteral: Literal = getInsertedLiteral(insertTuple.relation)
     val newValue: Param = Param(insertedLiteral.fields(max.valueIndex))
     val groupKeys: List[Parameter] = {
       val allKeys = max.literal.fields.filterNot(_==max.aggParam).filterNot(_.name=="_")
@@ -38,9 +38,8 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   def updateRow(incrementValue: IncrementValue): OnStatement = ???
 
   def getInsertedLiteral(relation: Relation): Literal = {
-    val lit = rule.body.head
-    require(lit.relation==relation)
-    lit
+    require(relation==max.relation)
+    max.literal
   }
 
   /** Interfaces to generate Z3 constraints */
