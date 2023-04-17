@@ -91,7 +91,7 @@ object Z3Helper {
       }
       case reserved: ReservedRelation => {
         reserved match {
-          case MsgSender() | MsgValue() | Now() | Balance() => {
+          case MsgSender() | MsgValue() | Now() | Balance() | This() => {
             val (x,_) = paramToConst(ctx, lit.fields.head, prefix)
             val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
             ctx.mkEq(relConst, x)
@@ -145,7 +145,7 @@ object Z3Helper {
       }
     }
     case reserved :ReservedRelation => reserved match {
-      case MsgSender() | MsgValue() | Now() | Balance() => typeToSort(ctx, reserved.sig.head)
+      case MsgSender() | MsgValue() | Now() | Balance() | This() => typeToSort(ctx, reserved.sig.head)
       case Send() => ???
       case Receive() => ???
     }
