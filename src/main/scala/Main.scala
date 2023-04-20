@@ -20,6 +20,14 @@ object Main extends App {
     "erc1155.dl",
     "controllable.dl",
     "tokenPartition.dl",
+    "tether.dl",
+    "bnb.dl",
+    "matic.dl",
+    "ltcSwapAsset.dl",
+    "theta.dl",
+    "wbtc.dl",
+    "shib.dl",
+    "linktoken.dl",
     "voting.dl",
     "auction.dl")
 
