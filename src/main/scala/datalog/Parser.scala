@@ -120,9 +120,18 @@ class ArithmeticParser extends JavaTokenParsers {
   }
   private def parameter: Parser[Param] = (constant | variable ) ^^ { p => Param(p)}
 
-  private def term : Parser[Arithmetic] = "(" ~> expr <~ ")" | parameter
+  private def term : Parser[Arithmetic] = "(" ~> arithExpr <~ ")" | parameter
 
-  def expr: Parser[Arithmetic] = term ~ rep(("+"|"-"|"*"|"/") ~ term) ^^ {
+  private def builtInFunction: Parser[Arithmetic] = {
+    def min: Parser[Min] = (("min"~"(") ~> arithExpr <~ (",")) ~ (arithExpr <~ (")")) ^^ {
+      case (e1~e2) => Min(e1,e2)
+    }
+    min
+  }
+
+  private def expr: Parser[Expr] = builtInFunction | arithExpr
+
+  def arithExpr: Parser[Arithmetic] = term ~ rep(("+"|"-"|"*"|"/") ~ term) ^^ {
     case t ~ ts => ts.foldLeft(t) {
       case (t1, "+" ~ t2) => Add(t1, t2)
       case (t1, "-" ~ t2) => Sub(t1, t2)
@@ -136,7 +145,7 @@ class ArithmeticParser extends JavaTokenParsers {
     case p ~ op ~ e => Assign(p,e)
   }
 
-  def comparison: Parser[Functor] = (expr) ~ (">="|"<="|">"|"<"|"!="|"==") ~ expr ^^ {
+  def comparison: Parser[Functor] = (arithExpr) ~ (">="|"<="|">"|"<"|"!="|"==") ~ arithExpr ^^ {
     case a ~ op ~ b => op match {
       case ">=" => Geq(a,b)
       case "<=" => Leq(a,b)

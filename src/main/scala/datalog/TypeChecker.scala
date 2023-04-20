@@ -52,7 +52,7 @@ case class TypeChecker() {
       case bin: BinaryOperator => {
         val at = inferType(bin.a,paramTypes)
         val bt = inferType(bin.b,paramTypes)
-        require(at==bt)
+        require(at==bt || at.isEmpty || bt.isEmpty, s"$bin, $at, $bt")
         at
       }
     }

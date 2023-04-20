@@ -64,6 +64,11 @@ case class Div(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
   val _type = a._type
   override def toString: String = s"${_paren(a)}/${_paren(b)}"
 }
+case class Min(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
+  require(a._type==b._type)
+  def _type: Type = a._type
+  override def toString: String = s"min($a,$b)"
+}
 object Arithmetic {
   def derivativeOf(e: Arithmetic, x: Param): Arithmetic = e match {
     case Zero(t) => Zero(t)
@@ -74,6 +79,7 @@ object Arithmetic {
     case Sub(a,b) => Sub(derivativeOf(a,x), derivativeOf(b,x))
     case Mul(a,b) => Mul(derivativeOf(a,x), derivativeOf(b,x))
     case Div(a,b) => ???
+    case Min(_,_) => ???
   }
   def simplify(expr: Arithmetic): Arithmetic = {
     def _simplify(expr: Arithmetic): Arithmetic = expr match {
@@ -102,6 +108,8 @@ object Arithmetic {
       case Div(Zero(t), _) => Zero(t)
       case Div(Negative(Zero(t)), _) => Zero(t)
       case Div(a,b) => Div(_simplify(a),_simplify(b))
+
+      case Min(a,b) => Min(_simplify(a),_simplify(b))
     }
 
     var e1 = expr
@@ -123,6 +131,7 @@ object Arithmetic {
         case Sub(a, b) => Sub(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
         case Mul(a, b) => Mul(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
         case Div(a, b) => Div(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
+        case Min(a, b) => Min(updateArithmeticType(a,newType), updateArithmeticType(b,newType))
       }
     }
   }

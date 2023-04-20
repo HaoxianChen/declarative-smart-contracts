@@ -1,7 +1,7 @@
 package verification
 
 import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
-import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, Type, Unequal, Variable, Zero}
+import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, This, Type, Unequal, Variable, Zero}
 
 object Z3Helper {
   val uintSize: Int = 32
@@ -159,13 +159,14 @@ object Z3Helper {
       case Negative(e) => functorExprToZ3(ctx, Sub(Zero(e._type),e), prefix)
       case operator: BinaryOperator => {
         require(operator.a._type==operator.b._type)
-        val x = functorExprToZ3(ctx, operator.a, prefix)
-        val y = functorExprToZ3(ctx, operator.b, prefix)
+        val x = functorExprToZ3(ctx, operator.a, prefix).asInstanceOf[Expr[ArithSort]]
+        val y = functorExprToZ3(ctx, operator.b, prefix).asInstanceOf[Expr[ArithSort]]
         operator match {
-          case _:Add => ctx.mkAdd(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-          case _:Sub => ctx.mkSub(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-          case _:Mul => ctx.mkMul(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
-          case _:Div => ctx.mkDiv(x.asInstanceOf[Expr[ArithSort]],y.asInstanceOf[Expr[ArithSort]])
+          case _:Add => ctx.mkAdd(x,y)
+          case _:Sub => ctx.mkSub(x,y)
+          case _:Mul => ctx.mkMul(x,y)
+          case _:Div => ctx.mkDiv(x,y)
+          case _:Min => ctx.mkITE(ctx.mkLt(x,y),x,y)
         }
       }
     }
