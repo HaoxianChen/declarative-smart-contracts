@@ -67,7 +67,7 @@ case class Div(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
 case class Min(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
   require(a._type==b._type)
   def _type: Type = a._type
-  override def toString: String = s"min($a,$b)"
+  override def toString: String = s"$a < $b ? $a : $b"
 }
 object Arithmetic {
   def derivativeOf(e: Arithmetic, x: Param): Arithmetic = e match {
