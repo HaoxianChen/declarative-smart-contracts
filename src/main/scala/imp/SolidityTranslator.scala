@@ -75,7 +75,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
   def translate(): Statement = {
     val structDefinitions: Statement = makeStructDefinitions()
-    val declarations: Statement = getRelationDeclartions()
+    val declarations: Statement = getRelationDeclarations()
     val eventDeclarations = eventHelper.getAllEventDeclarations()
     val interfaces: Statement = makeInterfaces()
     val functions = {
@@ -116,7 +116,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     all + DataStructureHelper.updateFunctionDecl(Type.uintType, Type.integerType)
   }
 
-  private def getRelationDeclartions(): Statement = {
+  private def getRelationDeclarations(): Statement = {
     var stmt: Statement = Empty()
     for (rel <- materializedRelations) {
       rel match {
