@@ -33,7 +33,10 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
   def updateRow(incrementValue: IncrementValue): OnStatement = {
     val insertedLiteral = getInsertedLiteral(incrementValue.relation)
     val resultIndex = rule.head.fields.indexOf(sum.aggResult)
-    val keyIndices = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
+    val keyIndices = {
+      val keys = primaryKeyIndices.map(i=>rule.head.fields(i))
+      keys.map(k=>insertedLiteral.fields.indexOf(k))
+    }
     // val delta: Arithmetic = incrementValue.delta
     val delta: Arithmetic = {
       val d = Param(insertedLiteral.fields(incrementValue.valueIndex))

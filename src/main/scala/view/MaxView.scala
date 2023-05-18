@@ -39,7 +39,13 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
 
   def getInsertedLiteral(relation: Relation): Literal = {
     require(relation==max.relation)
-    max.literal
+    if (rule.body.nonEmpty) {
+      val _lits = rule.body.filter(_.relation == max.relation)
+      require(_lits.size==1)
+      _lits.head
+    } else {
+      max.literal
+    }
   }
 
   /** Interfaces to generate Z3 constraints */

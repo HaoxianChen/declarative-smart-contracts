@@ -28,7 +28,7 @@ case class FunctionHelper(onStatement: OnStatement) {
     require(literal.relation == inRel)
     keyIndices.map(i=>literal.fields(i))
   }
-  def getCallStatement(update: UpdateStatement): Statement = {
+  def getCallStatement(update: UpdateStatement, idx: Int): Statement = {
     update match {
       case Insert(literal) => Call(functionName, getParam(literal))
       case Delete(literal) => Call(functionName, getParam(literal))
@@ -36,7 +36,7 @@ case class FunctionHelper(onStatement: OnStatement) {
       case _:IncrementAndInsert => throw new Exception(s"Unhandled statement:$update")
       case inc: Increment => {
         val delta = inc.delta
-        val outVar = Variable(delta._type, "delta")
+        val outVar = Variable(delta._type, s"delta$idx")
         // val assign = imp.Assign(Param(outVar), delta)
         val convertType: ConvertType = ConvertType(delta, outVar)
         val params = getParam(inc.literal) :+ outVar

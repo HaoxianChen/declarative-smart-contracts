@@ -6,7 +6,8 @@ import Z3Helper.{functorToZ3, literalToConst, paramToConst}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.Prove.get_vars
 
-case class PredicateExtractor(rules: Set[Rule], indices: Map[SimpleRelation, List[Int]]) {
+case class PredicateExtractor(rules: Set[Rule], indices: Map[SimpleRelation, List[Int]],
+                              functions: Set[Relation]) {
 
   private def getIndices(relation: Relation): List[Int] = relation match {
     case sr:SimpleRelation => indices.getOrElse(sr, List())
@@ -24,9 +25,12 @@ case class PredicateExtractor(rules: Set[Rule], indices: Map[SimpleRelation, Lis
   }
 
   def extractPredicates(ctx: Context, rule: Rule, prefix: String): Set[BoolExpr] = {
-    val candidateLiterals = rule.body.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).toList
+    val candidateLiterals = rule.body.filterNot(_.relation.name.startsWith(transactionRelationPrefix)).
+                              filterNot(lit=>functions.contains(lit.relation)).
+                              toList
     val _p = extractMatchingPredicates(ctx, candidateLiterals, prefix)
     val _m = rule.functors.flatMap(f => extractComparisonPredicates(ctx,f,candidateLiterals,prefix))
+    /** todo: should extract predicates from function relations as well */
     _p ++ _m
   }
 

@@ -108,8 +108,7 @@ case class Increment(relation: Relation, literal: Literal, keyIndices: List[Int]
   override def toString: String = {
     val keyStr = relation match {
       case SimpleRelation(name, sig, memberNames) => {
-        val keys = keyIndices.map(i => literal.fields(i))
-        keys.map(k=>s"[$k]").mkString("")
+        keyParams.map(k=>s"[$k]").mkString("")
       }
       case _:SingletonRelation => ""
       case r: ReservedRelation => throw new Exception(s"Cannot update reserved relation $r")

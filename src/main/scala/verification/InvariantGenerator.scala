@@ -13,7 +13,7 @@ case class InvariantGenerator(ctx: Context, program: Program,
                               indices: Map[SimpleRelation, List[Int]],
                               debug: Boolean=false) {
 
-  private val predicateExtractor = PredicateExtractor(program.rules, indices)
+  private val predicateExtractor = PredicateExtractor(program.rules, indices, program.functions)
 
   private def _refuteInvariant(inv: BoolExpr, candidates: Set[BoolExpr], tr: TransitionSystem): Boolean = {
     val f = ctx.mkImplies(ctx.mkAnd((tr.getTr() +: candidates.toArray):_*), tr.toPost(inv))
