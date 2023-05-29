@@ -35,7 +35,7 @@ object Main extends App {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
-    val impTranslator = ImperativeTranslator(dl, isInstrument, monitorViolations)
+    val impTranslator = new ImperativeTranslator(dl, isInstrument, monitorViolations)
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,monitorViolations).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
@@ -75,7 +75,7 @@ object Main extends App {
     val filepath = args(1)
 
     val dl = parseProgram(filepath)
-    val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+    val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
     val imperative = impTranslator.translate()
     // println(imperative)
     val verifier = new Verifier(dl, imperative)
@@ -88,7 +88,7 @@ object Main extends App {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
-      val impTranslator = ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+      val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
       val imperative = impTranslator.translate()
       val verifier = new Verifier(dl, imperative)
       verifier.check()
