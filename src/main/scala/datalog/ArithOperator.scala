@@ -136,7 +136,38 @@ object Arithmetic {
     }
   }
 
+  def rename(arith: Arithmetic, mapping: Map[Parameter,Parameter]): Arithmetic = arith match {
+    case Zero(_type) => arith
+    case One(_type) => arith
+    case Param(p) => Param(mapping.getOrElse(p,p))
+    case Negative(e) => Negative(rename(e, mapping))
+    case op: BinaryOperator => op match {
+      case Add(a, b) => Add(rename(a, mapping), rename(b, mapping))
+      case Sub(a, b) => Sub(rename(a, mapping), rename(b, mapping))
+      case Mul(a, b) => Mul(rename(a, mapping), rename(b, mapping))
+      case Div(a, b) => Div(rename(a, mapping), rename(b, mapping))
+      case Min(a, b) => Min(rename(a, mapping), rename(b, mapping))
+    }
+  }
+
+  def replace(arith: Arithmetic, mapping: Map[Param,Arithmetic]): Arithmetic = arith match {
+    case _: Zero | _:One => arith
+    case p: Param => mapping.getOrElse(p,p)
+    case Negative(e) => Negative(replace(e, mapping))
+    case op: BinaryOperator => op match {
+      case Add(a, b) => Add(replace(a, mapping), replace(b,mapping))
+      case Sub(a, b) => Sub(replace(a, mapping), replace(b,mapping))
+      case Mul(a, b) => Mul(replace(a, mapping), replace(b,mapping))
+      case Div(a, b) => Div(replace(a, mapping), replace(b,mapping))
+      case Min(a, b) => Min(replace(a, mapping), replace(b,mapping))
+    }
+  }
+
+  def rename(expr: Expr, mapping: Map[Parameter,Parameter]): Expr = expr match {
+    case arithmetic: Arithmetic => rename(arithmetic, mapping)
+  }
 }
+
 
 sealed abstract class Functor {
   def args: Array[Expr]

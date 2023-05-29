@@ -86,8 +86,8 @@ case class Literal(relation: Relation, fields: List[Parameter]) {
     s"${relation.name}($fieldStr)"
   }
 
-  def rename(from: Parameter, to: Parameter): Literal = {
-    val newFields = fields.map(x => if (x==from) to else x)
+  def rename(mapping: Map[Parameter,Parameter]): Literal = {
+    val newFields = fields.map(x => mapping.getOrElse(x,x))
     this.copy(fields=newFields)
   }
 }

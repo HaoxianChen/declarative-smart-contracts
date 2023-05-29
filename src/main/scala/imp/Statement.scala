@@ -426,6 +426,28 @@ object Condition {
     }
   }
   def makeConjunction(conditions: Condition*): Condition = conditions.foldLeft[Condition](True())(conjunction)
+
+  def rename(condition: Condition, mapping: Map[Parameter, Parameter]): Condition = condition match {
+    case True() => True()
+    case False() => False()
+    case MatchRelationField(relation, index, p) => MatchRelationField(relation,index,mapping.getOrElse(p,p))
+    case Match(a, b) => Match(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case Greater(a, b) => Greater(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case Lesser(a, b) => Lesser(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case Geq(a, b) => Geq(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case Leq(a, b) => Leq(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case Unequal(a, b) => Unequal(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
+    case And(a, b) => And(rename(a,mapping), rename(b,mapping))
+    case Or(a, b) => Or(rename(a,mapping), rename(b,mapping))
+    case BooleanFunction(name, parameters) => {
+      val newParams = parameters.map(p => mapping.getOrElse(p,p))
+      BooleanFunction(name, newParams)
+    }
+  }
+
+  def replaceArithmetic(condition: Condition, mapping: Map[Param, Arithmetic]): Condition = {
+    ???
+  }
 }
 
 case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
