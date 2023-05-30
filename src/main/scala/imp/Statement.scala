@@ -453,7 +453,6 @@ object Condition {
 case class ImperativeAbstractProgram(name: String, relations: Set[Relation], indices: Map[SimpleRelation, List[Int]],
                                      onStatements: Set[OnStatement],
                                      queryDefs: Set[Query],
-                                     dependencies: Map[Relation, Set[Relation]],
                                      rules: Set[Rule]) {
   override def toString: String = onStatements.mkString("\n") + "\n" + queryDefs.mkString("\n")
 }

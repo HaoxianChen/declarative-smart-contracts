@@ -95,6 +95,20 @@ object Main extends App {
     }
   }
 
+  else if (args(0) == "dependency-graph") {
+    for (p <- allBenchmarks) {
+      val filepath = Paths.get(benchmarkDir, p).toString
+      val dl = parseProgram(filepath)
+      val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+      val relationDependencies = impTranslator.getRelationDependencies()
+      // write to files
+      val outfile = s"relation-dependencies/${dl.name}.csv"
+      val preamble = s"#body,head,ruleId,isAgg\n"
+      val outStr = preamble+relationDependencies.map(t=>s"${t._1.name},${t._2.name},${t._3},${t._4}").mkString("\n")
+      Misc.writeToFile(outStr, outfile)
+    }
+  }
+
   else if (args(0) == "testz3") {
     TransitionSystem.testTS()
     // Prove.testZ3()

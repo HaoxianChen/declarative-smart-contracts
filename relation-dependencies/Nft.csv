@@ -1,0 +1,16 @@
+#body,head,ruleId,isAgg
+approval,approved,4,false
+ownerOf,tokenNoOwner,8,false
+recv_transfer,transfer,9,false
+exists,tokenNoOwner,8,false
+recv_setApprovalForAll,isApprovedForAll,2,false
+latestTransfer,exists,11,false
+latestTransfer,ownerOf,0,false
+recv_setApproval,approval,1,false
+recv_transferFrom,transfer,7,false
+ownerOf,approved,4,false
+transfer,latestTransfer,13,true
+recv_burn,transfer,12,false
+recv_mint,transfer,3,false
+recv_transferFrom,transfer,6,false
+ownerOf,balanceOf,5,true

@@ -103,33 +103,36 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     (allUpdates, dependentRules.map(_.head.relation))
   }
 
-  protected def getDependencyMap(): Map[Relation, Set[Relation]] = {
-    var dependencies: Set[(Relation,Relation)] = Set()
+  def getRelationDependencies(): Set[(Relation, Relation, Int, Boolean)] = {
+    /** Each 4Tuple represent one relation dependency (body, head, ruleID, isAggregationRule) */
+    var dependencies: Set[(Relation,Relation, Int, Boolean)] = Set()
 
     var R: Set[Relation] = program.relations.filter(_.name.contains(transactionRelationPrefix))
 
     def dependsOn(rule: Rule, relation: Relation): Boolean = {
-      val inBody =  rule.body.exists(_.relation==relation)
-      val inAggregator = rule.aggregators.exists(_.relation==relation)
-      inBody || inAggregator
+      if (isTransactionRule(rule) && !relation.name.contains(transactionRelationPrefix)) {
+        false
+      }
+      else {
+        val inBody =  rule.body.exists(_.relation==relation)
+        val inAggregator = rule.aggregators.exists(_.relation==relation)
+        inBody || inAggregator
+      }
     }
     while (R.nonEmpty) {
       var nextR: Set[Relation] = Set()
       for (rel <- R) {
-        val triggeredRules = program.rules.filter(r=>dependsOn(r, rel) && !isTransactionRule(r))
+        val triggeredRules = program.rules.filter(r=>dependsOn(r, rel))
         val triggeredRelations = triggeredRules.map(_.head.relation)
-        for (nr <- triggeredRelations) dependencies += Tuple2(nr, rel)
+        for (tr <- triggeredRules) {
+          val nextRel = tr.head.relation
+          dependencies += Tuple4(rel, nextRel, views(tr).ruleId, tr.aggregators.nonEmpty)
+        }
         nextR ++= triggeredRelations
       }
       R = nextR
     }
-
-    val dependencyMap: Map[Relation, Set[Relation]] = {
-      dependencies.groupBy(_._1).map{
-        case (k,v) => k -> v.map(_._2)
-      }
-    }
-    dependencyMap
+    dependencies
   }
 }
 
@@ -144,7 +147,6 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
       val toTrigger = relationsInBodies.intersect(relationsToTrigger)
       toTrigger.map(rel => InsertTuple(rel,primaryKeyIndices(rel)))
     }
-    var dependencies: Set[(Relation, Relation)] = Set()
 
     var triggered: Set[Trigger] = Set()
     var allUpdates: Set[OnStatement] = Set()
@@ -163,10 +165,6 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
           }
 
           val allNextTriggers = getTrigger(updateProgram)
-          /** Update dependencies */
-          for (nt <- allNextTriggers) {
-            dependencies += Tuple2(trigger.relation, nt.relation)
-          }
           val nextTriggers = allNextTriggers
             // .filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
           assert(nextTriggers.size <= 2)
@@ -182,17 +180,11 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
     val constructors: Set[OnStatement] = program.relations.find(_.name=="constructor") match {
         case Some(constructorRel) => {
           val (constuctorDefinition, dependentRelations) = getConstructor(constructorRel, program.rules)
-          for (r <- dependentRelations) dependencies += Tuple2(constructorRel, r)
           constuctorDefinition
         }
         case None => Set()
       }
     // val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
-    val dependencyMap: Map[Relation, Set[Relation]] = {
-      dependencies.groupBy(_._1).map{
-        case (k,v) => k -> v.map(_._2)
-      }
-    }
 
     val queryDefs = program.functions.map(getQueryDef)
 
@@ -200,7 +192,7 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
       constructors++allUpdates,
       queryDefs,
-      dependencyMap, program.rules)
+      program.rules)
   }
 
 }
@@ -238,7 +230,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
       constructors++statements,
       queryDefs,
-      getDependencyMap(), program.rules)
+      program.rules)
   }
 
   def getUpdate(trigger: Trigger, rule: Rule): OnStatement = {

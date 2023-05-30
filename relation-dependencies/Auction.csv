@@ -1,0 +1,14 @@
+#body,head,ruleId,isAgg
+bidTotal,balance,7,false
+bid,highestBid,0,true
+recv_withdraw,withdraw,1,false
+withdraw,withdrawCount,6,true
+withdraw,withdrawTotal,3,true
+recv_bid,bid,10,false
+withdraw,send,8,false
+withdrawCount,repeatWithdraw,13,false
+recv_withdraw,withdraw,5,false
+withdrawTotal,balance,7,false
+recv_endAuction,end,4,false
+recv_endAuction,send,2,false
+bid,bidTotal,12,true

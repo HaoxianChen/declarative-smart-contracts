@@ -1,0 +1,8 @@
+#body,head,ruleId,isAgg
+wins,inconsistency,6,false
+votes,wins,2,false
+vote,voted,3,false
+wins,hasWinner,1,false
+recv_vote,vote,5,false
+vote,votes,0,true
+wins,winningProposal,4,false
