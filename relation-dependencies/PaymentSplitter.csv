@@ -1,8 +1,10 @@
 #body,head,ruleId,isAgg
 release,totalReleased,1,true
+released,release,6,false
 totalReceived,overpaid,5,false
 released,overpaid,5,false
 recv_release,release,6,false
 release,released,4,true
 totalReleased,totalReceived,0,false
 release,send,3,false
+totalReceived,release,6,false

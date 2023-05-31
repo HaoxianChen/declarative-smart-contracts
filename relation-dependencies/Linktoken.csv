@@ -5,6 +5,9 @@ transferFrom,transfer,1,false
 totalOut,balanceOf,8,false
 allMint,totalSupply,14,false
 recv_transfer,transfer,6,false
+balanceOf,transferFrom,0,false
+balanceOf,transfer,6,false
+allowance,transferFrom,0,false
 balanceOf,totalBalances,16,true
 burn,allBurn,19,true
 totalSupply,unequalBalance,5,false
@@ -20,7 +23,9 @@ totalMint,balanceOf,8,false
 allowanceTotal,allowance,17,false
 transferFrom,spentTotal,9,true
 transfer,totalIn,11,true
-transfer,totalOut,15,true
 increaseAllowance,allowanceTotal,21,true
+transfer,totalOut,15,true
+allowance,increaseAllowance,20,false
 totalIn,balanceOf,8,false
 allBurn,totalSupply,14,false
+balanceOf,burn,7,false

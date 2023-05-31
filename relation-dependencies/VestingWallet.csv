@@ -1,6 +1,8 @@
 #body,head,ruleId,isAgg
 release,released,0,true
 recv_release,release,7,false
+released,release,6,false
 release,send,2,false
+released,release,7,false
 recv_release,release,6,false
 released,earlyRelease,3,false

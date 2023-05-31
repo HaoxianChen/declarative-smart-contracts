@@ -2,11 +2,13 @@
 transfer,totalOut,4,true
 burn,transfer,11,false
 recv_transfer,transfer,12,false
+balanceOf,burn,3,false
 mint,transfer,10,false
 totalOut,balanceOf,1,false
 burn,allBurn,7,true
 allMint,totalSupply,8,false
 recv_mint,mint,9,false
+balanceOf,transfer,12,false
 balanceOf,negativeBalance,5,false
 allBurn,totalSupply,8,false
 totalIn,balanceOf,1,false

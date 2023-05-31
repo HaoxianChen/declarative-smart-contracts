@@ -5,6 +5,7 @@ redeemByPartition,redeemTotalByPartition,13,true
 allBurn,totalSupply,7,false
 issueByPartition,totalMint,8,true
 redeemByPartition,allBurn,10,true
+balanceOfByPartition,redeemByPartition,9,false
 issueByPartition,issueTotalByPartition,5,true
 totalSupplyByPartition,unequalBalance,12,false
 redeemTotalByPartition,totalSupplyByPartition,4,false
@@ -21,3 +22,4 @@ issueByPartition,allMint,0,true
 totalOut,balanceOfByPartition,16,false
 totalMint,balanceOfByPartition,16,false
 recv_transferByPartition,transferByPartition,17,false
+balanceOfByPartition,transferByPartition,17,false

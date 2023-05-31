@@ -1,10 +1,12 @@
 #body,head,ruleId,isAgg
+allowance,increaseAllowance,23,false
 freezeOf,freezeSum,4,true
+balanceOf,transfer,16,false
 totalUnfreeze,freezeOf,11,false
 spentTotal,allowance,21,false
+balanceOf,burn,5,false
 totalBalances,unequalBalance,10,false
 allMint,totalSupply,15,false
-burn,allBurn,25,true
 recv_unfreeze,unfreeze,7,false
 balanceOf,totalBalances,18,true
 totalOut,balanceOf,3,false
@@ -14,6 +16,7 @@ recv_mint,mint,22,false
 totalFreeze,freezeOf,11,false
 totalMint,balanceOf,3,false
 allowanceTotal,allowance,21,false
+allowance,transferFrom,24,false
 freezeSum,unequalBalance,10,false
 recv_freeze,freeze,19,false
 transferFrom,transfer,1,false
@@ -26,8 +29,12 @@ totalSupply,unequalBalance,10,false
 recv_transfer,transfer,16,false
 recv_burn,burn,5,false
 mint,allMint,9,true
-totalBurn,balanceOf,3,false
+burn,allBurn,25,true
+balanceOf,transferFrom,24,false
 transfer,totalOut,17,true
+freezeOf,unfreeze,7,false
+totalBurn,balanceOf,3,false
+balanceOf,freeze,19,false
 recv_approve,increaseAllowance,23,false
 allBurn,totalSupply,15,false
 unfreeze,totalUnfreeze,12,true

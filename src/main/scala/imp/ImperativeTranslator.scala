@@ -110,23 +110,20 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     var R: Set[Relation] = program.relations.filter(_.name.contains(transactionRelationPrefix))
 
     def dependsOn(rule: Rule, relation: Relation): Boolean = {
-      if (isTransactionRule(rule) && !relation.name.contains(transactionRelationPrefix)) {
-        false
-      }
-      else {
-        val inBody =  rule.body.exists(_.relation==relation)
-        val inAggregator = rule.aggregators.exists(_.relation==relation)
-        inBody || inAggregator
-      }
+      val inBody =  rule.body.exists(_.relation==relation)
+      val inAggregator = rule.aggregators.exists(_.relation==relation)
+      inBody || inAggregator
     }
     while (R.nonEmpty) {
       var nextR: Set[Relation] = Set()
       for (rel <- R) {
         val triggeredRules = program.rules.filter(r=>dependsOn(r, rel))
-        val triggeredRelations = triggeredRules.map(_.head.relation)
+        // val triggeredRelations = triggeredRules.map(_.head.relation)
+        var triggeredRelations: Set[Relation] = Set()
         for (tr <- triggeredRules) {
           val nextRel = tr.head.relation
           dependencies += Tuple4(rel, nextRel, views(tr).ruleId, tr.aggregators.nonEmpty)
+          if (!isTransactionRule(tr) || rel.name.contains(transactionRelationPrefix)) triggeredRelations += nextRel
         }
         nextR ++= triggeredRelations
       }
