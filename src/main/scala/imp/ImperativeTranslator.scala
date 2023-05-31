@@ -103,33 +103,21 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     (allUpdates, dependentRules.map(_.head.relation))
   }
 
-  def getRelationDependencies(): Set[(Relation, Relation, Int, Boolean)] = {
-    /** Each 4Tuple represent one relation dependency (body, head, ruleID, isAggregationRule) */
-    var dependencies: Set[(Relation,Relation, Int, Boolean)] = Set()
-
-    var R: Set[Relation] = program.relations.filter(_.name.contains(transactionRelationPrefix))
-
-    def dependsOn(rule: Rule, relation: Relation): Boolean = {
-      val inBody =  rule.body.exists(_.relation==relation)
-      val inAggregator = rule.aggregators.exists(_.relation==relation)
-      inBody || inAggregator
+  def getRelationDependencies(): Set[(Relation, Relation, Int, Boolean, Boolean)] = {
+    /** Each 5Tuple represent one relation dependency (body, head, ruleID, isAggregationRule, isTransactionRule) */
+    def getDependencies(rule: Rule): Set[((Relation, Relation, Int, Boolean, Boolean))] = {
+      val isTx = isTransactionRule(rule)
+      val isAgg = rule.aggregators.nonEmpty
+      val ruleId = views(rule).ruleId
+      val fromBody = rule.body.filterNot(_.relation.isInstanceOf[ReservedRelation])
+                               .filterNot(_.relation.name.contains(transactionRelationPrefix))
+                               .map(lit => Tuple5(lit.relation, rule.head.relation, ruleId, isAgg, isTx))
+      val fromAggregator = rule.aggregators.map(agg =>
+                              Tuple5(agg.literal.relation, rule.head.relation, ruleId, isAgg, isTx))
+      fromBody++fromAggregator
     }
-    while (R.nonEmpty) {
-      var nextR: Set[Relation] = Set()
-      for (rel <- R) {
-        val triggeredRules = program.rules.filter(r=>dependsOn(r, rel))
-        // val triggeredRelations = triggeredRules.map(_.head.relation)
-        var triggeredRelations: Set[Relation] = Set()
-        for (tr <- triggeredRules) {
-          val nextRel = tr.head.relation
-          dependencies += Tuple4(rel, nextRel, views(tr).ruleId, tr.aggregators.nonEmpty)
-          if (!isTransactionRule(tr) || rel.name.contains(transactionRelationPrefix)) triggeredRelations += nextRel
-        }
-        nextR ++= triggeredRelations
-      }
-      R = nextR
-    }
-    dependencies
+    program.rules.filterNot(_.body.exists(_.relation.name=="constructor")).flatMap(getDependencies)
+
   }
 }
 

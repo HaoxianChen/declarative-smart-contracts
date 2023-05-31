@@ -103,8 +103,10 @@ object Main extends App {
       val relationDependencies = impTranslator.getRelationDependencies()
       // write to files
       val outfile = s"relation-dependencies/${dl.name}.csv"
-      val preamble = s"#body,head,ruleId,isAgg\n"
-      val outStr = preamble+relationDependencies.map(t=>s"${t._1.name},${t._2.name},${t._3},${t._4}").mkString("\n")
+      val preamble = s"#body,head,ruleId,isAgg,isTx\n"
+      val sortedEdges = relationDependencies.toList.sortBy(_._3)
+      val edgeStr = sortedEdges.map(t=>s"${t._1.name},${t._2.name},${t._3},${t._4},${t._5}")
+      val outStr = preamble+edgeStr.mkString("\n")
       Misc.writeToFile(outStr, outfile)
     }
   }
