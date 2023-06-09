@@ -80,9 +80,11 @@ abstract class View {
     val insertedLiteralKeys = keyIndices.map(i=>insertedLiteral.fields(i)).toSet
     val headLiteralKeys = this.primaryKeyIndices.map(i=>this.rule.head.fields(i)).toSet
 
+    val isOverwritten = headLiteralKeys.subsetOf(insertedLiteralKeys) && rule.functors.isEmpty
+
     // keyIndices.nonEmpty || relation.isInstanceOf[SingletonRelation]
     // (keyIndices.nonEmpty && !headLiteralKeys.subsetOf(insertedLiteralKeys)) || relation.isInstanceOf[SingletonRelation]
-    keyIndices.nonEmpty && !headLiteralKeys.subsetOf(insertedLiteralKeys)
+    keyIndices.nonEmpty && !isOverwritten
   }
 
   def getTriggersForView(trigger: Trigger): Array[Trigger] = trigger match {
