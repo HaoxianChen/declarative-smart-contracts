@@ -51,18 +51,35 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     }
   }
 
-  protected def getTrigger(statement: Statement): Set[Trigger] = statement match {
+  protected def getTrigger(statement: Statement): Set[(UpdateStatement, Trigger)] = statement match {
     case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement | _:Query => Set()
     case Seq(a,b) => getTrigger(a) ++ getTrigger(b)
     case If(_,s) => getTrigger(s)
     case o: OnStatement => getTrigger(o.statement)
     case Search(_, _, stmt) => getTrigger(stmt)
     case UpdateDependentRelations(update) => getTrigger(update)
-    case IncrementAndInsert(increment) => Set(InsertTuple(increment.relation, primaryKeyIndices(increment.relation)))
-    case Insert(lit) => Set(InsertTuple(lit.relation, primaryKeyIndices(lit.relation)))
-    case Delete(lit) => Set(DeleteTuple(lit.relation, primaryKeyIndices(lit.relation)))
-    case DeleteByKeys(rel,keys, updateTarget) => Set(ReplacedByKey(rel, primaryKeyIndices(rel), updateTarget))
-    case Increment(rel,lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
+    case incrementAndInsert: IncrementAndInsert => {
+      val trigger = InsertTuple(incrementAndInsert.increment.relation, primaryKeyIndices(incrementAndInsert.increment.relation))
+      Set(Tuple2(incrementAndInsert,trigger))
+    }
+    case insert: Insert => {
+      val trigger = InsertTuple(insert.literal.relation, primaryKeyIndices(insert.relation))
+      Set(Tuple2(insert, trigger))
+    }
+    case delete: Delete => {
+      val trigger = DeleteTuple(delete.literal.relation, primaryKeyIndices(delete.literal.relation))
+      Set(Tuple2(delete,trigger))
+    }
+    case deleteByKeys: DeleteByKeys => {
+      val trigger = ReplacedByKey(deleteByKeys.relation, primaryKeyIndices(deleteByKeys.relation),
+        deleteByKeys.updateTarget)
+      Set(Tuple2(deleteByKeys, trigger))
+    }
+    // case Increment(rel,lit,keys,vid,delta) => Set(IncrementValue(rel,keys,vid,delta))
+    case increment: Increment => {
+      val trigger = IncrementValue(increment.relation,increment.keyIndices,increment.valueIndex, increment.delta)
+      Set(Tuple2(increment,trigger))
+  }
   }
 
   protected def getTriggeredRules(trigger: Trigger): Set[Rule] = {
@@ -151,7 +168,7 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
             allUpdates += updateProgram
           }
 
-          val allNextTriggers = getTrigger(updateProgram)
+          val allNextTriggers = getTrigger(updateProgram).map(_._2)
           val nextTriggers = allNextTriggers
             // .filterNot(t => program.interfaces.map(_.relation).contains(t.relation))
           assert(nextTriggers.size <= 2)
@@ -224,18 +241,24 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
   def getUpdate(trigger: Trigger, rule: Rule): OnStatement = {
     val updateProgram = views(rule).getUpdateStatement(trigger)
     val nextTriggers = getTrigger(updateProgram)
-    var updateDependents: List[Statement] = List()
-    for (nt <- nextTriggers) {
+    // var updateDependents: List[Statement] = List()
+    var updateDependents: Set[(UpdateStatement, Statement)] = Set()
+    for ((updateToRelation, nt) <- nextTriggers) {
       val triggeredRules: Set[Rule] = getTriggeredRules(nt)
       for (nr <- triggeredRules) {
         val nextUpdates = getUpdate(nt, nr)
-        val renamed = renameUpdate(nt, rule.head, nr, nextUpdates)
-        updateDependents :+= renamed
+        val updatedLiteral: Literal = nt match {
+          case ReplacedByKey(_relation, keyIndices, targetRelation) => rule.body.filter(_.relation == _relation).head
+          case _ => rule.head
+        }
+        val renamed = renameUpdate(nt, updatedLiteral, nr, nextUpdates, localVariablePrefix = s"r${views(rule).ruleId}")
+        updateDependents += Tuple2(updateToRelation, renamed)
       }
     }
 
     /** Replace the statement with the update dependent statements. */
-    val fused = replaceUpdateStatement(updateProgram.statement, Statement.makeSeq(updateDependents:_*))
+    val updateDependentsMap = updateDependents.groupBy(_._1).map {case (k,v) => k->v.map(_._2)}
+    val fused = replaceUpdateStatement(updateProgram.statement, updateDependentsMap)
 
     trigger match {
       case InsertTuple(relation, keyIndices) => OnInsert(updateProgram.literal, updateProgram.updateTarget, fused,
@@ -251,7 +274,8 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
     }
   }
 
-  private def renameUpdate(trigger: Trigger, literal: Literal, rule: Rule, statement: OnStatement): Statement = {
+  private def renameUpdate(trigger: Trigger, literal: Literal, rule: Rule, statement: OnStatement,
+                           localVariablePrefix: String): Statement = {
     val updatedLiteral = views(rule).getInsertedLiteral(trigger.relation)
     trigger match {
       case InsertTuple(relation, keyIndices) => {
@@ -259,14 +283,35 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
         for ((from,to) <- updatedLiteral.fields.zip(literal.fields)) {
           mapping += from -> to
         }
-        val renamed = renameParameters(statement.statement,mapping)
+        val renamed = Statement.renameParameters(statement.statement,mapping)
         renamed
       }
-      case DeleteTuple(relation, keyIndices) => ???
+      case DeleteTuple(relation, keyIndices) => {
+        ???
+      }
       case ReplacedByKey(relation, keyIndices, targetRelation) => {
         /** todo: Fix this on benchmark NFT. */
-        statement.statement
-        ???
+        // statement.statement
+        require(literal.relation == relation)
+
+        var mapping: Map[Parameter, Parameter] = Map()
+        for (i <- keyIndices) {
+          val from = updatedLiteral.fields(i)
+          val to = literal.fields(i)
+          mapping += from -> to
+        }
+
+        val readTuple = ReadTuple(relation, keyList = keyIndices.map(i=>updatedLiteral.fields(i)))
+        val valueIndices: List[Int] = updatedLiteral.fields.indices.diff(keyIndices).toList
+        var groundVar: Statement = Empty()
+        for (valueIndex <- valueIndices) {
+          val localVar = Variable(relation.sig(valueIndex), s"${localVariablePrefix}_${literal.fields(valueIndex)}")
+          groundVar = Statement.makeSeq(groundVar,GroundVar(localVar, relation, valueIndex))
+          mapping += (literal.fields(valueIndex)) -> localVar
+        }
+
+        val renamed = Statement.renameParameters(statement.statement, mapping)
+        Statement.makeSeq(readTuple, groundVar, renamed)
       }
       case IncrementValue(relation, keyIndices, valueIndex, delta) => {
         var mapping: Map[Parameter, Parameter] = Map()
@@ -275,7 +320,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
           val to = literal.fields(i)
           mapping += from->to
         }
-        val renamed = renameParameters(statement.statement,mapping)
+        val renamed = Statement.renameParameters(statement.statement,mapping)
         val renamed2 = replaceArithmetic(renamed, Map(Param(updatedLiteral.fields(valueIndex)) -> delta))
         renamed2
       }
@@ -310,58 +355,23 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
     case statement: SolidityStatement => ???
   }
 
-  def renameParameters(statement: Statement, mapping: Map[Parameter, Parameter]): Statement = statement match {
-    case Empty() => Empty()
-    case GroundVar(p, relation, index) => GroundVar(mapping.getOrElse(p,p), relation, index)
-    case imp.Assign(p, expr) => {
-      val newP = Param(mapping.getOrElse(p.p, p.p))
-      imp.Assign(newP, Arithmetic.rename(expr, mapping))
-    }
-    case Seq(a, b) => Seq(renameParameters(a,mapping), renameParameters(b,mapping))
-    case If(condition, statement) => If(Condition.rename(condition,mapping), renameParameters(statement, mapping))
-    case statement: OnStatement => ???
-    case Query(literal, statement) => ???
-    case statement: UpdateStatement => statement match {
-      case Insert(literal) => Insert(literal.rename(mapping))
-      case Delete(literal) => Delete(literal.rename(mapping))
-      case DeleteByKeys(relation, keys, updateTarget) => {
-        val newKeys = keys.map(k=>mapping.getOrElse(k,k))
-        DeleteByKeys(relation, newKeys, updateTarget)
-      }
-      case IncrementAndInsert(increment) => {
-        /** todo: implement this for benchmark voting.dl */
-        ???
-      }
-      case Increment(relation, literal, keyIndices, valueIndex, delta) => Increment(relation, literal.rename(mapping),
-        keyIndices, valueIndex, delta)
-    }
-    case UpdateDependentRelations(update) => UpdateDependentRelations(
-      renameParameters(update,mapping).asInstanceOf[UpdateStatement])
-    case Search(relation, conditions, statement) => {
-      val newConds = conditions.map(c=>Condition.rename(c,mapping).asInstanceOf[MatchRelationField])
-      Search(relation, newConds, renameParameters(statement,mapping))
-    }
-    case solidityStatement: SolidityStatement => solidityStatement match {
-      case ReadTuple(relation, keyList, outputVar) => {
-        val newKeys = keyList.map(k=>mapping.getOrElse(k,k))
-        ReadTuple(relation, newKeys, outputVar)
-      }
-      case _ => {
-        ???
-      }
-    }
-  }
-
-  def replaceUpdateStatement(statement: Statement, updates: Statement): Statement = statement match {
+  // def replaceUpdateStatement(statement: Statement, updates: Statement): Statement = statement match {
+  def replaceUpdateStatement(statement: Statement, dependentUpdates: Map[UpdateStatement, Set[Statement]]): Statement = statement match {
     case _:Empty | _:GroundVar | _:imp.Assign => statement
-    case Seq(a, b) => Seq(replaceUpdateStatement(a,updates), replaceUpdateStatement(b,updates))
-    case If(condition, _statement) => If(condition, replaceUpdateStatement(_statement, updates))
+    case Seq(a, b) => Seq(replaceUpdateStatement(a,dependentUpdates), replaceUpdateStatement(b,dependentUpdates))
+    case If(condition, _statement) => If(condition, replaceUpdateStatement(_statement, dependentUpdates))
     case statement: OnStatement => ???
     case Query(literal, statement) => ???
-    case _update: UpdateStatement => Statement.makeSeq(_update, updates)
+    case _update: UpdateStatement => {
+      if (dependentUpdates.contains(_update)) {
+        val updateToDependents = Statement.makeSeq(dependentUpdates(_update).toSeq:_*)
+        Statement.makeSeq(_update, updateToDependents)
+      }
+      else _update
+    }
     case UpdateDependentRelations(update) => ???
     case Search(relation, conditions, _statement) => Search(relation, conditions,
-                                                        replaceUpdateStatement(_statement,updates))
+                                                        replaceUpdateStatement(_statement,dependentUpdates))
     case _statement: SolidityStatement => _statement
   }
 }

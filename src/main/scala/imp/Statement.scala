@@ -324,6 +324,48 @@ object Statement {
     }
   }
   def makeSeq(statementSeq: Statement*): Statement = statementSeq.foldLeft[Statement](Empty())(_makeSeq)
+
+  def renameParameters(statement: Statement, mapping: Map[Parameter, Parameter]): Statement = statement match {
+    case Empty() => Empty()
+    case GroundVar(p, relation, index) => GroundVar(mapping.getOrElse(p,p), relation, index)
+    case imp.Assign(p, expr) => {
+      val newP = Param(mapping.getOrElse(p.p, p.p))
+      imp.Assign(newP, Arithmetic.rename(expr, mapping))
+    }
+    case Seq(a, b) => Seq(renameParameters(a,mapping), renameParameters(b,mapping))
+    case If(condition, statement) => If(Condition.rename(condition,mapping), renameParameters(statement, mapping))
+    case statement: OnStatement => ???
+    case Query(literal, statement) => ???
+    case statement: UpdateStatement => statement match {
+      case Insert(literal) => Insert(literal.rename(mapping))
+      case Delete(literal) => Delete(literal.rename(mapping))
+      case DeleteByKeys(relation, keys, updateTarget) => {
+        val newKeys = keys.map(k=>mapping.getOrElse(k,k))
+        DeleteByKeys(relation, newKeys, updateTarget)
+      }
+      case IncrementAndInsert(increment) => {
+        /** todo: implement this for benchmark voting.dl */
+        ???
+      }
+      case Increment(relation, literal, keyIndices, valueIndex, delta) => Increment(relation, literal.rename(mapping),
+        keyIndices, valueIndex, Arithmetic.rename(delta, mapping))
+    }
+    case UpdateDependentRelations(update) => UpdateDependentRelations(
+      renameParameters(update,mapping).asInstanceOf[UpdateStatement])
+    case Search(relation, conditions, statement) => {
+      val newConds = conditions.map(c=>Condition.rename(c,mapping).asInstanceOf[MatchRelationField])
+      Search(relation, newConds, renameParameters(statement,mapping))
+    }
+    case solidityStatement: SolidityStatement => solidityStatement match {
+      case ReadTuple(relation, keyList, outputVar) => {
+        val newKeys = keyList.map(k=>mapping.getOrElse(k,k))
+        ReadTuple(relation, newKeys, outputVar)
+      }
+      case _ => {
+        ???
+      }
+    }
+  }
 }
 
 // On insert / increment, do statement
