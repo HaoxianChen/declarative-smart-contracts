@@ -7,7 +7,7 @@
 .decl *totalSupply(n: uint)
 .decl balanceOf(p: address, n: uint)[0]
 .decl freezeOf(p: address, n: uint)[0]
-.decl constructor()
+.decl constructor(initialSupply: uint)
 
 // New views
 .decl allowance(p: address, s: address, n:uint)[0,1]
@@ -44,11 +44,19 @@
 freeze(p,n) :- recv_freeze(n), msgSender(p), balanceOf(p,m), n <= m, n > 0.
 unfreeze(p,n) :- recv_unfreeze(n), msgSender(p), freezeOf(p,m), n<=m, n > 0.
 
+.decl recv_withdrawEther(amount: uint)
+.decl withdrawEther(p:address, amount: uint)
+withdrawEther(p,n) :- recv_withdrawEther(n), msgSender(p), owner(p).
+send(p,n) :- withdrawEther(p,n).
+
 .public recv_freeze
+.public recv_unfreeze
+.public recv_withdrawEther
 
 // Rules
-owner(s) :- constructor(), msgSender(s).
-totalSupply(0) :- constructor().
+owner(s) :- constructor(_), msgSender(s).
+totalSupply(n) :- constructor(n).
+balanceOf(s,n) :- constructor(n), msgSender(s).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
@@ -102,7 +110,7 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 .violation unequalBalance
 
-totalBalances(0) :- constructor().
+totalBalances(n) :- constructor(n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 freezeSum(s) :- s = sum n: freezeOf(_,n).
 unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
