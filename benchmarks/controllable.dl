@@ -42,6 +42,7 @@
 .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
+.public recv_controllerRedeem
 
 // Rules
 owner(s) :- constructor(), msgSender(s).
