@@ -33,6 +33,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       case rule => rule.body.map(_.relation).filter(_.name.startsWith(transactionRelationPrefix))
     }
   }
+  private val simplifier = new Simplifier()
   private val dataStructureHelper: Map[Relation, DataStructureHelper] = relations.map{
     case rel: SimpleRelation => {
       /** todo: handle situation with no indices */
@@ -80,7 +81,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     }
     else Empty()
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
-    DeclContract(name, definitions)
+    val simplified = simplifier.simplify(definitions)
+    DeclContract(name, simplified)
   }
 
   private def queryToDecl(query: Query): DeclFunction = {

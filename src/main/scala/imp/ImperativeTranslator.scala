@@ -14,6 +14,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     case rel: ReservedRelation => rel -> List()
   }.toMap
 
+  protected val simplifier = new Simplifier()
+
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, program.functions))
   }.toMap
@@ -197,7 +199,8 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (r <- triggeredRules) {
         val update = getUpdate(t,r)
-        statements +:= update
+        val simplified = simplifier.simplify(update).asInstanceOf[OnStatement]
+        statements +:= simplified
       }
     }
 
