@@ -1,6 +1,6 @@
 package imp
 
-import datalog.{BooleanType, Literal, Param, Parameter, Relation, UnitType, Variable}
+import datalog.{Arithmetic, BooleanType, Literal, Param, Parameter, Relation, UnitType, Variable}
 import view.View
 
 case class FunctionHelper(onStatement: OnStatement) {
@@ -36,7 +36,8 @@ case class FunctionHelper(onStatement: OnStatement) {
       case _:IncrementAndInsert => throw new Exception(s"Unhandled statement:$update")
       case inc: Increment => {
         val delta = inc.delta
-        val outVar = Variable(delta._type, s"delta$idx")
+        val deltaType = View.getDeltaType(delta._type)
+        val outVar = Variable(deltaType, s"delta$idx")
         // val assign = imp.Assign(Param(outVar), delta)
         val convertType: ConvertType = ConvertType(delta, outVar)
         val params = getParam(inc.literal) :+ outVar
@@ -55,27 +56,30 @@ case class FunctionHelper(onStatement: OnStatement) {
     Call(functionName, keyIndices.map(i=>params(i)), returnVar)
   }
   def getFunctionDeclaration(): DeclFunction = {
-    val (funcName,params) = onStatement match {
-      case OnInsert(literal, updateTarget, _,_) => {
+    val (funcName,params, newStatement) = onStatement match {
+      case OnInsert(literal, updateTarget, statement,_) => {
         val params = literal.fields.filterNot(_.name == "_")
-        (functionName, params)
+        (functionName, params, statement)
       }
-      case OnDelete(literal, updateTarget, _,_) => {
+      case OnDelete(literal, updateTarget, statement,_) => {
         val params = literal.fields.filterNot(_.name == "_")
-        (functionName, params)
+        (functionName, params, statement)
       }
       case onIncrement: OnIncrement => {
+        val _delta0 = Variable(onIncrement.updateValue._type, onIncrement.updateValue.name)
         val delta = {
-          Variable(View.getDeltaType(onIncrement.updateValue._type), onIncrement.updateValue.name)
+          Variable(View.getDeltaType(_delta0._type), _delta0.name)
         }
         val ps = onIncrement.keys :+ delta
-        (functionName, ps)
+        val mapping: Map[Parameter, Parameter] = Map(_delta0 -> delta)
+        val newStatement = Statement.renameParameters(onIncrement.statement, mapping)
+        (functionName, ps, newStatement)
       }
     }
 
     val returnType = if (isTransaction) BooleanType() else UnitType()
 
-    DeclFunction(funcName, params, returnType = returnType, onStatement.statement,
+    DeclFunction(funcName, params, returnType = returnType, newStatement,
       metaData = FunctionMetaData(Publicity.Private, isView = false,
         isTransaction = isTransaction, modifiers = Set() ))
   }

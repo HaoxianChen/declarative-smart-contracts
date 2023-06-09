@@ -34,7 +34,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       /** todo: Check case where the incremented value directly matched to the head. */
       val delta = {
         val d = Param(literal.fields(incrementValue.valueIndex))
-        Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+        d
       }
       val increment = Increment(incrementValue.relation, literal, incrementValue.keyIndices, incrementValue.valueIndex,
         delta = delta)
@@ -237,7 +237,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         case _ => ???
       }
       val d = Arithmetic.simplify(_d)
-      Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
+      d
     }
     Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
@@ -395,7 +395,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         case _ => ???
       }
       val d = Arithmetic.simplify(_d)
-      Arithmetic.updateArithmeticType(d, View.getDeltaType(x._type))
+      d
     }
     (resultIndex, delta)
   }

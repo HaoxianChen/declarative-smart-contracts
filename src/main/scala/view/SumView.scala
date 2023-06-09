@@ -40,7 +40,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     // val delta: Arithmetic = incrementValue.delta
     val delta: Arithmetic = {
       val d = Param(insertedLiteral.fields(incrementValue.valueIndex))
-      Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+      d
     }
     val increment = Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta = delta)
     OnIncrement(insertedLiteral, keyIndices, updateIndex = incrementValue.valueIndex, updateTarget = rule.head.relation,
@@ -57,7 +57,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     val resultIndex = rule.head.fields.indexOf(sum.aggResult)
     val delta: Arithmetic = {
       val d = Param(insertedLiteral.fields(incrementValue.valueIndex))
-      Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+      d
     }
     (delta, resultIndex)
   }
@@ -66,7 +66,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     val resultIndex = rule.head.fields.indexOf(sum.aggResult)
     val delta: Arithmetic = {
       val d = Param(sum.aggParam)
-      Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
+      d
     }
     (delta, resultIndex)
   }

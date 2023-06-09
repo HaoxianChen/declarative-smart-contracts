@@ -2,6 +2,7 @@ package imp
 
 import datalog.{Add, AnyType, Balance, BooleanType, CompoundType, Constant, Literal, MapType, MsgSender, MsgValue, Now, NumberType, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, StructType, SymbolType, This, Type, UnitType, Variable}
 import imp.DataStructureHelper.{getUpdateName, invalidBit, validBit, validField}
+import view.View
 
 case class DataStructureHelper(relation: Relation, indices: List[Int]) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
@@ -74,15 +75,17 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
 
   private def _incrementToUpdateStatements(increment: Increment): (Statement, Variable) = {
     val valueType = increment.valueType
+    val deltaType = View.getDeltaType(increment.valueType)
     val keyList = increment.keyParams
     val keyStr = keyList.map(k => s"[$k]").mkString("")
     val fieldName = increment.relation.memberNames(increment.valueIndex)
     val newValue = Variable(valueType, "newValue")
     val x = Variable(valueType, s"${increment.relation.name}$keyStr.$fieldName")
-    val delta = Variable(increment.delta._type, "_delta")
+    // val delta = Variable(increment.delta._type, "_delta")
+    val delta = Variable(deltaType, "_delta")
     val convertType = ConvertType(increment.delta, delta)
     val callUpdate = {
-      Call(getUpdateName(valueType, increment.delta._type), params = List(x,delta) , Some(newValue))
+      Call(getUpdateName(valueType, deltaType), params = List(x,delta) , Some(newValue))
     }
     (Statement.makeSeq(convertType, callUpdate), newValue)
   }
