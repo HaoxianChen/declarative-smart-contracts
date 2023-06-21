@@ -7,6 +7,13 @@ into Solidity programs.
 
 Build tool: [SBT](https://www.scala-sbt.org/1.x/docs/Setup.html)
 
+# Compile single smart contract
+
+```
+sbt "run compile benchmarks/[contract_name].dl"
+```
+The complete list of benchmark smart contracts are in [here](benchmarks/).
+
 # Run
 
 1. Generate Solidity programs: ``sbt "run test"``

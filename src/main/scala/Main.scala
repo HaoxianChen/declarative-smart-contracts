@@ -50,9 +50,10 @@ object Main extends App {
 
   if (args(0) == "compile") {
     val filepath = args(1)
-    val isInstrument = args(2).toBoolean
-    val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
-    run(filepath, displayResult = true, outDir=_outDir, isInstrument = isInstrument, monitorViolations = false)
+    // val isInstrument = args(2).toBoolean
+    // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
+    run(filepath, displayResult = true, outDir="solidity/fuse", isInstrument = false, monitorViolations = false,
+      optimizationOption="fuse")
   }
   else if (args(0) == "test") {
     val _outDir = outDir
