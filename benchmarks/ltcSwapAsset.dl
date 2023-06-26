@@ -21,7 +21,7 @@
 owner(p) :- now(t), effectiveTime(t2), t<t2, oldOwner(p).
 owner(p) :- now(t), effectiveTime(t2), t>=t2, newOwner(p).
 
-swapOwner(p,q,t) :- recv_swapOwner(p,q,d), now(t0), t := t0+d, msgSender(s). 
+swapOwner(p,q,t) :- recv_swapOwner(p,q,d),now(t0),t:=t0+d,msgSender(s),owner(s).
 effectiveTime(t) :- swapOwner(_,_,t).
 newOwner(q) :- swapOwner(_,q,_).
 oldOwner(p) :- swapOwner(p,_,_).
@@ -52,8 +52,9 @@ oldOwner(p) :- swapOwner(p,_,_).
 .public allowance(2)
 
 // Rules
-oldOwner(s) :- constructor(), msgSender(s).
+newOwner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
+effectiveTime(t) :- constructor(), now(t).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
