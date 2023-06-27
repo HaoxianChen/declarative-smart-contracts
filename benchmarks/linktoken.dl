@@ -6,7 +6,7 @@
 // views
 .decl *totalSupply(n: uint)
 .decl balanceOf(p: address, n: uint)[0]
-.decl constructor()
+.decl constructor(n: uint)
 
 // New views
 .decl allowance(p: address, s: address, n:uint)[0,1]
@@ -41,8 +41,9 @@ validRecipient(p) :- this(t), p!=t, p!=0.
 .public allowance(2)
 
 // Rules
-owner(s) :- constructor(), msgSender(s).
-totalSupply(0) :- constructor().
+owner(s) :- constructor(_), msgSender(s).
+totalSupply(n) :- constructor(n).
+balanceOf(p,n) :- constructor(n), msgSender(p).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
@@ -89,6 +90,6 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 .violation unequalBalance
 
-totalBalances(0) :- constructor().
+totalBalances(n) :- constructor(n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
