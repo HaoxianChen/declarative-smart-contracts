@@ -57,7 +57,8 @@ unlockTime(t) :- constructor(t).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+  canTransfer(s,r).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
@@ -79,7 +80,8 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n.
+                    msgSender(s), allowance(o,s,k), k>=n,
+                    canTransfer(o,r).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
