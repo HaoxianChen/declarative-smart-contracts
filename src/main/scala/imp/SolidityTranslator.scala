@@ -23,7 +23,9 @@ object Translator {
 }
 
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
-                              violations: Set[Relation], monitorViolation: Boolean)
+                              violations: Set[Relation],
+                              _materializedRelations: Set[Relation],
+                              monitorViolation: Boolean)
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -44,7 +46,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val materializedRelations: Set[Relation] = {
     val sendRelation = program.relations.filter(_ == Send())
     val _v = if (monitorViolation) violations else Set()
-    getMaterializedRelations(program,interfaces) ++ _v ++ sendRelation
+    if (_materializedRelations.nonEmpty) {
+      _materializedRelations ++ _v ++ sendRelation
+    }
+    else {
+      getMaterializedRelations(program,interfaces) ++ _v ++ sendRelation
+    }
   }
   private val functionHelpers: Map[OnStatement,FunctionHelper] = program.onStatements.map(
     on=>on->FunctionHelper(on)).toMap

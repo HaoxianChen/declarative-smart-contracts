@@ -7,7 +7,7 @@ import view.View
 /** Generate imperative program from Datalog rules
  * */
 
-abstract class AbstractImperativeTranslator(program: Program, isInstrument: Boolean, monitorViolations: Boolean) {
+abstract class AbstractImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean) {
   protected val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
     case rel: SimpleRelation => rel -> program.relationIndices.getOrElse(rel, List())
     case rel: SingletonRelation => rel -> List()
@@ -16,8 +16,38 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
 
   protected val simplifier = new Simplifier()
 
+  // protected val queryRelations: Set[Relation] = if (program.functions.nonEmpty) program.functions else getQueryRelations()
+  protected val queryRelations: Set[Relation] = if (materializedRelations.nonEmpty) {
+    program.functions ++ getQueryRelations()
+  }
+  else {
+    program.functions
+  }
+
+  /** For relations not materialized, they become query relations */
+  private def getQueryRelations(): Set[Relation] = {
+    def _getQueryRelations(rule: Rule): Set[Relation] = {
+      val fromThisRule = rule.body.map(_.relation).diff(materializedRelations)
+        .filterNot(_.name.contains(transactionRelationPrefix))
+        .filterNot(_.isInstanceOf[ReservedRelation])
+        .filterNot(_.name==s"constructor")
+      val fromDependentRules: Set[Relation] = {
+        var _ret: Set[Relation] = Set()
+        for (_rel <- fromThisRule) {
+          val definingRules: Set[Rule] = program.rules.filter(_.head.relation==_rel)
+          for (_r <- definingRules) {
+            _ret ++= _getQueryRelations(_r)
+          }
+        }
+        _ret
+      }
+      fromThisRule++fromDependentRules
+    }
+    program.transactionRules().flatMap(_getQueryRelations)
+  }
+
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
-    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, program.functions))
+    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations))
   }.toMap
 
   protected def isTransactionRule(rule: Rule): Boolean = {
@@ -91,7 +121,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
     ).filterNot( /** transaction rules are only triggered by new transaction.  */
       r => isTransactionRule(r) && !isTransactionTrigger(trigger)
     ).filterNot( /** relations that declared as functions are not triggered */
-      r=>program.functions.contains(r.head.relation)
+      // r=>program.functions.contains(r.head.relation)
+      r=>queryRelations.contains(r.head.relation)
     )
 
     trigger match {
@@ -102,7 +133,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
 
 
   protected def getQueryDef(relation: Relation): Query = {
-    require(program.functions.contains(relation))
+    // require(program.functions.contains(relation))
+    require(queryRelations.contains(relation))
 
     val defRules = program.rules.filter(_.head.relation==relation)
 
@@ -140,8 +172,8 @@ abstract class AbstractImperativeTranslator(program: Program, isInstrument: Bool
   }
 }
 
-class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViolations: Boolean)
-    extends AbstractImperativeTranslator(program, isInstrument, monitorViolations: Boolean) {
+class ImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean)
+    extends AbstractImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations: Boolean) {
   def ruleSize: Int = rulesToEvaluate.size
 
   def translate(): ImperativeAbstractProgram = {
@@ -190,7 +222,7 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
       }
     // val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
 
-    val queryDefs = program.functions.map(getQueryDef)
+    val queryDefs = queryRelations.map(getQueryDef)
 
     /** todo: check recursions on the dependency map */
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
@@ -201,8 +233,8 @@ class ImperativeTranslator(program: Program, isInstrument: Boolean, monitorViola
 
 }
 
-case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: Boolean, monitorViolations: Boolean)
-    extends ImperativeTranslator(program, isInstrument, monitorViolations) {
+case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean)
+    extends ImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations) {
 
   override def translate(): ImperativeAbstractProgram = {
     val triggers: Set[Trigger] = {
@@ -221,7 +253,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, isInstrument: 
       }
     }
 
-    val queryDefs = program.functions.map(getQueryDef)
+    val queryDefs = queryRelations.map(getQueryDef)
 
     val constructors: Set[OnStatement] = program.relations.find(_.name=="constructor") match {
       case Some(constructorRel) => {

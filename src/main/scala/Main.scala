@@ -1,11 +1,11 @@
-import Main.outDir
-import datalog.{Parser, TypeChecker}
-import imp.{ImperativeTranslator, SolidityTranslator}
+import datalog.{Parser, Program, Relation, TypeChecker}
+import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
-import util.Misc.{createDirectory, parseProgram}
+import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
 
 import java.nio.file.Paths
+import scala.sys.exit
 
 object Main extends App {
   val outDir = "solidity/dsc"
@@ -31,13 +31,40 @@ object Main extends App {
     "voting.dl",
     "auction.dl")
 
-  def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean): Unit = {
+  def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
+    if (isFileExists(filepath)) {
+      val materializedRelationNames: Set[String] = {
+        val allPlans = readMaterializedRelationNames(filepath)
+        allPlans.minBy(_.length).toSet
+      }
+      val ret = materializedRelationNames.flatMap(n=>dl.relations.filter(_.name==n))
+      require(ret.size == materializedRelationNames.size)
+      ret
+    }
+    else {
+      Set()
+    }
+  }
+
+  def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
+          consolidateUpdates: Boolean, materializePath: String = s""): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
-    val impTranslator = new ImperativeTranslator(dl, isInstrument, monitorViolations)
+    val materializedRelations: Set[Relation] = if (materializePath.nonEmpty) {
+      getMaterializedRelations(dl, materializePath)
+    }
+    else {
+      Set()
+    }
+    val impTranslator: ImperativeTranslator = if (consolidateUpdates) {
+      ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations)
+    }
+    else {
+      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations)
+    }
     val imperative = impTranslator.translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,monitorViolations).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,monitorViolations).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -49,26 +76,67 @@ object Main extends App {
   }
 
   if (args(0) == "compile") {
-    val filepath = args(1)
+    val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
+      s"--fuse consolidate updates into one function\n" +
+      s"--materialize <filename> materialize the set of relations specified in file\n" +
+      s"--out <directory> output directory\n"
+
+    def nextArg(map: Map[String, Any], list: List[String]): Map[String, Any] = list match {
+      case Nil => map
+      case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
+      case "--fuse" :: tail => nextArg(map ++ Map("fuse"->true), tail)
+      case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
+      case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
+      case unknown :: _ =>
+        println(s"Unknown option: $unknown")
+        exit(1)
+    }
+    val options: Map[String, Any] = if (args.length <= 1) {
+      println(compileUsage)
+      exit(1)
+    }
+    else {
+      nextArg(Map(), args.tail.toList)
+    }
+    // val filepath = args(1)
     // val isInstrument = args(2).toBoolean
     // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
-    run(filepath, displayResult = true, outDir="solidity/fuse", isInstrument = false, monitorViolations = false,
-      optimizationOption="fuse")
+    val filepath = options("filepath").toString
+    run(filepath, displayResult = true, outDir=options("out").toString,
+      isInstrument = false,
+      monitorViolations = false,
+      consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
+      materializePath = options.getOrElse("materialize","").toString)
   }
   else if (args(0) == "test") {
-    val _outDir = outDir
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false, outDir=_outDir, isInstrument = false, monitorViolations = false)
+      run(filepath, displayResult = false, outDir=outDir, isInstrument = false, monitorViolations = false,
+        consolidateUpdates = false)
+      run(filepath, displayResult = false, outDir="solidity/fuse", isInstrument = false, monitorViolations = false,
+        consolidateUpdates = true)
     }
+  }
+  else if (args(0) == "compile-all-versions") {
+    val filepath = args(1)
+
+    /** 1. The basic compilation. */
+    run(filepath, displayResult = false, outDir=outDir, isInstrument = false, monitorViolations = false,
+      consolidateUpdates = false)
+
+    /** 2. Fuse update operations into one function. */
+    val _fusedOutDir = "solidity/fuse"
+    run(filepath, displayResult = false, outDir=_fusedOutDir, isInstrument = false, monitorViolations = false,
+      consolidateUpdates = true)
   }
   else if (args(0) == "test-instrument") {
     val _outDir = outDirWithInstrumentations
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
-      run(filepath, displayResult = false, outDir=_outDir, isInstrument = true, monitorViolations = true)
+      run(filepath, displayResult = false, outDir=_outDir, isInstrument = true, monitorViolations = true,
+        consolidateUpdates = true)
     }
   }
 
@@ -76,7 +144,8 @@ object Main extends App {
     val filepath = args(1)
 
     val dl = parseProgram(filepath)
-    val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+    val materializedRelations: Set[Relation] = Set()
+    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
     val imperative = impTranslator.translate()
     // println(imperative)
     val verifier = new Verifier(dl, imperative)
@@ -89,7 +158,8 @@ object Main extends App {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
-      val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+      val materializedRelations: Set[Relation] = Set()
+      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
       val imperative = impTranslator.translate()
       val verifier = new Verifier(dl, imperative)
       verifier.check()
@@ -100,7 +170,8 @@ object Main extends App {
     for (p <- allBenchmarks) {
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
-      val impTranslator = new ImperativeTranslator(dl, isInstrument=true, monitorViolations = false)
+      val materializedRelations: Set[Relation] = Set()
+      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
       val relationDependencies = impTranslator.getRelationDependencies()
       // write to files
       val outfile = s"relation-dependencies/${dl.name}.csv"
@@ -121,5 +192,4 @@ object Main extends App {
   else {
     println(s"Unrecognized command: ${args(0)}")
   }
-
 }

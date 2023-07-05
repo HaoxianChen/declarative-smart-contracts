@@ -33,6 +33,17 @@ object Misc {
     parseProgramFromRawString(inputStr).setName(filename.capitalize)
   }
 
+  def readMaterializedRelationNames(filepath: String): Array[Array[String]] = {
+    val str = fileToString(filepath)
+    val lines = str.split("\n")
+    lines.map(l=>l.split(",").map(_.trim()).filter(_.nonEmpty))
+  }
+
+  def isFileExists(filepath: String): Boolean = {
+    val file = new File(filepath)
+    file.exists()
+  }
+
   def parseProgramFromRawString(inputStr: String): Program = {
     val parser = new Parser()
     val raw = parser.parseAll(parser.program, inputStr).get
