@@ -14,6 +14,13 @@ sbt "run compile benchmarks/[contract_name].dl"
 ```
 The complete list of benchmark smart contracts are in [here](benchmarks/).
 
+Other options: 
+```compile [--arg n] file-path
+--fuse                   consolidate updates into one function
+--materialize <filename> materialize the set of relations specified in file
+--out <directory>        output directory
+```
+
 # Run
 
 1. Generate Solidity programs: ``sbt "run test"``
