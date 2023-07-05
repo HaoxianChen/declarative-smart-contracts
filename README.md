@@ -21,6 +21,11 @@ Other options:
 --out <directory>        output directory
 ```
 
+The view materialization file is organized as a csv file,
+where the names of the materialized relations are separated by comma.
+See an [example](view-materialization/Wallet.csv).
+Other examples are located in [view-materialization](view-materialization/).
+
 # Run
 
 1. Generate Solidity programs: ``sbt "run test"``
@@ -40,7 +45,7 @@ First install Docker from [here](https://docs.docker.com/engine/install/).
 
 # Example contracts
 
-Five examples of declarative smart contrats are located in [benchmarks](benchmarks/).
+Examples of declarative smart contrats are located in [benchmarks](benchmarks/).
 
 # Verification
 
