@@ -16,7 +16,7 @@
 .decl mint(p: address, amount: uint)
 .decl recv_mint(p: address, amount: uint)
 .decl burn(p: address, amount: uint)
-.decl recv_burn(p: address, amount: uint)
+.decl recv_burn(amount: uint)
 .decl transfer(from: address, to: address, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
 
@@ -26,7 +26,7 @@
 .decl recv_approve(s: address, n:uint)
 
 // Interfaces
-.public recv_mint
+// .public recv_mint
 .public recv_burn
 .public recv_transfer
 .public balanceOf(1)
@@ -59,7 +59,7 @@ totalSupply(n) :- constructor(n).
 balanceOf(s,n) :- constructor(n), msgSender(s).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+burn(p,n) :- recv_burn(n), msgSender(p), p!=0 ,balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
 
 .decl totalMint(p: address, n: uint)[0]
