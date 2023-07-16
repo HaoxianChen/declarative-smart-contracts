@@ -22,12 +22,17 @@
 // New transactions
 .decl recv_transferFrom(from: address, to: address, amount: uint)
 .decl increaseAllowance(p: address, s: address, n:uint)
+.decl decreaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
+.decl recv_increaseApproval(p:address, n:uint)
+.decl recv_decreaseApproval(p:address, n:uint)
 
 // Interfaces
 .public recv_mint
 .public recv_burn
 .public recv_transfer
+.public recv_increaseApproval
+.public recv_decreaseApproval
 .public balanceOf(1)
 .public totalSupply(0)
 
@@ -76,13 +81,17 @@ transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m),
                             d:=n-m, validRecipient(s).
+increaseAllowance(o,s,n) :- recv_increaseApproval(s,n), msgSender(o), validRecipient(s).
+decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n), msgSender(o), validRecipient(s), allowance(o,s,m), m>=n.
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl decreaseAllowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_), m = sum n: decreaseAllowance(o,s,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 
-allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
 // Properties
 .decl *totalBalances(m: uint)
