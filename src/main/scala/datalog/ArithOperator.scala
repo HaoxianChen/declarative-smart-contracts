@@ -84,6 +84,7 @@ object Arithmetic {
   def simplify(expr: Arithmetic): Arithmetic = {
     def _simplify(expr: Arithmetic): Arithmetic = expr match {
       case a @ (_:Zero|_:One|_:Param) => a
+      case Negative(Zero(_t)) => Zero(_t)
       case Negative(Negative(a)) => _simplify(a)
       case Negative(a) => Negative(_simplify(a))
       case Add(Zero(_),b) => _simplify(b)
