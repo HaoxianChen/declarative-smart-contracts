@@ -345,7 +345,11 @@ object Statement {
       }
       case IncrementAndInsert(increment) => {
         /** todo: implement this for benchmark voting.dl */
-        ???
+        increment match {
+          case Increment(relation,literal,keyIndices,valueIndex,delta) =>
+            IncrementAndInsert(Increment(relation,literal.rename(mapping), keyIndices, valueIndex,
+              Arithmetic.rename(delta,mapping)))
+        }
       }
       case Increment(relation, literal, keyIndices, valueIndex, delta) => Increment(relation, literal.rename(mapping),
         keyIndices, valueIndex, Arithmetic.rename(delta, mapping))

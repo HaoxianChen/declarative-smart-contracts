@@ -9,7 +9,8 @@ import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort, initValue, literalToConst, paramToConst}
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
-                    functions: Set[Relation]) extends View {
+                    functions: Set[Relation],
+                    arithmeticOptimization: Boolean) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
   val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
@@ -24,7 +25,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   def updateRow(incrementValue: IncrementValue): OnStatement = {
 
     val literal = getInsertedLiteral(incrementValue.relation)
-    if (isUpdatable(incrementValue)) {
+    if (isUpdatable(incrementValue) && arithmeticOptimization) {
       val updates = updateOnIncrementValue(incrementValue)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,

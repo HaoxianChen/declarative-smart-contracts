@@ -47,7 +47,7 @@ object Main extends App {
   }
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
-          consolidateUpdates: Boolean, materializePath: String = s""): Unit = {
+          consolidateUpdates: Boolean, materializePath: String = s"", arithmeticOptimization: Boolean = true): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
@@ -58,10 +58,11 @@ object Main extends App {
       Set()
     }
     val impTranslator: ImperativeTranslator = if (consolidateUpdates) {
-      ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations)
+      ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations,
+        arithmeticOptimization)
     }
     else {
-      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations)
+      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations, arithmeticOptimization)
     }
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,monitorViolations).translate()
@@ -77,15 +78,17 @@ object Main extends App {
 
   if (args(0) == "compile") {
     val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
-      s"--fuse consolidate updates into one function\n" +
       s"--materialize <filename> materialize the set of relations specified in file\n" +
+      s"--no-fuse turn off the option to consolidate updates into one function\n" +
+      s"--no-arithmetic-optimization turn off arithmetic optimization\n" +
       s"--out <directory> output directory\n"
 
     def nextArg(map: Map[String, Any], list: List[String]): Map[String, Any] = list match {
       case Nil => map
       case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
-      case "--fuse" :: tail => nextArg(map ++ Map("fuse"->true), tail)
       case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
+      case "--no-fuse" :: tail => nextArg(map ++ Map("fuse"->false), tail)
+      case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-opt"->false), tail)
       case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
       case unknown :: _ =>
         println(s"Unknown option: $unknown")
@@ -105,8 +108,9 @@ object Main extends App {
     run(filepath, displayResult = true, outDir=options("out").toString,
       isInstrument = false,
       monitorViolations = false,
-      consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
-      materializePath = options.getOrElse("materialize","").toString)
+      consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
+      materializePath = options.getOrElse("materialize","").toString,
+      arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean)
   }
   else if (args(0) == "test") {
     for (p <- allBenchmarks) {

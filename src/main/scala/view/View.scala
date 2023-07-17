@@ -176,10 +176,10 @@ abstract class View {
 }
 object View {
   def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
-            functions: Set[Relation]): View = {
+            functions: Set[Relation], arithmeticOptimization: Boolean): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
-      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions)
+      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, arithmeticOptimization)
     }
     else {
       rule.aggregators.head match {

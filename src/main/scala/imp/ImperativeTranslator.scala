@@ -7,7 +7,9 @@ import view.View
 /** Generate imperative program from Datalog rules
  * */
 
-abstract class AbstractImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean) {
+abstract class AbstractImperativeTranslator(program: Program, materializedRelations: Set[Relation],
+                                            isInstrument: Boolean, monitorViolations: Boolean,
+                                            arithmeticOptimization: Boolean = true) {
   protected val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
     case rel: SimpleRelation => rel -> program.relationIndices.getOrElse(rel, List())
     case rel: SingletonRelation => rel -> List()
@@ -47,7 +49,8 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
   }
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
-    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations))
+    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
+      arithmeticOptimization))
   }.toMap
 
   protected def isTransactionRule(rule: Rule): Boolean = {
@@ -172,8 +175,10 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
   }
 }
 
-class ImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean)
-    extends AbstractImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations: Boolean) {
+class ImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean,
+                           monitorViolations: Boolean, arithmeticOptimization: Boolean=true)
+    extends AbstractImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations: Boolean,
+      arithmeticOptimization) {
   def ruleSize: Int = rulesToEvaluate.size
 
   def translate(): ImperativeAbstractProgram = {
@@ -233,8 +238,11 @@ class ImperativeTranslator(program: Program, materializedRelations: Set[Relation
 
 }
 
-case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean, monitorViolations: Boolean)
-    extends ImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations) {
+case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRelations: Set[Relation],
+                                                isInstrument: Boolean, monitorViolations: Boolean,
+                                                arithmeticOptimization: Boolean)
+    extends ImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations,
+      arithmeticOptimization) {
 
   override def translate(): ImperativeAbstractProgram = {
     val triggers: Set[Trigger] = {

@@ -14,7 +14,8 @@ import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort,
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
-  extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = ???, isInstrument = true, monitorViolations = false) {
+  extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = Set(),
+    isInstrument = true, monitorViolations = false) {
 
   private val program = addBuiltInRules(_program)
 
