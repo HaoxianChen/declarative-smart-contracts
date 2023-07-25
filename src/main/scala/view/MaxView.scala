@@ -2,12 +2,12 @@ package view
 
 import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort}
 import datalog.{AnyType, BooleanType, CompoundType, Literal, Max, NumberType, Param, Parameter, Relation, Rule, SymbolType, UnitType, Variable}
-import imp.{DeleteTuple, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
+import imp.{DeleteTuple, Empty, GroundVar, If, IncrementValue, Insert, InsertTuple, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Statement, Trigger}
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{getArraySort, getSort, makeTupleSort, paramToConst}
 
-case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
+case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enableProjection:Boolean) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Max])
   val max: Max = rule.aggregators.head.asInstanceOf[Max]
@@ -21,11 +21,11 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
       val allKeys = max.literal.fields.filterNot(_==max.aggParam).filterNot(_.name=="_")
       rule.head.fields.intersect(allKeys)
     }
-    val readTuple: ReadTuple = ReadTuple(rule.head.relation, groupKeys)
+    val readTuple = if (!enableProjection) ReadTuple(rule.head.relation, groupKeys) else Empty()
     val oldValue: Param = Param(Variable(max.aggResult._type,"_max"))
     val groundVar: GroundVar = {
       val valueIndexInHead: Int = rule.head.fields.indexOf(max.aggResult)
-      GroundVar(oldValue.p,rule.head.relation,valueIndexInHead)
+      GroundVar(oldValue.p,rule.head.relation,groupKeys,valueIndexInHead,enableProjection)
     }
     val condition = imp.Greater(newValue,oldValue)
     val insert: Insert = Insert(rule.head)

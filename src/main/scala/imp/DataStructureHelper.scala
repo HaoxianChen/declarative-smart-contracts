@@ -4,7 +4,7 @@ import datalog.{Add, AnyType, Balance, BooleanType, CompoundType, Constant, Lite
 import imp.DataStructureHelper.{getUpdateName, invalidBit, validBit, validField}
 import view.View
 
-case class DataStructureHelper(relation: Relation, indices: List[Int]) {
+case class DataStructureHelper(relation: Relation, indices: List[Int], enableProjection: Boolean) {
   require(indices.forall(i => relation.sig.indices.contains(i)))
   val keyTypes: List[Type] = indices.map(i=>relation.sig(i))
   val valueIndices: List[Int] = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
@@ -42,7 +42,7 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
           }
         })
         /** todo: handle situations when not all keys are in search conditions. */
-        val readTuple: ReadTuple = ReadTuple(rel, keys)
+        val readTuple = if (!enableProjection) ReadTuple(rel, keys) else Empty()
         val remainingConditions = search.conditions.filterNot(c => keys.contains(c.p))
         val condition = Condition.makeConjunction(remainingConditions.toList:_*)
         Statement.makeSeq(readTuple, If(condition, search.statement))
@@ -210,10 +210,10 @@ case class DataStructureHelper(relation: Relation, indices: List[Int]) {
       assert(indices.nonEmpty)
       /** If tuple exists, reset it to zeros. */
       val keys: List[Parameter] = indices.map(i=>delete.literal.fields(i))
-      val readTuple = ReadTuple(delete.relation, keys)
+      val readTuple = if (!enableProjection) ReadTuple(delete.relation, keys) else Empty()
       val matches: List[MatchRelationField] = valueIndices.map(i=>{
           val p = delete.literal.fields(i)
-          MatchRelationField(delete.relation, i, p)
+          MatchRelationField(delete.relation, keys, i, p, enableProjection)
         })
       val resetTuple: Statement = resetTupleStatement(keys, delete.literal)
       val conditionalReset = If(Condition.makeConjunction(matches:_*), resetTuple)

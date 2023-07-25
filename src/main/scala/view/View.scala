@@ -176,15 +176,16 @@ abstract class View {
 }
 object View {
   def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
-            functions: Set[Relation], arithmeticOptimization: Boolean): View = {
+            functions: Set[Relation], arithmeticOptimization: Boolean, enableProjection: Boolean): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
-      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, arithmeticOptimization)
+      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, arithmeticOptimization,
+        enableProjection=enableProjection)
     }
     else {
       rule.aggregators.head match {
         case _:Sum => SumView(rule, primaryKeyIndices, ruleId)
-        case _:Max => MaxView(rule, primaryKeyIndices, ruleId)
+        case _:Max => MaxView(rule, primaryKeyIndices, ruleId, enableProjection)
         case _:Count => CountView(rule, primaryKeyIndices, ruleId)
       }
     }

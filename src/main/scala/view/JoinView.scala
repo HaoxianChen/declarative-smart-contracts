@@ -10,7 +10,8 @@ import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort,
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
                     functions: Set[Relation],
-                    arithmeticOptimization: Boolean) extends View {
+                    arithmeticOptimization: Boolean,
+                    enableProjection: Boolean) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
   val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
@@ -156,13 +157,14 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   private def _getJoinStatements(groundedParams: Set[Parameter], remainingLiterals: List[Literal],
                                  innerStatement: Statement): Statement = {
     def _getCondition(grounded: Set[Parameter], literal: Literal): Set[MatchRelationField] = {
+      val keys = allIndices(literal.relation).map(i=>literal.fields(i))
       literal.fields.zipWithIndex.flatMap {
         case (p, i) => p match {
           case v: Variable => if (grounded.contains(v)) {
-            Some(MatchRelationField(literal.relation, i, v))
+            Some(MatchRelationField(literal.relation, keys, i, v, enableProjection))
           }
           else None
-          case c: Constant => Some(MatchRelationField(literal.relation, i, c))
+          case c: Constant => Some(MatchRelationField(literal.relation, keys, i, c, enableProjection))
         }
       }.toSet
     }
@@ -172,7 +174,8 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         if (!groundVar.contains(p)) {
           val newStmt = p match {
             case v: Variable => if (v.name != "_") {
-              GroundVar(v, literal.relation, i)
+              val keys = allIndices(literal.relation).map(i=>literal.fields(i))
+              GroundVar(v, literal.relation, keys, i, enableProjection)
             } else {
               Empty()
             }

@@ -25,7 +25,8 @@ object Translator {
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
                               violations: Set[Relation],
                               _materializedRelations: Set[Relation],
-                              monitorViolation: Boolean)
+                              monitorViolation: Boolean,
+                              enableProjection: Boolean)
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -39,9 +40,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val dataStructureHelper: Map[Relation, DataStructureHelper] = relations.map{
     case rel: SimpleRelation => {
       /** todo: handle situation with no indices */
-      rel -> DataStructureHelper(rel, indices.getOrElse(rel, List()))
+      rel -> DataStructureHelper(rel, indices.getOrElse(rel, List()),enableProjection)
     }
-    case rel @ (_:SingletonRelation|_:ReservedRelation) => rel -> DataStructureHelper(rel, List())
+    case rel @ (_:SingletonRelation|_:ReservedRelation) => rel -> DataStructureHelper(rel, List(),enableProjection)
   }.toMap
   private val materializedRelations: Set[Relation] = {
     val sendRelation = program.relations.filter(_ == Send())
@@ -249,18 +250,21 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       val (params, optOutput) = interfaceIO(iface)
       val statement: Statement = {
         val outputVar = optOutput.get
-        val groundVar = GroundVar(outputVar, rel, outIndex)
         val ret = Return(outputVar)
         iface.relation match {
           case _rel:SimpleRelation => if (indices.contains(_rel)) {
             val keys = indices(_rel).map(i=> Variable(_rel.sig(i), _rel.memberNames(i)))
-            val readTuple = ReadTuple(_rel, keys)
-            Statement.makeSeq(readTuple,groundVar,ret)
+            val groundVar = GroundVar(outputVar, rel, keys, outIndex, enableProjection)
+            val readTuple = if (!enableProjection) ReadTuple(_rel, keys) else Empty()
+            Statement.makeSeq(readTuple, groundVar,ret)
           }
           else {
             throw new Exception(s"Do not support simple relation without indices: ${rel}")
           }
-          case _:SingletonRelation => Statement.makeSeq(groundVar,ret)
+          case _:SingletonRelation => {
+            val groundVar = GroundVar(outputVar, rel, List(), outIndex, enableProjection)
+            Statement.makeSeq(groundVar,ret)
+          }
           case _:ReservedRelation => throw new Exception(s"Do not support interface on reserved relation: $rel")
         }
       }

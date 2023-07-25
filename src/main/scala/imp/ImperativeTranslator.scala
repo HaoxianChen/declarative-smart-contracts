@@ -9,7 +9,8 @@ import view.View
 
 abstract class AbstractImperativeTranslator(program: Program, materializedRelations: Set[Relation],
                                             isInstrument: Boolean, monitorViolations: Boolean,
-                                            arithmeticOptimization: Boolean = true) {
+                                            enableProjection: Boolean,
+                                            arithmeticOptimization: Boolean) {
   protected val primaryKeyIndices: Map[Relation, List[Int]] = program.relations.map {
     case rel: SimpleRelation => rel -> program.relationIndices.getOrElse(rel, List())
     case rel: SingletonRelation => rel -> List()
@@ -50,7 +51,7 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
-      arithmeticOptimization))
+      arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection))
   }.toMap
 
   protected def isTransactionRule(rule: Rule): Boolean = {
@@ -176,9 +177,10 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
 }
 
 class ImperativeTranslator(program: Program, materializedRelations: Set[Relation], isInstrument: Boolean,
-                           monitorViolations: Boolean, arithmeticOptimization: Boolean=true)
+                           monitorViolations: Boolean, arithmeticOptimization: Boolean, enableProjection:Boolean)
     extends AbstractImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations: Boolean,
-      arithmeticOptimization) {
+      enableProjection = enableProjection,
+      arithmeticOptimization=arithmeticOptimization) {
   def ruleSize: Int = rulesToEvaluate.size
 
   def translate(): ImperativeAbstractProgram = {
@@ -240,9 +242,10 @@ class ImperativeTranslator(program: Program, materializedRelations: Set[Relation
 
 case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRelations: Set[Relation],
                                                 isInstrument: Boolean, monitorViolations: Boolean,
-                                                arithmeticOptimization: Boolean)
+                                                arithmeticOptimization: Boolean,
+                                                enableProjection: Boolean)
     extends ImperativeTranslator(program, materializedRelations, isInstrument, monitorViolations,
-      arithmeticOptimization) {
+      arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection) {
 
   override def translate(): ImperativeAbstractProgram = {
     val triggers: Set[Trigger] = {
@@ -341,12 +344,13 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
           mapping += from -> to
         }
 
-        val readTuple = ReadTuple(relation, keyList = keyIndices.map(i=>updatedLiteral.fields(i)))
+        val keys = keyIndices.map(i=>updatedLiteral.fields(i))
+        val readTuple = if (!enableProjection) ReadTuple(relation, keyList = keys) else Empty()
         val valueIndices: List[Int] = updatedLiteral.fields.indices.diff(keyIndices).toList
         var groundVar: Statement = Empty()
         for (valueIndex <- valueIndices) {
           val localVar = Variable(relation.sig(valueIndex), s"${localVariablePrefix}_${literal.fields(valueIndex)}")
-          groundVar = Statement.makeSeq(groundVar,GroundVar(localVar, relation, valueIndex))
+          groundVar = Statement.makeSeq(groundVar,GroundVar(localVar, relation, keys, valueIndex, enableProjection))
           mapping += (literal.fields(valueIndex)) -> localVar
         }
 

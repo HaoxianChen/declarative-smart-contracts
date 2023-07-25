@@ -47,7 +47,8 @@ object Main extends App {
   }
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
-          consolidateUpdates: Boolean, materializePath: String = s"", arithmeticOptimization: Boolean = true): Unit = {
+          consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
+          arithmeticOptimization: Boolean = true): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
@@ -59,13 +60,15 @@ object Main extends App {
     }
     val impTranslator: ImperativeTranslator = if (consolidateUpdates) {
       ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations,
-        arithmeticOptimization)
+        arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection)
     }
     else {
-      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations, arithmeticOptimization)
+      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations,
+        arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection)
     }
     val imperative = impTranslator.translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,monitorViolations).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,monitorViolations,
+      enableProjection).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -88,7 +91,8 @@ object Main extends App {
       case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
       case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
       case "--no-fuse" :: tail => nextArg(map ++ Map("fuse"->false), tail)
-      case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-opt"->false), tail)
+      case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-optimization"->false), tail)
+      case "--no-projection" :: tail => nextArg(map++Map("projection"->false), tail)
       case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
       case unknown :: _ =>
         println(s"Unknown option: $unknown")
@@ -110,16 +114,17 @@ object Main extends App {
       monitorViolations = false,
       consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
       materializePath = options.getOrElse("materialize","").toString,
-      arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean)
+      arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
+      enableProjection = options.getOrElse("projection", true).toString.toBoolean)
   }
   else if (args(0) == "test") {
     for (p <- allBenchmarks) {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       run(filepath, displayResult = false, outDir=outDir, isInstrument = false, monitorViolations = false,
-        consolidateUpdates = false)
+        consolidateUpdates = false, enableProjection = true)
       run(filepath, displayResult = false, outDir="solidity/fuse", isInstrument = false, monitorViolations = false,
-        consolidateUpdates = true)
+        consolidateUpdates = true, enableProjection = true)
     }
   }
   else if (args(0) == "compile-all-versions") {
@@ -127,12 +132,12 @@ object Main extends App {
 
     /** 1. The basic compilation. */
     run(filepath, displayResult = false, outDir=outDir, isInstrument = false, monitorViolations = false,
-      consolidateUpdates = false)
+      consolidateUpdates = false, enableProjection = true)
 
     /** 2. Fuse update operations into one function. */
     val _fusedOutDir = "solidity/fuse"
     run(filepath, displayResult = false, outDir=_fusedOutDir, isInstrument = false, monitorViolations = false,
-      consolidateUpdates = true)
+      consolidateUpdates = true, enableProjection = true)
   }
   else if (args(0) == "test-instrument") {
     val _outDir = outDirWithInstrumentations
@@ -140,7 +145,7 @@ object Main extends App {
       println(p)
       val filepath = Paths.get(benchmarkDir, p).toString
       run(filepath, displayResult = false, outDir=_outDir, isInstrument = true, monitorViolations = true,
-        consolidateUpdates = true)
+        consolidateUpdates = true, enableProjection = true)
     }
   }
 
@@ -149,7 +154,8 @@ object Main extends App {
 
     val dl = parseProgram(filepath)
     val materializedRelations: Set[Relation] = Set()
-    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
+    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
+      monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
     // println(imperative)
     val verifier = new Verifier(dl, imperative)
@@ -163,7 +169,8 @@ object Main extends App {
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
       val materializedRelations: Set[Relation] = Set()
-      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
+      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
+        enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
       val imperative = impTranslator.translate()
       val verifier = new Verifier(dl, imperative)
       verifier.check()
@@ -175,7 +182,8 @@ object Main extends App {
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
       val materializedRelations: Set[Relation] = Set()
-      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, monitorViolations = false)
+      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
+        enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
       val relationDependencies = impTranslator.getRelationDependencies()
       // write to files
       val outfile = s"relation-dependencies/${dl.name}.csv"

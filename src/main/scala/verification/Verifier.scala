@@ -15,7 +15,7 @@ import view.{CountView, JoinView, MaxView, SumView, View}
 
 class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
   extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = Set(),
-    isInstrument = true, monitorViolations = false) {
+    isInstrument = true, monitorViolations = false, enableProjection = true, arithmeticOptimization = true) {
 
   private val program = addBuiltInRules(_program)
 

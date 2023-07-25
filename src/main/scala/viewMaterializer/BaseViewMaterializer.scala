@@ -16,7 +16,7 @@ class BaseViewMaterializer extends ViewMaterializer {
 
   protected def relationsToMaterialize(statement: Statement): Set[Relation] = statement match {
     case ReadTuple(rel, _, _) => Set(rel)
-    case GroundVar(_, rel, _) => Set(rel)
+    case GroundVar(_, rel, _, _, _) => Set(rel)
     case Search(_, matches, stmt) => matches.map(_.relation) ++ relationsToMaterialize(stmt)
     case If(_,stmt) => relationsToMaterialize(stmt)
     case Seq(a,b) => relationsToMaterialize(a) ++ relationsToMaterialize(b)
