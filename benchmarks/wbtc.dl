@@ -15,14 +15,20 @@
 .decl mint(p: address, amount: uint)
 .decl recv_mint(p: address, amount: uint)
 .decl burn(p: address, amount: uint)
-.decl recv_burn(p: address, amount: uint)
+.decl recv_burn(amount: uint)
 .decl transfer(from: address, to: address, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
 
 // New transactions
 .decl recv_transferFrom(from: address, to: address, amount: uint)
 .decl increaseAllowance(p: address, s: address, n:uint)
+.decl decreaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
+
+.decl recv_increaseApproval(p:address, n:uint)
+.decl recv_decreaseApproval(p:address, n:uint)
+.public recv_increaseApproval
+.public recv_decreaseApproval
 
 // Interfaces
 .public recv_mint
@@ -38,17 +44,17 @@
 
 .decl *paused(b: bool)
 .decl *pendingOwner(p: address)
-.decl *mintingFinished(b: bool)
+// .decl *mintingFinished(b: bool)
 
 .decl recv_pause()
 .decl recv_unpause()
-paused(true) :- recv_pause(), msgSender(s), owner(s). 
-paused(false) :- recv_unpause(), msgSender(s), owner(s). 
+paused(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
+paused(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
 
-.decl recv_transferOwner(p:address)
+.decl recv_transferOwnership(p:address)
 .decl recv_claimOwnership()
 .decl claimOwnership(p:address)
-pendingOwner(p) :- recv_transferOwner(p), msgSender(s), owner(s).
+pendingOwner(p) :- recv_transferOwnership(p), msgSender(s), owner(s), p!=0.
 claimOwnership(s) :- recv_claimOwnership(), msgSender(s), pendingOwner(s).
 owner(s) :- claimOwnership(s).
 pendingOwner(0) :- claimOwnership(_).
@@ -62,7 +68,7 @@ transfer(t,s,n) :- reclaimToken(t,s,n).
 
 .public recv_pause
 .public recv_unpause
-.public recv_transferOwner
+.public recv_transferOwnership
 .public recv_claimOwnership
 .public recv_reclaimToken
 
@@ -71,7 +77,7 @@ owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+burn(p,n) :- recv_burn(n), msgSender(p), balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
                   paused(false).
 
@@ -100,13 +106,17 @@ transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+increaseAllowance(o,s,n) :- recv_increaseApproval(s,n), msgSender(o).
+decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n), msgSender(o), allowance(o,s,m), m>=n.
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl decreaseAllowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_), m = sum n: decreaseAllowance(o,s,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 
-allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
 // Properties
 .decl *totalBalances(m: uint)

@@ -24,6 +24,8 @@ canTransfer(p,q) :- precirculated(p,true), precirculated(q,true).
 .decl recv_disallowPrecirculation(p:address)
 precirculated(p,true) :- recv_allowPrecirculation(p), msgSender(s), owner(s).
 precirculated(p,false) :- recv_disallowPrecirculation(p), msgSender(s), owner(s).
+.public recv_allowPrecirculation
+.public recv_disallowPrecirculation
 
 // Transactions
 .decl mint(p: address, amount: uint)

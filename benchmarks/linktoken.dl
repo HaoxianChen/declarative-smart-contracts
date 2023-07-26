@@ -45,20 +45,23 @@ validRecipient(p) :- this(t), p!=t, p!=0.
 .public recv_transferFrom
 .public allowance(2)
 
+.decl totalMint(p: address, n: uint)[0]
+.decl totalBurn(p: address, n: uint)[0]
+.decl totalOut(p: address, n: uint)[0]
+.decl totalIn(p: address, n: uint)[0]
+
 // Rules
 owner(s) :- constructor(_), msgSender(s).
 totalSupply(n) :- constructor(n).
 balanceOf(p,n) :- constructor(n), msgSender(p).
+totalIn(s,n) :- constructor(n), msgSender(s).
+totalMint(s,n) :- constructor(n), msgSender(s).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
                     validRecipient(r).
 
-.decl totalMint(p: address, n: uint)[0]
-.decl totalBurn(p: address, n: uint)[0]
-.decl totalOut(p: address, n: uint)[0]
-.decl totalIn(p: address, n: uint)[0]
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
