@@ -513,8 +513,32 @@ object Condition {
     }
   }
 
-  def replaceArithmetic(condition: Condition, mapping: Map[Param, Arithmetic]): Condition = {
-    ???
+  def replaceArithmetic(condition: Condition, mapping: Map[Param, Arithmetic]): Condition = condition match {
+    case True() => True()
+    case False() => False()
+    case MatchRelationField(relation, keys, index, p, enableProjection) =>
+      MatchRelationField(relation, keys, index, p, enableProjection)
+    case Match(a, b) => {
+      a match {
+        case ar: Arithmetic => b match {
+          case br: Arithmetic => Match(Arithmetic.replace(ar,mapping),Arithmetic.replace(br,mapping))
+        }
+      }
+    }
+    case Greater(a, b) => Greater(Arithmetic.replace(a,mapping),Arithmetic.replace(b,mapping))
+    case Lesser(a, b) => Lesser(Arithmetic.replace(a,mapping),Arithmetic.replace(b,mapping))
+    case Geq(a, b) => Geq(Arithmetic.replace(a,mapping),Arithmetic.replace(b,mapping))
+    case Leq(a, b) => Leq(Arithmetic.replace(a,mapping),Arithmetic.replace(b,mapping))
+    case Unequal(a, b) => {
+      a match {
+        case ar: Arithmetic => b match {
+          case br: Arithmetic => Unequal(Arithmetic.replace(ar,mapping),Arithmetic.replace(br,mapping))
+        }
+      }
+    }
+    case And(a, b) => And(Condition.replaceArithmetic(a,mapping),Condition.replaceArithmetic(b,mapping))
+    case Or(a, b) => Or(Condition.replaceArithmetic(a,mapping),Condition.replaceArithmetic(b,mapping))
+    case BooleanFunction(name, parameters) => ???
   }
 }
 

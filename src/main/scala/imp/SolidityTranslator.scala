@@ -25,6 +25,7 @@ object Translator {
 case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
                               violations: Set[Relation],
                               _materializedRelations: Set[Relation],
+                              isInstrument: Boolean,
                               monitorViolation: Boolean,
                               enableProjection: Boolean)
       extends Translator(program, interfaces, violations, monitorViolation) {

@@ -67,8 +67,8 @@ object Main extends App {
         arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection)
     }
     val imperative = impTranslator.translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,monitorViolations,
-      enableProjection).translate()
+    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
+      isInstrument,monitorViolations, enableProjection).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -79,25 +79,29 @@ object Main extends App {
     println(s"${impTranslator.ruleSize} rules.")
   }
 
-  if (args(0) == "compile") {
-    val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
-      s"--materialize <filename> materialize the set of relations specified in file\n" +
-      s"--no-fuse turn off the option to consolidate updates into one function\n" +
-      s"--no-arithmetic-optimization turn off arithmetic optimization\n" +
-      s"--out <directory> output directory\n"
+  val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
+    s"--materialize <filename> materialize the set of relations specified in file\n" +
+    s"--no-fuse turn off the option to consolidate updates into one function\n" +
+    s"--no-arithmetic-optimization turn off arithmetic optimization\n" +
+    s"--no-projection turn off projection optimization\n" +
+    s"--out <directory> output directory\n"
 
-    def nextArg(map: Map[String, Any], list: List[String]): Map[String, Any] = list match {
-      case Nil => map
-      case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
-      case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
-      case "--no-fuse" :: tail => nextArg(map ++ Map("fuse"->false), tail)
-      case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-optimization"->false), tail)
-      case "--no-projection" :: tail => nextArg(map++Map("projection"->false), tail)
-      case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
-      case unknown :: _ =>
-        println(s"Unknown option: $unknown")
-        exit(1)
-    }
+  def nextArg(map: Map[String, Any], list: List[String]): Map[String, Any] = list match {
+    case Nil => map
+    case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
+    case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
+    case "--no-fuse" :: tail => nextArg(map ++ Map("fuse"->false), tail)
+    case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-optimization"->false), tail)
+    case "--no-projection" :: tail => nextArg(map++Map("projection"->false), tail)
+    case "--instrument" :: tail => nextArg(map++Map("instrument"->true), tail)
+    case "--monitor" :: tail => nextArg(map++Map("monitor"->true), tail)
+    case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
+    case unknown :: _ =>
+      println(s"Unknown option: $unknown")
+      exit(1)
+  }
+
+  if (args(0) == "compile") {
     val options: Map[String, Any] = if (args.length <= 1) {
       println(compileUsage)
       exit(1)
@@ -110,12 +114,32 @@ object Main extends App {
     // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     val filepath = options("filepath").toString
     run(filepath, displayResult = true, outDir=options("out").toString,
-      isInstrument = false,
-      monitorViolations = false,
+      isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
+      monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
       consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
       materializePath = options.getOrElse("materialize","").toString,
       arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
       enableProjection = options.getOrElse("projection", true).toString.toBoolean)
+  }
+  else if (args(0) == "compile-all") {
+    val options: Map[String, Any] = if (args.length <= 1) {
+      println(compileUsage)
+      exit(1)
+    }
+    else {
+      nextArg(Map(), args.tail.toList)
+    }
+    for (p <- allBenchmarks) {
+      println(p)
+      val filepath = Paths.get(benchmarkDir, p).toString
+      run(filepath, displayResult = false, outDir=options("out").toString,
+        isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
+        monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
+        consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
+        materializePath = options.getOrElse("materialize","").toString,
+        arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
+        enableProjection = options.getOrElse("projection", true).toString.toBoolean)
+    }
   }
   else if (args(0) == "test") {
     for (p <- allBenchmarks) {

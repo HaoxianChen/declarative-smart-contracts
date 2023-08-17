@@ -330,7 +330,12 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
         renamed
       }
       case DeleteTuple(relation, keyIndices) => {
-        ???
+        var mapping: Map[Parameter, Parameter] = Map()
+        for ((from,to) <- updatedLiteral.fields.zip(literal.fields)) {
+          mapping += from -> to
+        }
+        val renamed = Statement.renameParameters(statement.statement,mapping)
+        renamed
       }
       case ReplacedByKey(relation, keyIndices, targetRelation) => {
         /** todo: Fix this on benchmark NFT. */
@@ -384,7 +389,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
     case Query(literal, statement) => ???
     case _update: UpdateStatement => _update match {
       case _:Insert|_:Delete|_:DeleteByKeys => _update
-      case IncrementAndInsert(increment) => ???
+      case IncrementAndInsert(increment) => IncrementAndInsert(replaceArithmetic(increment, mapping).asInstanceOf[Increment])
       case Increment(relation, literal, keyIndices, valueIndex, delta) =>
         Increment(relation,literal, keyIndices, valueIndex, Arithmetic.replace(delta,mapping))
     }
