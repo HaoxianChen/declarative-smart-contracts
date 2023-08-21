@@ -81,7 +81,7 @@ object Main extends App {
 
   val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
     s"--materialize <filename> materialize the set of relations specified in file\n" +
-    s"--no-fuse turn off the option to consolidate updates into one function\n" +
+    s"--fuse turn on the option to consolidate updates into one function\n" +
     s"--no-arithmetic-optimization turn off arithmetic optimization\n" +
     s"--no-projection turn off projection optimization\n" +
     s"--out <directory> output directory\n"
@@ -90,7 +90,7 @@ object Main extends App {
     case Nil => map
     case string :: Nil => nextArg(map ++ Map("filepath"->string), list.tail)
     case "--materialize" :: value :: tail => nextArg(map++ Map("materialize"->value), tail)
-    case "--no-fuse" :: tail => nextArg(map ++ Map("fuse"->false), tail)
+    case "--fuse" :: tail => nextArg(map ++ Map("fuse"->true), tail)
     case "--no-arithmetic-optimization" :: tail => nextArg(map++Map("arithmetic-optimization"->false), tail)
     case "--no-projection" :: tail => nextArg(map++Map("projection"->false), tail)
     case "--instrument" :: tail => nextArg(map++Map("instrument"->true), tail)
@@ -116,7 +116,7 @@ object Main extends App {
     run(filepath, displayResult = true, outDir=options("out").toString,
       isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
       monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
-      consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
+      consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
       materializePath = options.getOrElse("materialize","").toString,
       arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
       enableProjection = options.getOrElse("projection", true).toString.toBoolean)
@@ -135,7 +135,7 @@ object Main extends App {
       run(filepath, displayResult = false, outDir=options("out").toString,
         isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
         monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
-        consolidateUpdates = options.getOrElse("fuse",true).toString.toBoolean,
+        consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
         materializePath = options.getOrElse("materialize","").toString,
         arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
         enableProjection = options.getOrElse("projection", true).toString.toBoolean)
