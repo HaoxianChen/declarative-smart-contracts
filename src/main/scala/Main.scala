@@ -113,7 +113,12 @@ object Main extends App {
     // val isInstrument = args(2).toBoolean
     // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     val filepath = options("filepath").toString
-    run(filepath, displayResult = true, outDir=options("out").toString,
+    var outDirectory = "solidity/default"
+    if (options.contains("out")) {
+    	outDirectory = options("out").toString
+    }
+    run(filepath, displayResult = true, outDir=outDirectory,
+    //run(filepath, displayResult = true, outDir=options("out").toString,
       isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
       monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
       consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
