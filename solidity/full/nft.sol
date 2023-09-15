@@ -17,6 +17,11 @@ contract Nft {
     uint time;
     bool _valid;
   }
+  struct ApprovalTuple {
+    address p;
+    bool b;
+    bool _valid;
+  }
   struct ExistsTuple {
     bool b;
     bool _valid;
@@ -33,6 +38,7 @@ contract Nft {
   OwnerTuple owner;
   mapping(uint=>mapping(address=>ApprovedTuple)) approved;
   mapping(uint=>LatestTransferTuple) latestTransfer;
+  mapping(address=>mapping(uint=>ApprovalTuple)) approval;
   mapping(uint=>ExistsTuple) exists;
   mapping(address=>mapping(address=>IsApprovedForAllTuple)) isApprovedForAll;
   mapping(address=>BalanceOfTuple) balanceOf;
@@ -105,15 +111,6 @@ contract Nft {
           exists[tokenId] = ExistsTuple(false,false);
         }
       }
-  }
-  function updateApprovalOnInsertRecv_setApproval_r1(uint tokenId,address p,bool b) private   returns (bool) {
-      address o = msg.sender;
-      if(o==ownerOf[tokenId].p) {
-        updateApprovedOnInsertApproval_r4(o,tokenId,p,b);
-        emit Approval(o,tokenId,p,b);
-        return true;
-      }
-      return false;
   }
   function updateTransferOnInsertRecv_transfer_r9(address r,uint tokenId) private   returns (bool) {
       uint time = block.timestamp;
@@ -200,6 +197,16 @@ contract Nft {
             return true;
           }
         }
+      }
+      return false;
+  }
+  function updateApprovalOnInsertRecv_setApproval_r1(uint tokenId,address p,bool b) private   returns (bool) {
+      address o = msg.sender;
+      if(o==ownerOf[tokenId].p) {
+        updateApprovedOnInsertApproval_r4(o,tokenId,p,b);
+        approval[o][tokenId] = ApprovalTuple(p,b,true);
+        emit Approval(o,tokenId,p,b);
+        return true;
       }
       return false;
   }

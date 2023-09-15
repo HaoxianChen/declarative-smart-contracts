@@ -11,10 +11,6 @@ contract Matic {
     address p;
     bool _valid;
   }
-  struct DecreaseAllowanceTotalTuple {
-    uint m;
-    bool _valid;
-  }
   struct TotalMintTuple {
     uint n;
     bool _valid;
@@ -63,7 +59,6 @@ contract Matic {
   mapping(address=>TotalOutTuple) totalOut;
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
-  mapping(address=>mapping(address=>DecreaseAllowanceTotalTuple)) decreaseAllowanceTotal;
   mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
@@ -327,6 +322,10 @@ contract Matic {
       return true;
       return false;
   }
+  function updateDecreaseAllowanceTotalOnInsertDecreaseAllowance_r4(address o,address s,uint n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementDecreaseAllowanceTotal_r29(o,s,delta0);
+  }
   function updateAllMintOnInsertConstructor_r12(uint n) private    {
       allMint = AllMintTuple(n,true);
   }
@@ -376,11 +375,6 @@ contract Matic {
         }
       }
       return false;
-  }
-  function updateDecreaseAllowanceTotalOnInsertDecreaseAllowance_r4(address o,address s,uint n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementDecreaseAllowanceTotal_r29(o,s,delta0);
-      decreaseAllowanceTotal[o][s].m += n;
   }
   function updateTransferFromOnInsertRecv_transferFrom_r2(address o,address r,uint n) private   returns (bool) {
       address s = msg.sender;

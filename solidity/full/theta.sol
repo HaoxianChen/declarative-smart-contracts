@@ -7,10 +7,6 @@ contract Theta {
     uint n;
     bool _valid;
   }
-  struct UnlockTimeTuple {
-    uint t;
-    bool _valid;
-  }
   struct OwnerTuple {
     address p;
     bool _valid;
@@ -25,11 +21,6 @@ contract Theta {
   }
   struct AllMintTuple {
     uint n;
-    bool _valid;
-  }
-  struct CanTransferTuple {
-    address p;
-    address q;
     bool _valid;
   }
   struct AllowanceTotalTuple {
@@ -58,13 +49,11 @@ contract Theta {
   }
   mapping(address=>TotalInTuple) totalIn;
   mapping(address=>TotalOutTuple) totalOut;
-  UnlockTimeTuple unlockTime;
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
   mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
-  CanTransferTuple canTransfer;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
@@ -88,11 +77,8 @@ contract Theta {
         revert("Rule condition failed");
       }
   }
-  function disallowPrecirculation(address p) public    {
-      bool r26 = updatePrecirculatedOnInsertRecv_disallowPrecirculation_r26(p);
-      if(r26==false) {
-        revert("Rule condition failed");
-      }
+  function allowPrecirculation(address p) public    {
+      revert("Rule condition failed");
   }
   function approve(address s,uint n) public    {
       bool r24 = updateIncreaseAllowanceOnInsertRecv_approve_r24(s,n);
@@ -100,11 +86,8 @@ contract Theta {
         revert("Rule condition failed");
       }
   }
-  function allowPrecirculation(address p) public    {
-      bool r19 = updatePrecirculatedOnInsertRecv_allowPrecirculation_r19(p);
-      if(r19==false) {
-        revert("Rule condition failed");
-      }
+  function disallowPrecirculation(address p) public    {
+      revert("Rule condition failed");
   }
   function getTotalSupply() public view  returns (uint) {
       uint n = totalSupply.n;
@@ -136,26 +119,18 @@ contract Theta {
         revert("Rule condition failed");
       }
   }
-  function updateUnlockTimeOnInsertConstructor_r7(uint t) private    {
-      unlockTime = UnlockTimeTuple(t,true);
+  function updateAllMintOnInsertMint_r4(uint n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllMint_r16(delta0);
+      allMint.n += n;
   }
   function updateAllBurnOnInsertBurn_r23(uint n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllBurn_r16(delta0);
       allBurn.n += n;
   }
-  function canTransfer(address p,address q) private view  returns (bool) {
-      uint ut = unlockTime.t;
-      uint t = block.timestamp;
-      if(t>=ut) {
-        return true;
-      }
-      if(true==precirculated[q].b) {
-        if(true==precirculated[p].b) {
-          return true;
-        }
-      }
-      return false;
+  function updateUnlockTimeOnInsertConstructor_r7(uint t) private    {
+      // Empty()
   }
   function updateBurnOnInsertRecv_burn_r8(address p,uint n) private   returns (bool) {
       address s = owner.p;
@@ -175,28 +150,16 @@ contract Theta {
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
   }
-  function updateAllowanceOnIncrementAllowanceTotal_r21(address o,address s,int m) private    {
-      int _delta = int(m);
-      uint newValue = updateuintByint(allowance[o][s].n,_delta);
-      allowance[o][s].n = newValue;
-  }
-  function updatePrecirculatedOnInsertRecv_allowPrecirculation_r19(address p) private   returns (bool) {
-      address s = owner.p;
-      if(s==msg.sender) {
-        emit Precirculated(p,true);
-        return true;
-      }
-      return false;
-  }
-  function updateAllMintOnInsertMint_r4(uint n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllMint_r16(delta0);
-      allMint.n += n;
-  }
   function updateTotalSupplyOnIncrementAllBurn_r16(int b) private    {
       int _delta = int(-b);
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
+  }
+  function unlockTime(uint t) private view  returns (bool) {
+      if(t==constructor.t) {
+        return true;
+      }
+      return false;
   }
   function updateMintOnInsertRecv_mint_r22(address p,uint n) private   returns (bool) {
       address s = owner.p;
@@ -240,6 +203,21 @@ contract Theta {
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
   }
+  function canTransfer(address p,address q) private view  returns (bool) {
+      if(precirculated(p,true) && precirculated(q,true)) {
+        return true;
+      }
+      uint t = block.timestamp;
+      if(t>=ut && unlockTime(ut)) {
+        return true;
+      }
+      return false;
+  }
+  function updateAllowanceOnIncrementAllowanceTotal_r21(address o,address s,int m) private    {
+      int _delta = int(m);
+      uint newValue = updateuintByint(allowance[o][s].n,_delta);
+      allowance[o][s].n = newValue;
+  }
   function updateTotalBalancesOnInsertConstructor_r20() private    {
       // Empty()
   }
@@ -265,16 +243,18 @@ contract Theta {
       return true;
       return false;
   }
-  function updateBalanceOfOnIncrementTotalMint_r9(address p,int n) private    {
-      int _delta = int(n);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
-  }
-  function updatePrecirculatedOnInsertRecv_disallowPrecirculation_r26(address p) private   returns (bool) {
+  function precirculated(address p,bool b) private view  returns (bool) {
       address s = owner.p;
       if(s==msg.sender) {
-        emit Precirculated(p,false);
-        return true;
+        if(p==recv_disallowPrecirculation.p) {
+          return true;
+        }
+      }
+      address s = owner.p;
+      if(s==msg.sender) {
+        if(p==recv_allowPrecirculation.p) {
+          return true;
+        }
       }
       return false;
   }
@@ -282,6 +262,11 @@ contract Theta {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalBurn_r9(p,delta0);
       totalBurn[p].n += n;
+  }
+  function updateBalanceOfOnIncrementTotalMint_r9(address p,int n) private    {
+      int _delta = int(n);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
   }
   function updateTransferFromOnInsertRecv_transferFrom_r10(address o,address r,uint n) private   returns (bool) {
       address s = msg.sender;

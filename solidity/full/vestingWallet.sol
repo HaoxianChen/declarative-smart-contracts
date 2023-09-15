@@ -1,8 +1,4 @@
 contract VestingWallet {
-  struct BeneficiaryTuple {
-    address p;
-    bool _valid;
-  }
   struct DurationTuple {
     uint t;
     bool _valid;
@@ -15,10 +11,9 @@ contract VestingWallet {
     uint n;
     bool _valid;
   }
-  ReleasedTuple released;
-  BeneficiaryTuple beneficiary;
   DurationTuple duration;
   StartTuple start;
+  ReleasedTuple released;
   event Release(uint n);
   constructor(uint s,uint d,address b) public {
     updateDurationOnInsertConstructor_r5(d);
@@ -36,6 +31,21 @@ contract VestingWallet {
       uint n = released.n;
       return n;
   }
+  function updateReleaseOnInsertRecv_release_r7() private   returns (bool) {
+      uint d = duration.t;
+      uint e = released.n;
+      uint b = address(this).balance;
+      uint a = start.t;
+      uint t = block.timestamp;
+      if(d<a+d && b>e && a<a+d && t>a+d) {
+        uint n = b-e;
+        updateSendOnInsertRelease_r2(n);
+        updateReleasedOnInsertRelease_r0(n);
+        emit Release(n);
+        return true;
+      }
+      return false;
+  }
   function updateDurationOnInsertConstructor_r5(uint d) private    {
       duration = DurationTuple(d,true);
   }
@@ -47,6 +57,9 @@ contract VestingWallet {
       int value = convertedX+delta;
       uint convertedValue = uint(value);
       return convertedValue;
+  }
+  function updateBeneficiaryOnInsertConstructor_r4(address b) private    {
+      // Empty()
   }
   function updateStartOnInsertConstructor_r1(uint a) private    {
       uint t = block.timestamp;
@@ -73,23 +86,5 @@ contract VestingWallet {
       if(n>0) {
         payable(b).send(n);
       }
-  }
-  function updateReleaseOnInsertRecv_release_r7() private   returns (bool) {
-      uint d = duration.t;
-      uint e = released.n;
-      uint b = address(this).balance;
-      uint a = start.t;
-      uint t = block.timestamp;
-      if(d<a+d && b>e && a<a+d && t>a+d) {
-        uint n = b-e;
-        updateSendOnInsertRelease_r2(n);
-        updateReleasedOnInsertRelease_r0(n);
-        emit Release(n);
-        return true;
-      }
-      return false;
-  }
-  function updateBeneficiaryOnInsertConstructor_r4(address b) private    {
-      beneficiary = BeneficiaryTuple(b,true);
   }
 }

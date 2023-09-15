@@ -23,14 +23,12 @@ contract Tether {
     bool b;
     bool _valid;
   }
-  struct AllowanceTotalTuple {
-    uint m;
+  struct AddBlackListTuple {
+    address p;
     bool _valid;
   }
-  struct TransferTuple {
-    address from;
-    address to;
-    uint amount;
+  struct AllowanceTotalTuple {
+    uint m;
     bool _valid;
   }
   struct MaxFeeTuple {
@@ -53,13 +51,6 @@ contract Tether {
     uint r;
     bool _valid;
   }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
-    bool _valid;
-  }
   struct TotalRedeemTuple {
     uint n;
     bool _valid;
@@ -80,9 +71,8 @@ contract Tether {
   RateTuple rate;
   TotalSupplyTuple totalSupply;
   mapping(address=>IsBlackListedTuple) isBlackListed;
+  AddBlackListTuple addBlackList;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferTuple transfer;
-  TransferFromTuple transferFrom;
   MaxFeeTuple maxFee;
   AllRedeemTuple allRedeem;
   mapping(address=>BalanceOfTuple) balanceOf;
@@ -161,6 +151,11 @@ contract Tether {
       }
       return false;
   }
+  function updateTransferFromOnInsertTransferFromWithFee_r18(address o,address r,address s,uint f,uint n) private    {
+      uint m = n-f;
+      updateSpentTotalOnInsertTransferFrom_r21(o,s,m);
+      updateTransferOnInsertTransferFrom_r1(o,r,m);
+  }
   function updateBalanceOfOnInsertConstructor_r8(uint n) private    {
       address s = msg.sender;
       balanceOf[s] = BalanceOfTuple(n,true);
@@ -174,10 +169,10 @@ contract Tether {
       return true;
       return false;
   }
-  function updateTransferOnInsertTransferFrom_r1(address o,address r,uint n) private    {
-      updateTotalInOnInsertTransfer_r28(r,n);
-      updateTotalOutOnInsertTransfer_r19(o,n);
-      transfer = TransferTuple(o,r,n,true);
+  function updateTransferFromOnInsertTransferFromWithFee_r10(address o,address r,address s,uint f) private    {
+      address p = owner.p;
+      updateSpentTotalOnInsertTransferFrom_r21(o,s,f);
+      updateTransferOnInsertTransferFrom_r1(o,p,f);
   }
   function updateTotalBalancesOnInsertConstructor_r29(uint n) private    {
       // Empty()
@@ -186,6 +181,11 @@ contract Tether {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllRedeem_r2(delta0);
       allRedeem.n += n;
+  }
+  function updateTransferOnInsertTransferWithFee_r3(address s,address r,uint f) private    {
+      address o = owner.p;
+      updateTotalInOnInsertTransfer_r28(o,f);
+      updateTotalOutOnInsertTransfer_r19(s,f);
   }
   function updateTotalOutOnInsertTransfer_r19(address p,uint n) private    {
       int delta0 = int(n);
@@ -202,24 +202,6 @@ contract Tether {
       updateTotalSupplyOnIncrementAllIssue_r2(delta0);
       allIssue.n += n;
   }
-  function updateTransferOnInsertTransferWithFee_r3(address s,address r,uint f) private    {
-      address o = owner.p;
-      updateTotalInOnInsertTransfer_r28(o,f);
-      updateTotalOutOnInsertTransfer_r19(s,f);
-      transfer = TransferTuple(s,o,f,true);
-  }
-  function updateTransferFromOnInsertTransferFromWithFee_r18(address o,address r,address s,uint f,uint n) private    {
-      uint m = n-f;
-      updateSpentTotalOnInsertTransferFrom_r21(o,s,m);
-      updateTransferOnInsertTransferFrom_r1(o,r,m);
-      transferFrom = TransferFromTuple(o,r,s,m,true);
-  }
-  function updateTransferOnInsertTransferWithFee_r17(address s,address r,uint f,uint n) private    {
-      uint m = n-f;
-      updateTotalInOnInsertTransfer_r28(r,m);
-      updateTotalOutOnInsertTransfer_r19(s,m);
-      transfer = TransferTuple(s,r,m,true);
-  }
   function updateTotalSupplyOnIncrementAllRedeem_r2(int b) private    {
       int _delta = int(-b);
       uint newValue = updateuintByint(totalSupply.n,_delta);
@@ -230,11 +212,9 @@ contract Tether {
       updateBalanceOfOnIncrementTotalRedeem_r6(p,delta0);
       totalRedeem[p].n += n;
   }
-  function updateTransferFromOnInsertTransferFromWithFee_r10(address o,address r,address s,uint f) private    {
-      address p = owner.p;
-      updateSpentTotalOnInsertTransferFrom_r21(o,s,f);
-      updateTransferOnInsertTransferFrom_r1(o,p,f);
-      transferFrom = TransferFromTuple(o,p,s,f,true);
+  function updateTransferOnInsertTransferFrom_r1(address o,address r,uint n) private    {
+      updateTotalInOnInsertTransfer_r28(r,n);
+      updateTotalOutOnInsertTransfer_r19(o,n);
   }
   function updateAllowanceTotalOnInsertIncreaseAllowance_r30(address o,address s,uint n) private    {
       int delta0 = int(n);
@@ -288,6 +268,11 @@ contract Tether {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r6(p,delta0);
       totalIn[p].n += n;
+  }
+  function updateTransferOnInsertTransferWithFee_r17(address s,address r,uint f,uint n) private    {
+      uint m = n-f;
+      updateTotalInOnInsertTransfer_r28(r,m);
+      updateTotalOutOnInsertTransfer_r19(s,m);
   }
   function updateIssueOnInsertRecv_issue_r11(address p,uint n) private   returns (bool) {
       address s = owner.p;
