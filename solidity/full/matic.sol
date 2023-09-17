@@ -11,6 +11,10 @@ contract Matic {
     address p;
     bool _valid;
   }
+  struct DecreaseAllowanceTotalTuple {
+    uint m;
+    bool _valid;
+  }
   struct TotalMintTuple {
     uint n;
     bool _valid;
@@ -39,6 +43,13 @@ contract Matic {
     uint n;
     bool _valid;
   }
+  struct TransferFromTuple {
+    address from;
+    address to;
+    address spender;
+    uint amount;
+    bool _valid;
+  }
   struct BalanceOfTuple {
     uint n;
     bool _valid;
@@ -59,11 +70,13 @@ contract Matic {
   mapping(address=>TotalOutTuple) totalOut;
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
+  mapping(address=>mapping(address=>DecreaseAllowanceTotalTuple)) decreaseAllowanceTotal;
   mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>IsPauserTuple) isPauser;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
+  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
@@ -179,10 +192,10 @@ contract Matic {
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
   }
-  function updateTotalSupplyOnIncrementAllMint_r16(int m) private    {
-      int _delta = int(m);
-      uint newValue = updateuintByint(totalSupply.n,_delta);
-      totalSupply.n = newValue;
+  function updateAllowanceOnIncrementSpentTotal_r29(address o,address s,int l) private    {
+      int _delta = int(-l);
+      uint newValue = updateuintByint(allowance[o][s].n,_delta);
+      allowance[o][s].n = newValue;
   }
   function updateTotalBalancesOnInsertConstructor_r32(uint n) private    {
       // Empty()
@@ -322,10 +335,6 @@ contract Matic {
       return true;
       return false;
   }
-  function updateDecreaseAllowanceTotalOnInsertDecreaseAllowance_r4(address o,address s,uint n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementDecreaseAllowanceTotal_r29(o,s,delta0);
-  }
   function updateAllMintOnInsertConstructor_r12(uint n) private    {
       allMint = AllMintTuple(n,true);
   }
@@ -349,6 +358,26 @@ contract Matic {
       int delta0 = int(n);
       updateAllowanceOnIncrementSpentTotal_r29(o,s,delta0);
       spentTotal[o][s].m += n;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r2(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      if(false==paused.b) {
+        uint m = balanceOf[o].n;
+        uint k = allowance[o][s].n;
+        if(m>=n && k>=n) {
+          updateSpentTotalOnInsertTransferFrom_r27(o,s,n);
+          updateTransferOnInsertTransferFrom_r1(o,r,n);
+          transferFrom = TransferFromTuple(o,r,s,n,true);
+          emit TransferFrom(o,r,s,n);
+          return true;
+        }
+      }
+      return false;
+  }
+  function updateTotalSupplyOnIncrementAllMint_r16(int m) private    {
+      int _delta = int(m);
+      uint newValue = updateuintByint(totalSupply.n,_delta);
+      totalSupply.n = newValue;
   }
   function updateTotalBurnOnInsertBurn_r14(address p,uint n) private    {
       int delta0 = int(n);
@@ -376,24 +405,10 @@ contract Matic {
       }
       return false;
   }
-  function updateTransferFromOnInsertRecv_transferFrom_r2(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      if(false==paused.b) {
-        uint m = balanceOf[o].n;
-        uint k = allowance[o][s].n;
-        if(m>=n && k>=n) {
-          updateSpentTotalOnInsertTransferFrom_r27(o,s,n);
-          updateTransferOnInsertTransferFrom_r1(o,r,n);
-          emit TransferFrom(o,r,s,n);
-          return true;
-        }
-      }
-      return false;
-  }
-  function updateAllowanceOnIncrementSpentTotal_r29(address o,address s,int l) private    {
-      int _delta = int(-l);
-      uint newValue = updateuintByint(allowance[o][s].n,_delta);
-      allowance[o][s].n = newValue;
+  function updateDecreaseAllowanceTotalOnInsertDecreaseAllowance_r4(address o,address s,uint n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementDecreaseAllowanceTotal_r29(o,s,delta0);
+      decreaseAllowanceTotal[o][s].m += n;
   }
   function updateTotalMintOnInsertMint_r15(address p,uint n) private    {
       int delta0 = int(n);

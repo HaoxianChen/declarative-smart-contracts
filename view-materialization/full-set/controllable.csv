@@ -1,1 +1,1 @@
-controller,allMint,allowanceTotal,totalSupply,spentTotal,owner,totalBurn,balanceOf,allowance,allBurn,totalMint,totalIn,totalOut
+controllerTransfer,totalOut,balanceOf,transferFrom,totalMint,totalSupply,spentTotal,allMint,owner,totalBurn,totalIn,allBurn,allowanceTotal,controller,allowance

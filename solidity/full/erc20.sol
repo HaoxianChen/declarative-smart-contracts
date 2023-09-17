@@ -39,6 +39,13 @@ contract Erc20 {
     uint n;
     bool _valid;
   }
+  struct TransferFromTuple {
+    address from;
+    address to;
+    address spender;
+    uint amount;
+    bool _valid;
+  }
   struct BalanceOfTuple {
     uint n;
     bool _valid;
@@ -55,6 +62,7 @@ contract Erc20 {
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
+  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
   mapping(address=>BalanceOfTuple) balanceOf;
@@ -115,6 +123,19 @@ contract Erc20 {
       updateTotalOutOnInsertTransfer_r13(o,n);
       updateTotalInOnInsertTransfer_r8(r,n);
       emit Transfer(o,r,n);
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r18(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint k = allowance[o][s].n;
+      uint m = balanceOf[o].n;
+      if(m>=n && k>=n) {
+        updateTransferOnInsertTransferFrom_r0(o,r,n);
+        updateSpentTotalOnInsertTransferFrom_r6(o,s,n);
+        transferFrom = TransferFromTuple(o,r,s,n,true);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
   }
   function updateBalanceOfOnIncrementTotalBurn_r5(address p,int m) private    {
       int _delta = int(-m);
@@ -185,18 +206,6 @@ contract Erc20 {
       int delta0 = int(n);
       updateAllowanceOnIncrementSpentTotal_r15(o,s,delta0);
       spentTotal[o][s].m += n;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r18(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint k = allowance[o][s].n;
-      uint m = balanceOf[o].n;
-      if(m>=n && k>=n) {
-        updateTransferOnInsertTransferFrom_r0(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r6(o,s,n);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
   }
   function updateTotalInOnInsertTransfer_r8(address p,uint n) private    {
       int delta0 = int(n);
