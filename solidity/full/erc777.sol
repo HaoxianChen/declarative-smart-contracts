@@ -19,13 +19,6 @@ contract Erc777 {
     uint m;
     bool _valid;
   }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
-    bool _valid;
-  }
   struct RevokedDefaultOperatorTuple {
     bool b;
     bool _valid;
@@ -80,7 +73,6 @@ contract Erc777 {
   mapping(address=>TotalMintTuple) totalMint;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>RevokedDefaultOperatorTuple)) revokedDefaultOperator;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
@@ -254,10 +246,28 @@ contract Erc777 {
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
   }
+  function updateTransferFromOnInsertRecv_transferFrom_r30(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint k = allowance[o][s].n;
+      uint m = balanceOf[o].n;
+      if(m>=n && k>=n) {
+        updateTransferOnInsertTransferFrom_r1(o,r,n);
+        updateSpentTotalOnInsertTransferFrom_r24(o,s,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
+  }
   function updateAllowanceOnIncrementSpentTotal_r26(address o,address s,int l) private    {
       int _delta = int(-l);
       uint newValue = updateuintByint(allowance[o][s].n,_delta);
       allowance[o][s].n = newValue;
+  }
+  function updateuintByint(uint x,int delta) private   returns (uint) {
+      int convertedX = int(x);
+      int value = convertedX+delta;
+      uint convertedValue = uint(value);
+      return convertedValue;
   }
   function updateBalanceOfOnIncrementTotalOut_r6(address p,int o) private    {
       int _delta = int(-o);
@@ -309,25 +319,6 @@ contract Erc777 {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalMint_r6(p,delta0);
       totalMint[p].n += n;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r30(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint k = allowance[o][s].n;
-      uint m = balanceOf[o].n;
-      if(m>=n && k>=n) {
-        updateTransferOnInsertTransferFrom_r1(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r24(o,s,n);
-        transferFrom = TransferFromTuple(o,r,s,n,true);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
-  }
-  function updateuintByint(uint x,int delta) private   returns (uint) {
-      int convertedX = int(x);
-      int value = convertedX+delta;
-      uint convertedValue = uint(value);
-      return convertedValue;
   }
   function updateBalanceOfOnIncrementTotalBurn_r6(address p,int m) private    {
       int _delta = int(-m);

@@ -27,19 +27,13 @@ contract Voting {
     bool b;
     bool _valid;
   }
-  struct VoteTuple {
-    address p;
-    uint proposal;
-    bool _valid;
-  }
   QuorumSizeTuple quorumSize;
   mapping(address=>IsVoterTuple) isVoter;
   WinningProposalTuple winningProposal;
   mapping(address=>VotedTuple) voted;
+  HasWinnerTuple hasWinner;
   mapping(uint=>VotesTuple) votes;
   mapping(uint=>WinsTuple) wins;
-  HasWinnerTuple hasWinner;
-  VoteTuple vote;
   event Vote(address p,uint proposal);
   function getWinningProposal() public view  returns (uint) {
       uint proposal = winningProposal.proposal;
@@ -71,11 +65,6 @@ contract Voting {
         revert("Rule condition failed");
       }
   }
-  function updateVotesOnInsertVote_r0(address _p0,uint p) private    {
-      int delta2 = int(1);
-      updateWinsOnIncrementVotes_r2(p,delta2);
-      votes[p].c += 1;
-  }
   function updateHasWinnerOnDeleteWins_r1(bool b) private    {
       if(b==true) {
         hasWinner = HasWinnerTuple(false,false);
@@ -83,6 +72,15 @@ contract Voting {
   }
   function updateVotedOnInsertVote_r3(address v) private    {
       voted[v] = VotedTuple(true,true);
+  }
+  function updateWinningProposalOnInsertWins_r4(uint p,bool b) private    {
+      WinsTuple memory toDelete = wins[p];
+      if(toDelete._valid==true) {
+        updateWinningProposalOnDeleteWins_r4(p,toDelete.b);
+      }
+      if(b==true) {
+        winningProposal = WinningProposalTuple(p,true);
+      }
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -131,6 +129,11 @@ contract Voting {
       uint newValue = updateuintByint(votes[p].c,_delta);
       updateWinsOnInsertVotes_r2(p,newValue);
   }
+  function updateVotesOnInsertVote_r0(address _p0,uint p) private    {
+      int delta2 = int(1);
+      updateWinsOnIncrementVotes_r2(p,delta2);
+      votes[p].c += 1;
+  }
   function updateVoteOnInsertRecv_vote_r5(uint p) private   returns (bool) {
       if(false==hasWinner.b) {
         address v = msg.sender;
@@ -138,21 +141,11 @@ contract Voting {
           if(false==voted[v].b) {
             updateVotesOnInsertVote_r0(v,p);
             updateVotedOnInsertVote_r3(v);
-            vote = VoteTuple(v,p,true);
             emit Vote(v,p);
             return true;
           }
         }
       }
       return false;
-  }
-  function updateWinningProposalOnInsertWins_r4(uint p,bool b) private    {
-      WinsTuple memory toDelete = wins[p];
-      if(toDelete._valid==true) {
-        updateWinningProposalOnDeleteWins_r4(p,toDelete.b);
-      }
-      if(b==true) {
-        winningProposal = WinningProposalTuple(p,true);
-      }
   }
 }

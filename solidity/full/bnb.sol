@@ -43,24 +43,12 @@ contract Bnb {
     address p;
     bool _valid;
   }
-  struct WithdrawEtherTuple {
-    address p;
-    uint amount;
-    bool _valid;
-  }
   struct FreezeOfTuple {
     uint n;
     bool _valid;
   }
   struct AllowanceTotalTuple {
     uint m;
-    bool _valid;
-  }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
     bool _valid;
   }
   struct BalanceOfTuple {
@@ -74,18 +62,16 @@ contract Bnb {
   mapping(address=>TotalInTuple) totalIn;
   mapping(address=>TotalOutTuple) totalOut;
   mapping(address=>TotalFreezeTuple) totalFreeze;
+  OwnerTuple owner;
   mapping(address=>FreezeOfTuple) freezeOf;
   mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
   mapping(address=>TotalUnfreezeTuple) totalUnfreeze;
   mapping(address=>TotalBurnTuple) totalBurn;
-  OwnerTuple owner;
-  WithdrawEtherTuple withdrawEther;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
   event TransferFrom(address from,address to,address spender,uint amount);
@@ -159,6 +145,18 @@ contract Bnb {
         revert("Rule condition failed");
       }
   }
+  function updateTransferFromOnInsertRecv_transferFrom_r14(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint k = allowance[o][s].n;
+      uint m = balanceOf[o].n;
+      if(m>=n && r!=address(0) && n+m>=m && n>0 && k>=n) {
+        updateSpentTotalOnInsertTransferFrom_r22(o,s,n);
+        updateTransferOnInsertTransferFrom_r1(o,r,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
+  }
   function updateBalanceOfOnIncrementTotalIn_r15(address p,int i) private    {
       int _delta = int(i);
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
@@ -184,16 +182,6 @@ contract Bnb {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r15(p,delta0);
       totalIn[p].n += n;
-  }
-  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
-      address p = owner.p;
-      if(p==msg.sender) {
-        updateSendOnInsertWithdrawEther_r3(p,n);
-        withdrawEther = WithdrawEtherTuple(p,n,true);
-        emit WithdrawEther(p,n);
-        return true;
-      }
-      return false;
   }
   function updateTransferOnInsertRecv_transfer_r8(address r,uint n) private   returns (bool) {
       address s = msg.sender;
@@ -300,24 +288,20 @@ contract Bnb {
       return true;
       return false;
   }
+  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
+      address p = owner.p;
+      if(p==msg.sender) {
+        updateSendOnInsertWithdrawEther_r3(p,n);
+        emit WithdrawEther(p,n);
+        return true;
+      }
+      return false;
+  }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
       int value = convertedX+delta;
       uint convertedValue = uint(value);
       return convertedValue;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r14(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint k = allowance[o][s].n;
-      uint m = balanceOf[o].n;
-      if(m>=n && r!=address(0) && n+m>=m && n>0 && k>=n) {
-        updateSpentTotalOnInsertTransferFrom_r22(o,s,n);
-        updateTransferOnInsertTransferFrom_r1(o,r,n);
-        transferFrom = TransferFromTuple(o,r,s,n,true);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
   }
   function updateTotalFreezeOnInsertFreeze_r0(address p,uint n) private    {
       int delta0 = int(n);

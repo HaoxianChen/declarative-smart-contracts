@@ -39,25 +39,8 @@ contract Wbtc {
     uint n;
     bool _valid;
   }
-  struct ReclaimTokenTuple {
-    address t;
-    address s;
-    uint n;
-    bool _valid;
-  }
-  struct ClaimOwnershipTuple {
-    address p;
-    bool _valid;
-  }
   struct DecreaseAllowanceTotalTuple {
     uint m;
-    bool _valid;
-  }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
     bool _valid;
   }
   struct BalanceOfTuple {
@@ -81,15 +64,12 @@ contract Wbtc {
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
   PendingOwnerTuple pendingOwner;
+  mapping(address=>mapping(address=>DecreaseAllowanceTotalTuple)) decreaseAllowanceTotal;
   mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
-  ReclaimTokenTuple reclaimToken;
-  ClaimOwnershipTuple claimOwnership;
-  mapping(address=>mapping(address=>DecreaseAllowanceTotalTuple)) decreaseAllowanceTotal;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
@@ -215,21 +195,27 @@ contract Wbtc {
   function updateSendOnInsertReclaimToken_r21(address s,uint n) private    {
       payable(s).send(n);
   }
+  function updateTotalOutOnInsertTransfer_r24(address p,uint n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalOut_r6(p,delta0);
+      totalOut[p].n += n;
+  }
   function updateTransferOnInsertReclaimToken_r4(address t,address s,uint n) private    {
       updateTotalInOnInsertTransfer_r11(s,n);
       updateTotalOutOnInsertTransfer_r24(t,n);
       emit Transfer(t,s,n);
   }
-  function updateReclaimTokenOnInsertRecv_reclaimToken_r23() private   returns (bool) {
+  function updateTransferFromOnInsertRecv_transferFrom_r13(address o,address r,uint n) private   returns (bool) {
       address s = msg.sender;
-      if(s==owner.p) {
-        address t = address(this);
-        uint n = balanceOf[t].n;
-        updateSendOnInsertReclaimToken_r21(s,n);
-        updateTransferOnInsertReclaimToken_r4(t,s,n);
-        reclaimToken = ReclaimTokenTuple(t,s,n,true);
-        emit ReclaimToken(t,s,n);
-        return true;
+      if(false==paused.b) {
+        uint m = balanceOf[o].n;
+        uint k = allowance[o][s].n;
+        if(m>=n && k>=n) {
+          updateSpentTotalOnInsertTransferFrom_r27(o,s,n);
+          updateTransferOnInsertTransferFrom_r0(o,r,n);
+          emit TransferFrom(o,r,s,n);
+          return true;
+        }
       }
       return false;
   }
@@ -266,10 +252,15 @@ contract Wbtc {
       updateBalanceOfOnIncrementTotalMint_r6(p,delta0);
       totalMint[p].n += n;
   }
-  function updateBalanceOfOnIncrementTotalMint_r6(address p,int n) private    {
-      int _delta = int(n);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
+  function updateClaimOwnershipOnInsertRecv_claimOwnership_r12() private   returns (bool) {
+      address s = pendingOwner.p;
+      if(s==msg.sender) {
+        updateOwnerOnInsertClaimOwnership_r30(s);
+        updatePendingOwnerOnInsertClaimOwnership_r1();
+        emit ClaimOwnership(s);
+        return true;
+      }
+      return false;
   }
   function updateBalanceOfOnIncrementTotalOut_r6(address p,int o) private    {
       int _delta = int(-o);
@@ -285,6 +276,15 @@ contract Wbtc {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r6(p,delta0);
       totalIn[p].n += n;
+  }
+  function updateIncreaseAllowanceOnInsertRecv_approve_r31(address s,uint n) private   returns (bool) {
+      address o = msg.sender;
+      uint m = allowance[o][s].n;
+      uint d = n-m;
+      updateAllowanceTotalOnInsertIncreaseAllowance_r32(o,s,d);
+      emit IncreaseAllowance(o,s,d);
+      return true;
+      return false;
   }
   function updatePendingOwnerOnInsertRecv_transferOwnership_r22(address p) private   returns (bool) {
       address s = owner.p;
@@ -325,22 +325,6 @@ contract Wbtc {
       int _delta = int(-l);
       uint newValue = updateuintByint(allowance[o][s].n,_delta);
       allowance[o][s].n = newValue;
-  }
-  function updateClaimOwnershipOnInsertRecv_claimOwnership_r12() private   returns (bool) {
-      address s = pendingOwner.p;
-      if(s==msg.sender) {
-        updateOwnerOnInsertClaimOwnership_r30(s);
-        updatePendingOwnerOnInsertClaimOwnership_r1();
-        claimOwnership = ClaimOwnershipTuple(s,true);
-        emit ClaimOwnership(s);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalOutOnInsertTransfer_r24(address p,uint n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalOut_r6(p,delta0);
-      totalOut[p].n += n;
   }
   function updateDecreaseAllowanceTotalOnInsertDecreaseAllowance_r7(address o,address s,uint n) private    {
       int delta0 = int(n);
@@ -403,6 +387,23 @@ contract Wbtc {
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
   }
+  function updateBalanceOfOnIncrementTotalMint_r6(address p,int n) private    {
+      int _delta = int(n);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
+  }
+  function updateReclaimTokenOnInsertRecv_reclaimToken_r23() private   returns (bool) {
+      address s = msg.sender;
+      if(s==owner.p) {
+        address t = address(this);
+        uint n = balanceOf[t].n;
+        updateSendOnInsertReclaimToken_r21(s,n);
+        updateTransferOnInsertReclaimToken_r4(t,s,n);
+        emit ReclaimToken(t,s,n);
+        return true;
+      }
+      return false;
+  }
   function updateAllBurnOnInsertBurn_r29(uint n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllBurn_r19(delta0);
@@ -417,30 +418,6 @@ contract Wbtc {
       updateAllowanceTotalOnInsertIncreaseAllowance_r32(o,s,n);
       emit IncreaseAllowance(o,s,n);
       return true;
-      return false;
-  }
-  function updateIncreaseAllowanceOnInsertRecv_approve_r31(address s,uint n) private   returns (bool) {
-      address o = msg.sender;
-      uint m = allowance[o][s].n;
-      uint d = n-m;
-      updateAllowanceTotalOnInsertIncreaseAllowance_r32(o,s,d);
-      emit IncreaseAllowance(o,s,d);
-      return true;
-      return false;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r13(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      if(false==paused.b) {
-        uint m = balanceOf[o].n;
-        uint k = allowance[o][s].n;
-        if(m>=n && k>=n) {
-          updateSpentTotalOnInsertTransferFrom_r27(o,s,n);
-          updateTransferOnInsertTransferFrom_r0(o,r,n);
-          transferFrom = TransferFromTuple(o,r,s,n,true);
-          emit TransferFrom(o,r,s,n);
-          return true;
-        }
-      }
       return false;
   }
   function updateTotalSupplyOnIncrementAllMint_r19(int m) private    {

@@ -52,13 +52,6 @@ contract Theta {
     bool b;
     bool _valid;
   }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
-    bool _valid;
-  }
   struct BalanceOfTuple {
     uint n;
     bool _valid;
@@ -78,7 +71,6 @@ contract Theta {
   AllMintTuple allMint;
   CanTransferTuple canTransfer;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
   mapping(address=>BalanceOfTuple) balanceOf;
@@ -175,13 +167,13 @@ contract Theta {
       }
       return false;
   }
+  function updateBalanceOfOnIncrementTotalBurn_r9(address p,int m) private    {
+      int _delta = int(-m);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
+  }
   function updateAllowanceOnIncrementAllowanceTotal_r21(address o,address s,int m) private    {
       int _delta = int(m);
-      uint newValue = updateuintByint(allowance[o][s].n,_delta);
-      allowance[o][s].n = newValue;
-  }
-  function updateAllowanceOnIncrementSpentTotal_r21(address o,address s,int l) private    {
-      int _delta = int(-l);
       uint newValue = updateuintByint(allowance[o][s].n,_delta);
       allowance[o][s].n = newValue;
   }
@@ -254,24 +246,6 @@ contract Theta {
       }
       return false;
   }
-  function updateBalanceOfOnIncrementTotalBurn_r9(address p,int m) private    {
-      int _delta = int(-m);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r10(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint m = balanceOf[o].n;
-      uint k = allowance[o][s].n;
-      if(m>=n && k>=n && canTransfer(o,r)) {
-        updateSpentTotalOnInsertTransferFrom_r11(o,s,n);
-        updateTransferOnInsertTransferFrom_r0(o,r,n);
-        transferFrom = TransferFromTuple(o,r,s,n,true);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
-  }
   function updateTotalBalancesOnInsertConstructor_r20() private    {
       // Empty()
   }
@@ -315,6 +289,23 @@ contract Theta {
       int _delta = int(n);
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r10(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint m = balanceOf[o].n;
+      uint k = allowance[o][s].n;
+      if(m>=n && k>=n && canTransfer(o,r)) {
+        updateSpentTotalOnInsertTransferFrom_r11(o,s,n);
+        updateTransferOnInsertTransferFrom_r0(o,r,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
+  }
+  function updateAllowanceOnIncrementSpentTotal_r21(address o,address s,int l) private    {
+      int _delta = int(-l);
+      uint newValue = updateuintByint(allowance[o][s].n,_delta);
+      allowance[o][s].n = newValue;
   }
   function updateTransferOnInsertRecv_transfer_r25(address r,uint n) private   returns (bool) {
       address s = msg.sender;

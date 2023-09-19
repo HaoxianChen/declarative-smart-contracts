@@ -1,1 +1,1 @@
-allMint,totalOut,totalSupplyByPartition,balanceOfByPartition,issueTotalByPartition,redeemTotalByPartition,allBurn,totalIn,owner,totalSupply,totalMint,totalBurn
+totalSupplyByPartition,totalIn,totalOut,totalSupply,owner,totalBurn,allMint,balanceOfByPartition,totalMint,redeemTotalByPartition,allBurn,issueTotalByPartition
