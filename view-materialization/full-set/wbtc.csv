@@ -1,1 +1,1 @@
-owner,pendingOwner,allowance,spentTotal,balanceOf,totalBurn,decreaseAllowanceTotal,claimOwnership,allowanceTotal,totalIn,paused,allMint,totalSupply,totalMint,allBurn,totalOut
+allowance,allMint,totalIn,totalOut,claimOwnership,owner,spentTotal,reclaimToken,decreaseAllowanceTotal,allowanceTotal,totalSupply,transferFrom,pendingOwner,allBurn,totalMint,balanceOf,totalBurn,paused

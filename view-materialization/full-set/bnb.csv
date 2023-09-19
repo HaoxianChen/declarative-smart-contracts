@@ -1,1 +1,1 @@
-owner,freezeOf,allowance,spentTotal,balanceOf,totalFreeze,totalBurn,allowanceTotal,totalIn,allMint,totalSupply,totalMint,totalUnfreeze,allBurn,totalOut
+allowance,allMint,totalIn,totalOut,owner,spentTotal,withdrawEther,totalUnfreeze,totalFreeze,allowanceTotal,totalSupply,transferFrom,totalMint,allBurn,balanceOf,totalBurn,freezeOf

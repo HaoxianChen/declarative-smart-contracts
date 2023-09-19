@@ -39,8 +39,21 @@ contract Controllable {
     uint n;
     bool _valid;
   }
+  struct ControllerTransferTuple {
+    address from;
+    address to;
+    uint amount;
+    bool _valid;
+  }
   struct TotalMintTuple {
     uint n;
+    bool _valid;
+  }
+  struct TransferFromTuple {
+    address from;
+    address to;
+    address spender;
+    uint amount;
     bool _valid;
   }
   struct BalanceOfTuple {
@@ -56,12 +69,14 @@ contract Controllable {
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
   ControllerTuple controller;
-  mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
+  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
+  ControllerTransferTuple controllerTransfer;
+  mapping(address=>TotalMintTuple) totalMint;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
   event TransferFrom(address from,address to,address spender,uint amount);
@@ -130,11 +145,6 @@ contract Controllable {
       updateAllowanceOnIncrementAllowanceTotal_r22(o,s,delta0);
       allowanceTotal[o][s].m += n;
   }
-  function updateTotalSupplyOnIncrementAllBurn_r16(int b) private    {
-      int _delta = int(-b);
-      uint newValue = updateuintByint(totalSupply.n,_delta);
-      totalSupply.n = newValue;
-  }
   function updateTransferFromOnInsertRecv_transferFrom_r25(address o,address r,uint n) private   returns (bool) {
       address s = msg.sender;
       uint k = allowance[o][s].n;
@@ -142,10 +152,16 @@ contract Controllable {
       if(m>=n && k>=n) {
         updateSpentTotalOnInsertTransferFrom_r9(o,s,n);
         updateTransferOnInsertTransferFrom_r0(o,r,n);
+        transferFrom = TransferFromTuple(o,r,s,n,true);
         emit TransferFrom(o,r,s,n);
         return true;
       }
       return false;
+  }
+  function updateTotalSupplyOnIncrementAllBurn_r16(int b) private    {
+      int _delta = int(-b);
+      uint newValue = updateuintByint(totalSupply.n,_delta);
+      totalSupply.n = newValue;
   }
   function updateAllowanceOnIncrementAllowanceTotal_r22(address o,address s,int m) private    {
       int _delta = int(m);

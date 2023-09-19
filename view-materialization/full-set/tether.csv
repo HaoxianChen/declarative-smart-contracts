@@ -1,1 +1,1 @@
-owner,transferFromWithFee,allowance,spentTotal,allRedeem,isBlackListed,balanceOf,addBlackList,transferFrom,totalSupply,totalRedeem,allIssue,totalIssue,allowanceTotal,maxFee,totalIn,rate,totalOut
+allIssue,totalIn,rate,spentTotal,totalRedeem,allRedeem,maxFee,transferFrom,balanceOf,allowance,totalOut,allowanceTotal,transferWithFee,isBlackListed,owner,addBlackList,totalIssue,totalSupply,transferFromWithFee
