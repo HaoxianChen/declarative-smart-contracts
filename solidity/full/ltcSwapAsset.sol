@@ -51,13 +51,6 @@ contract LtcSwapAsset {
     uint t;
     bool _valid;
   }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
-    bool _valid;
-  }
   struct BalanceOfTuple {
     uint n;
     bool _valid;
@@ -75,7 +68,6 @@ contract LtcSwapAsset {
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   NewOwnerTuple newOwner;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   OldOwnerTuple oldOwner;
@@ -142,34 +134,10 @@ contract LtcSwapAsset {
       uint n = balanceOf[p].n;
       return n;
   }
-  function updateBurnOnInsertRecv_burn_r6(address p,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint m = balanceOf[p].n;
-      if(p!=address(0) && n<=m && owner(s)) {
-        updateTotalBurnOnInsertBurn_r14(p,n);
-        updateAllBurnOnInsertBurn_r24(n);
-        emit Burn(p,n);
-        return true;
-      }
-      return false;
-  }
   function updateTransferOnInsertTransferFrom_r0(address o,address r,uint n) private    {
       updateTotalOutOnInsertTransfer_r18(o,n);
       updateTotalInOnInsertTransfer_r11(r,n);
       emit Transfer(o,r,n);
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r23(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint k = allowance[o][s].n;
-      uint m = balanceOf[o].n;
-      if(m>=n && k>=n) {
-        updateTransferOnInsertTransferFrom_r0(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r10(o,s,n);
-        transferFrom = TransferFromTuple(o,r,s,n,true);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
   }
   function updateAllMintOnInsertMint_r3(uint n) private    {
       int delta0 = int(n);
@@ -206,6 +174,29 @@ contract LtcSwapAsset {
         updateOldOwnerOnInsertSwapOwner_r12(p);
         updateNewOwnerOnInsertSwapOwner_r25(q);
         emit SwapOwner(p,q,t);
+        return true;
+      }
+      return false;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r23(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint k = allowance[o][s].n;
+      uint m = balanceOf[o].n;
+      if(m>=n && k>=n) {
+        updateTransferOnInsertTransferFrom_r0(o,r,n);
+        updateSpentTotalOnInsertTransferFrom_r10(o,s,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
+  }
+  function updateBurnOnInsertRecv_burn_r6(address p,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint m = balanceOf[p].n;
+      if(p!=address(0) && n<=m && owner(s)) {
+        updateTotalBurnOnInsertBurn_r14(p,n);
+        updateAllBurnOnInsertBurn_r24(n);
+        emit Burn(p,n);
         return true;
       }
       return false;

@@ -1,1 +1,1 @@
-transferFrom,totalMint,totalSupply,allMint,owner,totalIn,allBurn,allowanceTotal,unlockTime,precirculated,totalOut,balanceOf,spentTotal,canTransfer,totalBurn,allowance
+owner,allowance,spentTotal,balanceOf,canTransfer,totalBurn,unlockTime,allowanceTotal,totalIn,allMint,precirculated,totalSupply,totalMint,allBurn,totalOut

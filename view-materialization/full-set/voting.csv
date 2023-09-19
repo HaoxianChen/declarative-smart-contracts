@@ -1,1 +1,1 @@
-quorumSize,wins,winningProposal,isVoter,hasWinner,votes,vote,voted
+isVoter,quorumSize,hasWinner,wins,winningProposal,voted,vote,votes

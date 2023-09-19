@@ -39,13 +39,6 @@ contract Shib {
     uint n;
     bool _valid;
   }
-  struct TransferFromTuple {
-    address from;
-    address to;
-    address spender;
-    uint amount;
-    bool _valid;
-  }
   struct BalanceOfTuple {
     uint n;
     bool _valid;
@@ -62,7 +55,6 @@ contract Shib {
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
-  TransferFromTuple transferFrom;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
   mapping(address=>BalanceOfTuple) balanceOf;
@@ -131,6 +123,11 @@ contract Shib {
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
   }
+  function updateTransferFromOnInsertBurnFrom_r23(address s,address p,uint n) private    {
+      updateTransferOnInsertTransferFrom_r0(s,p,n);
+      updateSpentTotalOnInsertTransferFrom_r7(s,address(0),n);
+      emit TransferFrom(s,p,address(0),n);
+  }
   function updateTotalOutOnInsertTransfer_r15(address p,uint n) private    {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalOut_r6(p,delta0);
@@ -156,19 +153,6 @@ contract Shib {
       int _delta = int(m);
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r20(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint k = allowance[o][s].n;
-      uint m = balanceOf[o].n;
-      if(m>=n && k>=n) {
-        updateTransferOnInsertTransferFrom_r0(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r7(o,s,n);
-        transferFrom = TransferFromTuple(o,r,s,n,true);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
   }
   function updateBalanceOfOnIncrementTotalOut_r6(address p,int o) private    {
       int _delta = int(-o);
@@ -206,6 +190,18 @@ contract Shib {
           emit Burn(p,n);
           return true;
         }
+      }
+      return false;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r20(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint k = allowance[o][s].n;
+      uint m = balanceOf[o].n;
+      if(m>=n && k>=n) {
+        updateTransferOnInsertTransferFrom_r0(o,r,n);
+        updateSpentTotalOnInsertTransferFrom_r7(o,s,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
       }
       return false;
   }
@@ -274,12 +270,6 @@ contract Shib {
   }
   function updateTotalSupplyOnInsertConstructor_r1() private    {
       totalSupply = TotalSupplyTuple(0,true);
-  }
-  function updateTransferFromOnInsertBurnFrom_r23(address s,address p,uint n) private    {
-      updateTransferOnInsertTransferFrom_r0(s,p,n);
-      updateSpentTotalOnInsertTransferFrom_r7(s,address(0),n);
-      transferFrom = TransferFromTuple(s,p,address(0),n,true);
-      emit TransferFrom(s,p,address(0),n);
   }
   function updateAllMintOnInsertMint_r3(uint n) private    {
       int delta0 = int(n);

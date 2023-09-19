@@ -55,13 +55,6 @@ contract Tether {
     uint amount;
     bool _valid;
   }
-  struct TransferWithFeeTuple {
-    address from;
-    address to;
-    uint fee;
-    uint amount;
-    bool _valid;
-  }
   struct RateTuple {
     uint r;
     bool _valid;
@@ -89,6 +82,7 @@ contract Tether {
   mapping(address=>TotalIssueTuple) totalIssue;
   OwnerTuple owner;
   AllIssueTuple allIssue;
+  RateTuple rate;
   TotalSupplyTuple totalSupply;
   mapping(address=>IsBlackListedTuple) isBlackListed;
   AddBlackListTuple addBlackList;
@@ -100,8 +94,6 @@ contract Tether {
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
   mapping(address=>TotalInTuple) totalIn;
   TransferFromWithFeeTuple transferFromWithFee;
-  TransferWithFeeTuple transferWithFee;
-  RateTuple rate;
   mapping(address=>TotalRedeemTuple) totalRedeem;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   event Issue(address p,uint amount);
@@ -159,6 +151,12 @@ contract Tether {
         revert("Rule condition failed");
       }
   }
+  function updateTransferFromOnInsertTransferFromWithFee_r18(address o,address r,address s,uint f,uint n) private    {
+      uint m = n-f;
+      updateSpentTotalOnInsertTransferFrom_r21(o,s,m);
+      updateTransferOnInsertTransferFrom_r1(o,r,m);
+      transferFrom = TransferFromTuple(o,r,s,m,true);
+  }
   function updateBalanceOfOnInsertConstructor_r8(uint n) private    {
       address s = msg.sender;
       balanceOf[s] = BalanceOfTuple(n,true);
@@ -190,38 +188,10 @@ contract Tether {
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
   }
-  function updateBalanceOfOnIncrementTotalOut_r6(address p,int o) private    {
-      int _delta = int(-o);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
-  }
   function updateAllIssueOnInsertIssue_r27(uint n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllIssue_r2(delta0);
       allIssue.n += n;
-  }
-  function updateTransferWithFeeOnInsertRecv_transfer_r7(address r,uint n) private   returns (bool) {
-      uint rt = rate.r;
-      uint mf = maxFee.m;
-      address s = msg.sender;
-      uint m = balanceOf[s].n;
-      if(false==isBlackListed[s].b) {
-        if(n<=m) {
-          uint f = (rt*n)/10000 < mf ? (rt*n)/10000 : mf;
-          updateTransferOnInsertTransferWithFee_r3(s,r,f);
-          updateTransferOnInsertTransferWithFee_r17(s,r,f,n);
-          transferWithFee = TransferWithFeeTuple(s,r,f,n,true);
-          emit TransferWithFee(s,r,f,n);
-          return true;
-        }
-      }
-      return false;
-  }
-  function updateTransferFromOnInsertTransferFromWithFee_r18(address o,address r,address s,uint f,uint n) private    {
-      uint m = n-f;
-      updateSpentTotalOnInsertTransferFrom_r21(o,s,m);
-      updateTransferOnInsertTransferFrom_r1(o,r,m);
-      transferFrom = TransferFromTuple(o,r,s,m,true);
   }
   function updateTotalSupplyOnIncrementAllRedeem_r2(int b) private    {
       int _delta = int(-b);
@@ -340,6 +310,27 @@ contract Tether {
       address o = owner.p;
       updateTotalInOnInsertTransfer_r28(o,f);
       updateTotalOutOnInsertTransfer_r19(s,f);
+  }
+  function updateTransferWithFeeOnInsertRecv_transfer_r7(address r,uint n) private   returns (bool) {
+      uint rt = rate.r;
+      uint mf = maxFee.m;
+      address s = msg.sender;
+      uint m = balanceOf[s].n;
+      if(false==isBlackListed[s].b) {
+        if(n<=m) {
+          uint f = (rt*n)/10000 < mf ? (rt*n)/10000 : mf;
+          updateTransferOnInsertTransferWithFee_r3(s,r,f);
+          updateTransferOnInsertTransferWithFee_r17(s,r,f,n);
+          emit TransferWithFee(s,r,f,n);
+          return true;
+        }
+      }
+      return false;
+  }
+  function updateBalanceOfOnIncrementTotalOut_r6(address p,int o) private    {
+      int _delta = int(-o);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
   }
   function updateTotalSupplyOnInsertConstructor_r22(uint n) private    {
       totalSupply = TotalSupplyTuple(n,true);

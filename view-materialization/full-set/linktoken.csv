@@ -1,1 +1,1 @@
-transferFrom,totalMint,totalSupply,allMint,owner,totalIn,allBurn,allowanceTotal,decreaseAllowanceTotal,validRecipient,totalOut,balanceOf,spentTotal,totalBurn,allowance
+owner,allowance,spentTotal,balanceOf,totalBurn,decreaseAllowanceTotal,validRecipient,allowanceTotal,totalIn,allMint,totalSupply,totalMint,allBurn,totalOut
