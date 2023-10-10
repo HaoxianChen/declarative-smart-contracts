@@ -23,15 +23,6 @@ contract Erc777 {
     bool b;
     bool _valid;
   }
-  struct OperatorSendTuple {
-    address o;
-    address r;
-    address s;
-    uint n;
-    uint data;
-    uint operatorData;
-    bool _valid;
-  }
   struct TotalBurnTuple {
     uint n;
     bool _valid;
@@ -70,14 +61,13 @@ contract Erc777 {
   }
   mapping(address=>TotalInTuple) totalIn;
   mapping(address=>TotalOutTuple) totalOut;
+  mapping(address=>TotalBurnTuple) totalBurn;
   mapping(address=>TotalMintTuple) totalMint;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>RevokedDefaultOperatorTuple)) revokedDefaultOperator;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
-  OperatorSendTuple operatorSend;
-  mapping(address=>TotalBurnTuple) totalBurn;
   mapping(address=>DefaultOperatorTuple) defaultOperator;
   OwnerTuple owner;
   mapping(address=>mapping(address=>OperatorsTuple)) operators;

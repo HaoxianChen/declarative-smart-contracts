@@ -39,12 +39,6 @@ contract Controllable {
     uint n;
     bool _valid;
   }
-  struct ControllerTransferTuple {
-    address from;
-    address to;
-    uint amount;
-    bool _valid;
-  }
   struct TotalMintTuple {
     uint n;
     bool _valid;
@@ -62,13 +56,12 @@ contract Controllable {
   mapping(address=>TotalBurnTuple) totalBurn;
   OwnerTuple owner;
   ControllerTuple controller;
+  mapping(address=>TotalMintTuple) totalMint;
   TotalSupplyTuple totalSupply;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
-  ControllerTransferTuple controllerTransfer;
-  mapping(address=>TotalMintTuple) totalMint;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
   event TransferFrom(address from,address to,address spender,uint amount);

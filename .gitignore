@@ -2,4 +2,7 @@ target/
 project/
 view-materialization/full-manual-bw
 view-materialization/target
-solidity/experiments
+solidity/experiment
+view-materialization/experiment
+view-materialization/target
+truffle-config.js
