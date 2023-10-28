@@ -69,6 +69,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
     val tr = TransitionSystem(program.name, ctx)
 
+    /** Variable keeps track of the current transaction name. */
+    val (_, transactionNext) = tr.newVar("transaction", ctx.mkStringSort())
+
     var initConditions: List[BoolExpr] = List()
     for (rel <- materializedRelations) {
       val sort = getSort(ctx, rel, getIndices(rel))
@@ -78,7 +81,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
     tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
 
-    val transitionConditions = getTransitionConstraints()
+    val transitionConditions = getTransitionConstraints(transactionNext)
     tr.setTr(transitionConditions)
 
     for (vr <- violationRules) {
@@ -164,7 +167,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
   }
 
-  private def getTransitionConstraints(): BoolExpr = {
+  private def getTransitionConstraints(transactionNext: Expr[_]): BoolExpr = {
 
     val triggers: Set[Trigger] = {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionRelationPrefix))
@@ -179,18 +182,24 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       var i: Int = 0
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
       for (rule <- triggeredRules) {
-        val ruleConsrtaint: BoolExpr = ruleToExpr(rule, t)
+        val ruleConstraint: BoolExpr = ruleToExpr(rule, t)
 
         /** Add the "unchanged" constraints */
-        val unchangedConstraints: List[BoolExpr] = getUnchangedConstraints(ruleConsrtaint)
+        val unchangedConstraints: List[BoolExpr] = getUnchangedConstraints(ruleConstraint)
 
         /** A boolean value indicating which transaction branch gets evaluate to true */
         val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
         i += 1
 
+        /** Indicator for transaction name. */
+        val trNameConstraint = ctx.mkEq(transactionNext, ctx.mkString(t.relation.name))
+
         transactionConst +:= trConst
         transactionConstraints +:= ctx.mkAnd(
-          (ctx.mkEq(trConst, ctx.mkInt(1)) :: ruleConsrtaint :: unchangedConstraints).toArray: _*)
+          (trNameConstraint
+            :: ctx.mkEq(trConst, ctx.mkInt(1))
+            :: ruleConstraint
+            :: unchangedConstraints).toArray: _*)
       }
     }
 

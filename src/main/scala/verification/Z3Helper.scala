@@ -1,7 +1,7 @@
 package verification
 
 import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
-import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, This, Type, Unequal, Variable, Zero}
+import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, This, Transaction, Type, Unequal, Variable, Zero}
 
 object Z3Helper {
   val uintSize: Int = 32
@@ -96,6 +96,7 @@ object Z3Helper {
             val relConst = ctx.mkConst(lit.relation.name, getSort(ctx, lit.relation, indices))
             ctx.mkEq(relConst, x)
           }
+          case Transaction() => ctx.mkEq(ctx.mkConst("transaction",ctx.mkStringSort()), ctx.mkString(lit.fields(0).name))
           case Send() => ???
           case Receive() => ???
         }

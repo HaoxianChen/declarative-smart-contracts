@@ -37,7 +37,7 @@ sealed abstract class Relation {
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
-    MsgSender(), MsgValue(), Now(), Send(), Balance(), Receive(), This()
+    MsgSender(), MsgValue(), Now(), Send(), Balance(), Receive(), This(), Transaction()
   )
 }
 
@@ -78,6 +78,11 @@ case class This() extends ReservedRelation {
   def name: String = "this"
   def sig: List[Type] = List(Type.addressType)
   def memberNames: List[String] = List("p")
+}
+case class Transaction() extends ReservedRelation {
+  def name: String = "transaction"
+  def sig: List[Type] = List(SymbolType("String"))
+  def memberNames: List[String] = List("name")
 }
 
 case class Literal(relation: Relation, fields: List[Parameter]) {
