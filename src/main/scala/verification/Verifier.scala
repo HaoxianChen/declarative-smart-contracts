@@ -262,9 +262,10 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
             var ret: List[(Trigger,Rule)] = List()
             for (t <- trueBranch.nextTriggers) {
               for (tr <- getTriggeredRules(t)) {
-                for (nt <- views(tr).getTriggersForView(t)) {
-                  ret :+= (nt, tr)
-                }
+                ret :+= (t,tr)
+                // for (nt <- views(tr).getTriggersForView(t)) {
+                //    ret :+= (nt, tr)
+                // }
               }
             }
             ret
@@ -303,7 +304,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
         trueBranchWithDependentConstraints
       }
 
-      (thisId, allConstraints)
+      val allConstraintsSimplified = allConstraints.simplify().asInstanceOf[BoolExpr]
+
+      (thisId, allConstraintsSimplified)
     }
 
     val (_, expr) = _ruleToExpr(rule,trigger)

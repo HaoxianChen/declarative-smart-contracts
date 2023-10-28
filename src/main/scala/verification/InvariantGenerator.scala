@@ -91,26 +91,29 @@ case class InvariantGenerator(ctx: Context, program: Program,
 
     var candidates: Set[BoolExpr] = Set()
 
+    def getPremisesFromInitConstraint(): (Array[BoolExpr], Array[Expr[_]], Array[Type]) = {
+      var initConditions: Array[BoolExpr] = Array()
+      var _keyConsts: Array[Expr[_]] = Array()
+      var _keyTypes: Array[Type] = Array()
+      for (rel <- materializedRelations.intersect(propertyRule.body.map(_.relation))) {
+        val sort = getSort(ctx, rel, getIndices(rel))
+        val (v_in, _) = makeStateVar(ctx, rel.name, sort)
+
+        val (_init, _keys, _kts) = getInitConstraints(ctx, rel, v_in, indices, isQuantified = false)
+        initConditions :+= _init
+        _keyConsts ++= _keys
+        _keyTypes ++= _kts
+      }
+      // (ctx.mkNot(ctx.mkAnd(initConditions:_*)), _keyConsts, _keyTypes)
+      (initConditions.map(i => ctx.mkNot(i)), _keyConsts, _keyTypes)
+    }
+
     for (rule <- transactionRules) {
       val _preds = predicateExtractor.extractPredicates(ctx,rule,prefix)
       val predicates: Set[BoolExpr] = _preds.map(
         p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
 
-      val (premise, keyConsts, keyTypes) = {
-        var initConditions: Array[BoolExpr] = Array()
-        var _keyConsts: Array[Expr[_]] = Array()
-        var _keyTypes: Array[Type] = Array()
-        for (rel <- materializedRelations.intersect(propertyRule.body.map(_.relation))) {
-          val sort = getSort(ctx, rel, getIndices(rel))
-          val (v_in, _) = makeStateVar(ctx, rel.name, sort)
-
-          val (_init, _keys, _kts) = getInitConstraints(ctx, rel, v_in, indices, isQuantified = false)
-          initConditions :+= _init
-          _keyConsts ++= _keys
-          _keyTypes ++= _kts
-        }
-        (ctx.mkNot(ctx.mkAnd(initConditions:_*)), _keyConsts, _keyTypes)
-      }
+      val (premises, keyConsts, keyTypes) = getPremisesFromInitConstraint()
 
       /** Conjunct the premise with predicates form rules */
       val predicatesOnKeys: Set[BoolExpr] = {
@@ -119,7 +122,11 @@ case class InvariantGenerator(ctx: Context, program: Program,
         _preds.map(p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
       }
 
-      val conditionalPremises: Set[BoolExpr] = predicatesOnKeys.map(p => ctx.mkAnd(premise, p))
+      val conditionalPremises: Set[BoolExpr] = {
+        // predicatesOnKeys.map(p => ctx.mkAnd(premise, p))
+        predicatesOnKeys.flatMap(
+          p => premises.map(i=> ctx.mkAnd(i, p)))
+      }
 
       /** Bind the key variable to predicates */
       var from: Array[Expr[_]] = Array()
@@ -134,7 +141,8 @@ case class InvariantGenerator(ctx: Context, program: Program,
       }
 
       /** Generate invariants in the form of implications */
-      for (eachPremise <- conditionalPremises+premise) {
+      // for (eachPremise <- conditionalPremises+premise) {
+      for (eachPremise <- conditionalPremises++premises) {
         for (eachPred <- predicates) {
           val conclusion = ctx.mkNot(eachPred).simplify()
           val inv = if (keyConsts.nonEmpty) {
