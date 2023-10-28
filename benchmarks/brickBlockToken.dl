@@ -1,0 +1,174 @@
+// parameters
+.decl *owner(p: address)
+.decl *paused(p: bool)
+.decl constructor()
+
+// views
+.decl allowed(p: address, p2: address, a: uint)[0,1]
+
+// Constructor
+owner(s) :- constructor(), msgSender(s).
+paused(a) :- constructor(), a:=false.
+
+// ownable
+.decl recv_transferownership(_new: address)
+.decl transferOwnership(old: address, _new: address)
+
+transferOwnership(s,_new) :- recv_transferownership(_new), 
+                        msgSender(s), owner(s), _new!=0.
+owner(_new) :- transferOwnership(_,_new).
+
+// pausable
+.decl recv_pause()
+.decl pause()
+pause() :- recv_pause(), msgSender(s), owner(s), paused(a), a!=true.
+paused(a) :- pause(), a:=true.
+
+// basicToken
+.decl *totalSupply(a:uint)
+.decl balances(p: address, a: uint)[0]
+
+.decl recv_transfer(to: address, a: uint)
+.decl transfer(from: address, to: address, a:uint)
+
+transfer(s,r,n) :- recv_transfer(r,n), paused(false), msgSender(s), r!=0, balances(s,m), n<=m.
+
+// standardToken
+.decl recv_transferFrom(from: address, to: address, a: uint)
+.decl recv_approve(s: address, n: uint)
+.decl recv_increaseApproval(s: address, a:uint)
+.decl recv_decreaseApproval(s: address, a:uint)
+.public recv_transfer
+.public recv_transferFrom
+.public recv_approve
+.public recv_increaseApproval
+.public recv_decreaseApproval
+
+.decl transferFrom(operator: address, from: address, to: address, a: uint)
+transferFrom(s,f,r,n) :- recv_transferFrom(f,r,n), r!=0, balances(f,m), n<=m, 
+                    msgSender(s), allowed(f,s,a), n<=a.
+
+.decl totalIn(p:address,n:uint)[0]
+.decl totalOut(p:address,n:uint)[0]
+transfer(s,r,n) :- transferFrom(_,s,r,n).
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n). 
+balances(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
+            
+.decl spentTotal(o:address, s:address, m:uint)[0,1]
+spentTotal(f,s,m) :- transferFrom(f,s,_,_), m = sum n: transferFrom(f,s,_,n).
+
+
+.decl approve(owner: address, operator:address, n: uint)
+approve(s,o,n) :- recv_approve(o,n), msgSender(s).
+
+.decl increaseAllowance(o: address, s: address, d: uint)
+increaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n>m, d:=n-m.
+increaseAllowance(o,s,m) :- recv_increaseApproval(s,m), msgSender(o).
+
+.decl decreaseAllowance(o: address, s:address, a:uint)[0,1]
+decreaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n<m, d:=m-n.
+decreaseAllowance(o,s,d) :- recv_decreaseApproval(s,m), msgSender(o),
+                        allowed(o,s,n), n>=m, d:=n-m.  
+
+.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl decreaseTotal(o:address, s:address, m:uint)[0,1]
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_), m = sum n: decreaseAllowance(f,s,n).
+
+allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d), m := n-l-d.
+            
+
+// BrickblockToken
+.decl *predecessorAddress(p:address)
+.decl *bonusDistributionAddress(p:address)
+.decl *fountainContractAddress(p:address)
+.decl *tokenSaleActive(b:bool)
+.decl *dead(b:bool)
+.decl *initialSupply(a:uint)
+
+.decl BrickblockToken()
+// initialSupply(a) :- BrickblockToken(), a:= 500 * (10 ** 6) * (10 ** uint256(decimals)).
+initialSupply(a) :- BrickblockToken(), a:= 500 * 1000000.
+dead(b) :- BrickblockToken(), b:=false.
+tokenSaleActive(b) :- BrickblockToken(), b:=true.
+
+.decl unpause()
+.decl recv_unpause()
+.public recv_unpause
+unpause() :- recv_unpause(), msgSender(s), owner(s), paused(b), b==true, dead(false). 
+paused(false) :- unpause().
+
+.decl recv_changeBonusDistributionAddress(p:address)
+bonusDistributionAddress(a) :- recv_changeBonusDistributionAddress(a),
+                                        msgSender(s), owner(s), this(thisAddr), thisAddr!=a.
+
+.decl recv_changeFountainContractAddress(p:address)
+.public recv_changeFountainContractAddress
+fountainContractAddress(a):- recv_changeFountainContractAddress(a),
+                                msgSender(s), owner(s), a!=s, this(thisAddr), thisAddr!=a.
+
+.decl recv_distributeTokens(p:address, v:uint)
+.public recv_distributeTokens
+.decl distributeTokens(p:address, v:uint)
+distributeTokens(a, n) :- recv_distributeTokens(a,n), msgSender(s), owner(s),
+                                    tokenSaleActive(b), b==true, a!=0, a!=s.
+transfer(s,p,n) :- distributeTokens(p,n), this(s).
+
+.decl finalizeTokenSale()
+.decl recv_finalizeTokenSale()
+.public recv_finalizeTokenSale
+.decl *bonusShare(n: uint)
+.decl *companyShare(n: uint)
+finalizeTokenSale() :- recv_finalizeTokenSale(), msgSender(s), owner(s), tokenSaleActive(true),
+                bonusDistributionAddress(a), a!=0, fountainContractAddress(fa), fa!=0.
+transfer(p,bda,n) :- finalizeTokenSale(), this(p), bonusDistributionAddress(bda), bonusShare(bs),
+                initialSupply(s), n := s * bs / 100.
+tokenSaleActive(false) :- finalizeTokenSale().
+
+.decl recv_upgrade(p: address)
+.public recv_upgrade
+.decl upgrade(p: address)
+upgrade(p) :- recv_upgrade(p), msgSender(s), owner(s), p!=0.
+dead(true) :- upgrade(_).
+paused(true):- upgrade(_).
+
+
+// .decl noEtherTransfer()
+// .violation noEtherTransfer
+// noEtherTransfer() :- dead(true), paused(false).
+
+.decl *onceEndSale(b: bool)
+onceEndSale(false) :- constructor().
+onceEndSale(true) :- finalizeTokenSale().
+
+.decl transferAfterEndSale()
+.violation transferAfterEndSale
+transferAfterEndSale() :- transaction(recv_distributeTokens), onceEndSale(true).
+
+// .decl distributedTokens(n: uint)
+// .decl companyTokens(n: uint)
+// .decl bonusTokens(n: uint)
+// .decl newTotalSupply(n: uint)
+// .function distributedTokens
+// .function companyTokens
+// .function newTotalSupply
+// {
+//     function bonusToken(): uint = {
+//     }
+//     function distributedTokens(): uint = {
+//         uint s = initialSupply.n;
+//         return s - balances[this].n;
+//     }
+//     function newTotalSupply(): uint = {
+//         return distributedTokens() + bonusTokens() + companyTokens();
+//     }
+// }
+// distributedTokens(dt) :- initialSupply(s), this(p), balances(p,n), dt := s - n.
+// companyTokens(ct) :- companyShare(cs),initialSupply(s), ct := s * cs / 100.
+//
+// bonusTokens(bt) :- bonusShare(bs),initialSupply(s), bt := s * bs / 100.
+// newTotalSupply(nts) :- distributedTokens(dt), bonusTokens(bt), companyTokens(ct), nts := dt+bt+ct.
+//
+// transfer(p,0,n) :- finalizeTokenSale(),this(p), totalSupply(m), n := m - newTotalSupply().
+// approve(p,fa,ct) :- finalizeTokenSale(),this(p), fountainContractAddress(fa), companyTokens(ct).

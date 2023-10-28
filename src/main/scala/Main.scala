@@ -11,7 +11,9 @@ object Main extends App {
   val outDir = "solidity/dsc"
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
-  val allBenchmarks = List("crowFunding.dl", "erc20.dl",
+  val allBenchmarks = List(
+    "crowFunding.dl",
+    "erc20.dl",
     "nft.dl",
     "wallet.dl",
     "vestingWallet.dl",
@@ -29,7 +31,9 @@ object Main extends App {
     "shib.dl",
     "linktoken.dl",
     "voting.dl",
-    "auction.dl")
+    "brickBlockToken.dl",
+    "auction.dl"
+    )
 
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
