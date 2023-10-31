@@ -35,6 +35,13 @@ object Main extends App {
     "auction.dl"
     )
 
+    val invariantGenerationBenchmarks = List(
+      "crowFunding.dl",
+      "voting.dl",
+      "brickBlockToken.dl",
+      "auction.dl"
+    )
+
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
       val materializedRelationNames: Set[String] = {
@@ -103,6 +110,18 @@ object Main extends App {
     case unknown :: _ =>
       println(s"Unknown option: $unknown")
       exit(1)
+  }
+
+  def runVerification(p: String): Unit = {
+    println(p)
+    val filepath = Paths.get(benchmarkDir, p).toString
+    val dl = parseProgram(filepath)
+    val materializedRelations: Set[Relation] = Set()
+    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
+      enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
+    val imperative = impTranslator.translate()
+    val verifier = new Verifier(dl, imperative)
+    verifier.check()
   }
 
   if (args(0) == "compile") {
@@ -193,15 +212,13 @@ object Main extends App {
 
   else if (args(0) == "test-verification") {
     for (p <- allBenchmarks) {
-      println(p)
-      val filepath = Paths.get(benchmarkDir, p).toString
-      val dl = parseProgram(filepath)
-      val materializedRelations: Set[Relation] = Set()
-      val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
-        enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
-      val imperative = impTranslator.translate()
-      val verifier = new Verifier(dl, imperative)
-      verifier.check()
+      runVerification(p)
+    }
+  }
+
+  else if (args(0) == "test-invariant-generator") {
+    for (p<-invariantGenerationBenchmarks) {
+      runVerification(p)
     }
   }
 
@@ -214,7 +231,7 @@ object Main extends App {
         enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
       val relationDependencies = impTranslator.getRelationDependencies()
       // write to files
-      val outfile = s"relation-dependencies/${dl.name}.csv"
+      val outfile = s"view-materialization/relation-dependencies/${dl.name}.csv"
       val preamble = s"#body,head,ruleId,isAgg,isTx\n"
       val sortedEdges = relationDependencies.toList.sortBy(_._3)
       val edgeStr = sortedEdges.map(t=>s"${t._1.name},${t._2.name},${t._3},${t._4},${t._5}")
