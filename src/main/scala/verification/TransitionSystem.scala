@@ -8,12 +8,17 @@ case class TransitionSystem(name: String, ctx: Context) {
   private var variables: Set[(Expr[_], Expr[_])] = Set()
   private var init: BoolExpr = ctx.mkTrue()
   private var tr: BoolExpr = ctx.mkTrue()
+  private var trs: Set[BoolExpr] = Set()
 
   def setInit(_init: BoolExpr): Unit = init = _init
-  def setTr(_tr: BoolExpr): Unit = tr = _tr
+  def setTr(_tr: BoolExpr, _trs: Set[BoolExpr]): Unit = {
+    tr = _tr
+    trs = _trs
+  }
 
   def getInit(): BoolExpr = init
   def getTr(): BoolExpr = tr
+  def getTrs(): Set[BoolExpr] = trs
 
   def newVar[T<:Sort](name: String, sort: T): (Expr[T], Expr[T]) = {
     val (v_in,v_out) = makeStateVar(ctx, name, sort)
@@ -93,7 +98,7 @@ object TransitionSystem {
     )
 
     tr.setInit(init)
-    tr.setTr(ctx.mkOr(trTransferFrom, trSetAllowance))
+    tr.setTr(ctx.mkOr(trTransferFrom, trSetAllowance), Set(trTransferFrom,trSetAllowance))
     // tr.setTr(trMint)
 
     // val property = ctx.mkNot(ctx.mkExists(

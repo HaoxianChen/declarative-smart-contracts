@@ -1,16 +1,17 @@
 package verification
 
-import com.microsoft.z3.{BoolExpr, Context, Expr, Status}
+import com.microsoft.z3.{BoolExpr, Context, Expr, Sort, Status}
 import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Type}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.Prove.prove
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{getSort, paramToConst}
-import Verifier.{getInitConstraints, simplifyByRenamingConst}
+import verification.Z3Helper.{getSort, literalToConst, paramToConst}
+import Verifier.{_getDefaultConstraints, simplifyByRenamingConst}
 
 case class InvariantGenerator(ctx: Context, program: Program,
                               materializedRelations: Set[Relation],
                               indices: Map[SimpleRelation, List[Int]],
+                              _getInitConstraints: (Relation, Expr[Sort]) => (BoolExpr, Array[Expr[_]], Array[Type]),
                               debug: Boolean=false) {
 
   private val predicateExtractor = PredicateExtractor(program.rules, indices, program.functions)
@@ -86,7 +87,8 @@ case class InvariantGenerator(ctx: Context, program: Program,
     Some(ctx.mkAnd(candidates.toArray:_*))
   }
 
-  private def generateCandidateInvariants(ctx: Context, propertyRule: Rule, prefix: String): Set[BoolExpr] = {
+  private def generateCandidateInvariants(ctx: Context, propertyRule: Rule, prefix: String,
+                                         ): Set[BoolExpr] = {
     val transactionRules: Set[Rule] = program.rules.filter(r => r.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
 
     var candidates: Set[BoolExpr] = Set()
@@ -99,7 +101,8 @@ case class InvariantGenerator(ctx: Context, program: Program,
         val sort = getSort(ctx, rel, getIndices(rel))
         val (v_in, _) = makeStateVar(ctx, rel.name, sort)
 
-        val (_init, _keys, _kts) = getInitConstraints(ctx, rel, v_in, indices, isQuantified = false)
+        // val (_init, _keys, _kts) = _getDefaultConstraints(ctx,rel, v_in, indices, isQuantified = false)
+        val (_init, _keys, _kts) = _getInitConstraints(rel, v_in)
         initConditions :+= _init
         _keyConsts ++= _keys
         _keyTypes ++= _kts
@@ -114,6 +117,11 @@ case class InvariantGenerator(ctx: Context, program: Program,
         p=>simplifyByRenamingConst(p,constOnly = false).simplify().asInstanceOf[BoolExpr])
 
       val (premises, keyConsts, keyTypes) = getPremisesFromInitConstraint()
+
+      val premisesFromProperty = {
+        val _lits = propertyRule.body.filter(_.relation.isInstanceOf[SingletonRelation])
+        _lits.map(_lit=>literalToConst(ctx, _lit, List(), prefix=""))
+      }
 
       /** Conjunct the premise with predicates form rules */
       val predicatesOnKeys: Set[BoolExpr] = {
@@ -142,7 +150,7 @@ case class InvariantGenerator(ctx: Context, program: Program,
 
       /** Generate invariants in the form of implications */
       // for (eachPremise <- conditionalPremises+premise) {
-      for (eachPremise <- conditionalPremises++premises) {
+      for (eachPremise <- conditionalPremises++premises++premisesFromProperty) {
         for (eachPred <- predicates) {
           val conclusion = ctx.mkNot(eachPred).simplify()
           val inv = if (keyConsts.nonEmpty) {

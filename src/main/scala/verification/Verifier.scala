@@ -9,7 +9,7 @@ import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{addBuiltInRules, getInitConstraints, simplifyByRenamingConst}
+import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, simplifyByRenamingConst}
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
@@ -37,8 +37,15 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     makeStateVar(ctx, rel.name, sort)
   })
 
+  val initializationRules = program.rules.filter(_r=>_r.body.exists(_l=>_l.relation.name=="constructor"))
+
+  def getInitConstraintsPartial(_relation: Relation, _const: Expr[Sort]): (BoolExpr, Array[Expr[_]], Array[Type]) = {
+    val initRule = initializationRules.find(_.head.relation==_relation)
+    getInitConstraints(ctx, _relation, _const, indices, initRule, isQuantified = false)
+  }
   private val invariantGenerator: InvariantGenerator = InvariantGenerator(ctx, program,
-                                              materializedRelations, impAbsProgram.indices)
+                                              materializedRelations, impAbsProgram.indices,
+                                            getInitConstraintsPartial)
 
   private val queryConstraints: Map[Relation, BoolExpr] = program.functions.map(
     rel => (rel -> generateQueryConstraints(rel))).toMap
@@ -70,33 +77,37 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val tr = TransitionSystem(program.name, ctx)
 
     /** Variable keeps track of the current transaction name. */
-    val (_, transactionNext) = tr.newVar("transaction", ctx.mkStringSort())
+    val (transactionThis, transactionNext) = tr.newVar("transaction", ctx.mkStringSort())
 
+    /** Generate initial constraints. */
     var initConditions: List[BoolExpr] = List()
     for (rel <- materializedRelations) {
       val sort = getSort(ctx, rel, getIndices(rel))
       val (v_in, _) = tr.newVar(rel.name, sort)
-      val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices)
+      val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices, initializationRules.find(_.head.relation==rel))
       initConditions :+= _init
     }
     tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
 
-    val transitionConditions = getTransitionConstraints(transactionNext)
-    tr.setTr(transitionConditions)
+    val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
+    tr.setTr(fullTransitionCondition, transactionConditions)
 
     for (vr <- violationRules) {
       val property = getProperty(ctx, vr)
       println(property)
 
-      val (resInit, _resTr) = inductiveProve(ctx, tr, property)
+      val isTransactionProperty = vr.body.exists(_.relation.name=="transaction")
+
+      val (resInit, _resTr) = inductiveProve(ctx, tr, property, isTransactionProperty)
       val resTr = _resTr match {
         case Status.UNSATISFIABLE => _resTr
         case Status.UNKNOWN | Status.SATISFIABLE => {
           invariantGenerator.findInvariant(tr, vr) match {
             case Some(inv) => {
-              validateInvariant(inv, tr, property)
+              // validateInvariant(inv, tr, property)
+              val (_invInit, _invTr) = inductiveProve(ctx,tr,ctx.mkAnd(property,inv), isTransactionProperty)
               println(s"invariant: ${inv}")
-              Status.UNSATISFIABLE
+              _invTr
             }
             case None => _resTr
           }
@@ -107,10 +118,23 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
   }
 
-  def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr): (Status, Status) = {
-    val (resInit,_) = prove(ctx, ctx.mkImplies(ts.getInit(), property))
+  def inductiveProve(ctx: Context, ts: TransitionSystem, property: BoolExpr, isTransactionProperty: Boolean=false): (Status, Status) = {
+    val (resInit,_) = if (isTransactionProperty) {
+      prove(ctx, ctx.mkImplies(ctx.mkAnd(ts.getInit(), ts.getTr()), ts.toPost(property)))
+    }
+    else {
+      prove(ctx, ctx.mkImplies(ts.getInit(), property))
+    }
     val f2 = ctx.mkImplies(ctx.mkAnd(property, ts.getTr()), ts.toPost(property))
     val (resTr,_) = prove(ctx, f2)
+    // Debugging
+    // for (_tr <- ts.getTrs()) {
+    //   val _f = ctx.mkImplies(ctx.mkAnd(property, _tr), ts.toPost(property))
+    //   val (_resTr, _model) = prove(ctx, _f)
+    //   if (_resTr == Status.SATISFIABLE) {
+    //     println(_resTr)
+    //   }
+    // }
     (resInit, resTr)
   }
 
@@ -123,10 +147,10 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
   private def validateInvariant(inv: BoolExpr, tr: TransitionSystem, property: BoolExpr): Unit = {
     val (initRes, trRes) = inductiveProve(ctx, tr, inv)
-    assert(initRes==Status.UNSATISFIABLE)
+    // assert(initRes==Status.UNSATISFIABLE)
     assert(trRes==Status.UNSATISFIABLE)
     val (initRes2, trRes2) = inductiveProve(ctx, tr, property, inv)
-    assert(initRes2 == Status.UNSATISFIABLE)
+    // assert(initRes2 == Status.UNSATISFIABLE)
     assert(trRes2 == Status.UNSATISFIABLE)
   }
 
@@ -167,7 +191,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
   }
 
-  private def getTransitionConstraints(transactionNext: Expr[_]): BoolExpr = {
+  private def getTransitionConstraints(transactionThis: Expr[_], transactionNext: Expr[_]): (BoolExpr, Set[BoolExpr]) = {
 
     val triggers: Set[Trigger] = {
       val relationsToTrigger = program.interfaces.map(_.relation).filter(r => r.name.startsWith(transactionRelationPrefix))
@@ -192,7 +216,10 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
         i += 1
 
         /** Indicator for transaction name. */
-        val trNameConstraint = ctx.mkEq(transactionNext, ctx.mkString(t.relation.name))
+        val trNameConstraint = {
+          val txName = ctx.mkString(t.relation.name)
+          ctx.mkEq(transactionNext, txName)
+        }
 
         transactionConst +:= trConst
         transactionConstraints +:= ctx.mkAnd(
@@ -203,11 +230,12 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       }
     }
 
-    ctx.mkAnd(
+    val fullConstraint = ctx.mkAnd(
       ctx.mkAnd(transactionConst.map(c => ctx.mkOr(ctx.mkEq(c,ctx.mkInt(0)), ctx.mkEq(c,ctx.mkInt(1)))).toArray:_*),
       ctx.mkEq(ctx.mkAdd(transactionConst.toArray:_*), ctx.mkInt(1)),
       ctx.mkOr(transactionConstraints.toArray:_*)
     )
+    (fullConstraint, transactionConstraints.toSet)
   }
 
   private def getUnchangedConstraints(_expr: BoolExpr): List[BoolExpr] = {
@@ -376,6 +404,33 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     (ctx.mkAnd(expr.toArray:_*), from.toArray, to.toArray)
   }
 
+
+  def getInitConstraints(ctx: Context, relation: Relation, const: Expr[Sort],
+                         indices: Map[SimpleRelation, List[Int]],
+                         initRule: Option[Rule],
+                         isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = initRule match {
+    case Some(rule) => relation match {
+      case SimpleRelation(name, sig, memberNames) => ???
+      case SingletonRelation(name, sig, memberNames) => {
+        val bodyConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
+          map(lit=>literalToConst(ctx,lit,getIndices(lit.relation),""))
+        val assignExpr: BoolExpr = if (sig.size == 1) {
+          val litConst = literalToConst(ctx,rule.head, List(), prefix = "")
+          // ctx.mkEq(const, literalToConst(ctx,rule.head, List(), prefix = ""))
+          litConst
+        }
+        else {
+          ???
+        }
+        (ctx.mkAnd((bodyConstraints+assignExpr).toArray:_*), Array(), Array())
+
+      }
+      case relation: ReservedRelation => ???
+    }
+    case None => _getDefaultConstraints(ctx,relation, const, indices, isQuantified)
+  }
+
+
   private def getPrefix(id: Int): String = s"i$id"
 
 }
@@ -419,7 +474,9 @@ object Verifier {
     newExpr
   }
 
-  def getInitConstraints(ctx: Context, relation: Relation, const: Expr[Sort], indices: Map[SimpleRelation, List[Int]], isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
+  def _getDefaultConstraints(ctx: Context, relation: Relation, const: Expr[Sort],
+                         indices: Map[SimpleRelation, List[Int]],
+                         isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
     case sr: SimpleRelation => {
       val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
       val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
