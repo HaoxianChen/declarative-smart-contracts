@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="declarative-smart-contract_2.13-0.1.0-SNAPSHOT">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/target/scala-2.13/declarative-smart-contract_2.13-0.1.0-SNAPSHOT.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

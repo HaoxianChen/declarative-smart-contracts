@@ -31,18 +31,25 @@ object Main extends App {
     "voting.dl",
     "auction.dl")
 
-  def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
+  def getMaterializedRelations(dl: Program, filepath: String): List[(Set[Relation],Set[Relation])] = {
     if (isFileExists(filepath)) {
-      val materializedRelationNames: Set[String] = {
-        val allPlans = readMaterializedRelationNames(filepath)
-        allPlans.minBy(_.length).toSet
+      val allPlans = readMaterializedRelationNames(filepath)
+      var rowLists: List[(Set[Relation],Set[Relation])] = List()
+      for(plan <- allPlans){
+        val emptyIndex = plan.indexOf("")
+        val (minList, funcList) = plan.splitAt(emptyIndex)
+        val minListSet = minList.toSet
+        val funcListSet = funcList.tail.toSet  // skip the "" entry
+        val minSet = minListSet.flatMap(n => dl.relations.filter(_.name == n))
+        require(minSet.size == minListSet.size)
+        val funcSet = funcListSet.flatMap(n => dl.relations.filter(_.name == n))
+        require(funcSet.size == funcListSet.size)
+        rowLists = ((minSet, funcSet)) :: rowLists
       }
-      val ret = materializedRelationNames.flatMap(n=>dl.relations.filter(_.name==n))
-      require(ret.size == materializedRelationNames.size)
-      ret
+      rowLists
     }
     else {
-      Set()
+      List((Set.empty[Relation],Set.empty[Relation]))
     }
   }
 
@@ -52,31 +59,37 @@ object Main extends App {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
-    val materializedRelations: Set[Relation] = if (materializePath.nonEmpty) {
-      getMaterializedRelations(dl, materializePath)
+    val dl_org = parseProgram(filepath)  // the program object => original dl version
+    val rowLists = getMaterializedRelations(dl_org, materializePath)
+    println(rowLists.getClass.getName)
+    println(rowLists.mkString(","))
+    var count = 0
+    for(row <- rowLists){
+      count += 1
+      println(row.getClass.getName)
+      val (materializedRelations: Set[Relation], functionalRelations: Set[Relation]) = row
+      val dl = dl_org.addFunctions(functionalRelations)
+      val impTranslator: ImperativeTranslator = if (consolidateUpdates) {
+        ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations,
+          arithmeticOptimization = arithmeticOptimization, enableProjection = enableProjection)
+      }
+      else {
+        new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations,
+          arithmeticOptimization = arithmeticOptimization, enableProjection = enableProjection)
+      }
+      val imperative = impTranslator.translate()
+      val solidity = SolidityTranslator(imperative, dl.interfaces, dl.violations, materializedRelations,
+        isInstrument, monitorViolations, enableProjection).translate()
+      val outfile = Paths.get(outDir, s"$filename/$filename$count.sol")
+      Misc.writeToFile(solidity.toString, outfile.toString)
+      if (displayResult) {
+        println(dl)
+        println(imperative)
+        println(s"Solidity program:\n${solidity}")
+      }
+      println(s"${impTranslator.ruleSize} rules.")
     }
-    else {
-      Set()
-    }
-    val impTranslator: ImperativeTranslator = if (consolidateUpdates) {
-      ImperativeTranslatorWithUpdateFusion(dl, materializedRelations, isInstrument, monitorViolations,
-        arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection)
-    }
-    else {
-      new ImperativeTranslator(dl, materializedRelations, isInstrument, monitorViolations,
-        arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection)
-    }
-    val imperative = impTranslator.translate()
-    val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
-      isInstrument,monitorViolations, enableProjection).translate()
-    val outfile = Paths.get(outDir, s"$filename.sol")
-    Misc.writeToFile(solidity.toString, outfile.toString)
-    if (displayResult) {
-      println(dl)
-      println(imperative)
-      println(s"Solidity program:\n${solidity}")
-    }
-    println(s"${impTranslator.ruleSize} rules.")
+
   }
 
   val compileUsage: String = s"Usage: compile [--arg n] file-path\n" +
@@ -221,6 +234,121 @@ object Main extends App {
       val edgeStr = sortedEdges.map(t=>s"${t._1.name},${t._2.name},${t._3},${t._4},${t._5}")
       val outStr = preamble+edgeStr.mkString("\n")
       Misc.writeToFile(outStr, outfile)
+    }
+  }
+
+  // adding new features for simplification
+  else if (args(0) == "simplification-check") {
+    for (p <- allBenchmarks) {
+      val filepath = Paths.get(benchmarkDir, p).toString
+      val dl = parseProgram(filepath)
+      var noSimplificationSet: Set[String] = Set()
+
+      // originally, relations that can not be skipped:
+      // => Original noSkippedSet: public relations, txns, direct body relations for txns, manually defined functions
+      // 1. write in scala: complex; 2. write in python: separate code
+
+      // complete set of relations that can not be skipped
+      // => Original noSkippedSet (as above) + AnalysisBases noSkippedSet (discussed as follows)
+      dl.rules.foreach { element =>
+        val head = element.head.toString.split("\\(")
+        val headTitle = head(0)
+        val headFields = head(1).split("\\)")(0).split(",")
+        println("head relation: ", headTitle, headFields.mkString(","))
+        val bodies = element.body.toArray
+        println("body relations: ", bodies.mkString(","))
+        val formulas = element.functors.toArray
+        println("Non-aggregate calculations: ", formulas.mkString(","))
+        val aggregatedFormulas = element.aggregators.toArray
+        println("aggregators: ", aggregatedFormulas.mkString(","))
+
+        // 1. if the body relation use exactly the same field as the head field
+        // => differential is constant, no judgement operation
+
+        // 2. if some field(s) from the body/head relation form a formula relationship
+        // => differential may not be constant: s = m*n (however, we do not find a case up to now)
+        // => may contain judgement operations: <, <=, >, >=, !=, == (we have to manually list out all cases)
+        // => otherwise, differential is constant, no judgement operation: =, :=, +, -
+
+        // Question: if the rule contains a judgement, all relations in the rule can not be skipped?
+        // Or only relations whose fields are in the rule can not be skipped?
+        // version 1:
+        for (formula <- formulas) {
+          println("current formula:", formula)
+          val judgementPattern = """[<>!=]=|[<>](?![=<>])""".r
+          val judgementMatches = judgementPattern.findAllIn(formula.toString).toList
+
+          if (judgementMatches.nonEmpty) {
+            println("contain judgement operator")
+            // for every body relation whose field is in this judgement, this body relation can not be skipped
+
+            val separatorPattern = """(?![<>=!:])=(?![<>=!:])|[<>=!:]=|[<>](?![=<>])|[\-+()]""".r
+            val formulaFields = separatorPattern.split(formula.toString).map(_.trim).filter(_.nonEmpty)
+            println("formula fields: ", formulaFields.mkString(","))
+
+            // find all the body/head relations containing fields appearing in judgement operations
+            for (formulaField <- formulaFields) {
+              for (body <- bodies) {
+                body.fields.foreach { bodyField =>
+                  if (bodyField.toString == formulaField) { // this body relation can not be skipped
+                    // Lan: to do
+                  }
+                }
+              }
+              for (headField <- headFields) {
+                if (headField == formulaField) { // this head relation can not be skipped
+                  // Lan: to do
+                }
+              }
+            }
+          }
+        }
+        for (body <- bodies) { // if body itself contains a judgement operation (true, false), it can not be skipped
+          // "closed(true)"  equals to   "close(p), p==true"
+          body.fields.foreach { bodyField =>
+            if (bodyField.toString == "true" || bodyField.toString == "false") { // this body relation can not be skipped
+              // Lan: to do
+            }
+          }
+        }
+        // version 2:
+        // if the judgement turn from false to true, then we will have to update the head based on all other bodies
+        // if it contains a judgement in the rule, all body relations should not be skipped
+        var judgementFlag = false
+        for (formula <- formulas) {
+          println("current formula:", formula)
+          val judgementPattern = """[<>!=]=|[<>](?![=<>])""".r
+          val judgementMatches = judgementPattern.findAllIn(formula.toString).toList
+          if (judgementMatches.nonEmpty) {
+            println("contain judgement operator")
+            judgementFlag = true
+          }
+        }
+        for (body <- bodies) { // if body itself contains a judgement operation (true, false), it can not be skipped
+          // "closed(true)"  equals to   "close(p), p==true"
+          body.fields.foreach { bodyField =>
+            if (bodyField.toString == "true" || bodyField.toString == "false") { // this body relation can not be skipped
+              judgementFlag = true
+            }
+          }
+        }
+        if (judgementFlag) { // all body relations can not be skipped
+          for(body <- bodies){
+            noSimplificationSet += body.relation.name
+          }
+        }
+
+        // 3. if some field(s) from the body relation have a aggregated formula relationship with this head field
+        // Now we only have one operator: sum
+        // => differential is constant, no judgement operation
+        println("relations that can not be simplified: ", noSimplificationSet.mkString(","))
+        println("finish a rule\n")
+      }
+
+      val outfile = s"view-materialization/noSimplification-set/${dl.name}.csv"
+      val outStr = noSimplificationSet.mkString(",") + "\n"
+      Misc.writeToFile(outStr, outfile)
+      println("finish a contract\n")
     }
   }
 

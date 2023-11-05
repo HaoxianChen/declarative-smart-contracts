@@ -143,4 +143,6 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
                                          _.relation.name.startsWith(transactionRelationPrefix)))
 
   def addRules(newRules: Set[Rule]): Program = this.copy(rules = this.rules++newRules)
+
+  def addFunctions(newFunctions: Set[Relation]): Program = this.copy(functions = this.functions++newFunctions) // Lan: modified
 }

@@ -36,7 +36,8 @@ object Misc {
   def readMaterializedRelationNames(filepath: String): Array[Array[String]] = {
     val str = fileToString(filepath)
     val lines = str.split("\n")
-    lines.map(l=>l.split(",").map(_.trim()).filter(_.nonEmpty))
+    //lines.map(l=>l.split(",").map(_.trim()).filter(_.nonEmpty))
+    lines.map(l=>l.split(",").map(_.trim())) // Lan: We use an empty character to split min set and function set
   }
 
   def isFileExists(filepath: String): Boolean = {
