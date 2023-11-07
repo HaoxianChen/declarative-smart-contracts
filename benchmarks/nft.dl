@@ -42,9 +42,17 @@ transfer(tokenId,0,to,time) :- recv_mint(tokenId,to), msgSender(s), owner(s),
 transfer(tokenId,p,0,time) :- recv_burn(tokenId), ownerOf(tokenId,p), msgSender(s),
                               owner(s), exists(tokenId,true), now(time).
 transfer(tokenId,s,r,time) :- recv_transfer(r,tokenId), msgSender(s), ownerOf(tokenId,s),now(time), r!=0.
+
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s,true),now(time), r!=0.
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId),ownerOf(tokenId,s), r!=0,
                                 msgSender(o), isApprovedForAll(s,o,true), now(time).
+
+transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), now(time), r!=0,
+                                {
+                                     approved(tokenId,s,true);
+                                     ownerOf(tokenId,s), msgSender(o), isApprovedForAll(s,o,true);
+                                }.
+
 approval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
 isApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
 

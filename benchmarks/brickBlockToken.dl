@@ -8,7 +8,7 @@
 
 // Constructor
 owner(s) :- constructor(), msgSender(s).
-paused(a) :- constructor(), a:=false.
+paused(true) :- constructor().
 
 // ownable
 .decl recv_transferownership(_new: address)
@@ -45,16 +45,18 @@ transfer(s,r,n) :- recv_transfer(r,n), paused(false), msgSender(s), r!=0, balanc
 .public recv_decreaseApproval
 
 .decl transferFrom(operator: address, from: address, to: address, a: uint)
-transferFrom(s,f,r,n) :- recv_transferFrom(f,r,n), r!=0, balances(f,m), n<=m, 
+transferFrom(s,f,r,n) :- recv_transferFrom(f,r,n), r!=0, balances(f,m), n<=m,
                     msgSender(s), allowed(f,s,a), n<=a.
 
+.decl burn(p:address, n:uint)
 .decl totalIn(p:address,n:uint)[0]
 .decl totalOut(p:address,n:uint)[0]
 transfer(s,r,n) :- transferFrom(_,s,r,n).
+transfer(s,0,n) :- burn(s,n).
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n). 
 balances(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
-            
+
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
 spentTotal(f,s,m) :- transferFrom(f,s,_,_), m = sum n: transferFrom(f,s,_,n).
 
@@ -83,6 +85,7 @@ allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d)
 .decl *predecessorAddress(p:address)
 .decl *bonusDistributionAddress(p:address)
 .decl *fountainContractAddress(p:address)
+.decl *successorAddress(p:address)
 .decl *tokenSaleActive(b:bool)
 .decl *dead(b:bool)
 .decl *initialSupply(a:uint)
@@ -92,6 +95,10 @@ allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d)
 initialSupply(a) :- BrickblockToken(), a:= 500 * 1000000.
 dead(b) :- BrickblockToken(), b:=false.
 tokenSaleActive(b) :- BrickblockToken(), b:=true.
+
+.decl *burnTotal(n:uint)
+burnTotal(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- initialSupply(i), burnTotal(b), n:=i-b.
 
 .decl unpause()
 .decl recv_unpause()
@@ -133,18 +140,35 @@ upgrade(p) :- recv_upgrade(p), msgSender(s), owner(s), p!=0.
 dead(true) :- upgrade(_).
 paused(true):- upgrade(_).
 
+.decl recv_evacuate(p:address)
+.public recv_evacuate
+burn(p,n) :- recv_evacuate(p), dead(true), msgSender(s), successorAddress(s), balances(p,n).
 
-// .decl noEtherTransfer()
-// .violation noEtherTransfer
-// noEtherTransfer() :- dead(true), paused(false).
+.decl *noEtherTransfer()
+.violation noEtherTransfer
+noEtherTransfer() :- dead(true), paused(false).
 
 .decl *onceEndSale(b: bool)
 onceEndSale(false) :- constructor().
 onceEndSale(true) :- finalizeTokenSale().
 
-.decl transferAfterEndSale()
+.decl *transferAfterEndSale()
 .violation transferAfterEndSale
 transferAfterEndSale() :- transaction(recv_distributeTokens), onceEndSale(true).
+
+.decl *transferBeforeUnpause()
+.violation transferBeforeUnpause
+.decl *onceUnpaused(b:bool)
+onceUnpaused(false) :- constructor().
+onceUnpaused(true) :- unpause().
+transferBeforeUnpause() :- transaction(recv_transfer), onceUnpaused(false).
+
+.decl *evacuateAfterUpgrade()
+.violation evacuateAfterUpgrade
+.decl *onceUpgrade(b:bool)
+onceUpgrade(false) :- constructor().
+onceUpgrade(true) :- upgrade(_).
+evacuateAfterUpgrade() :- transaction(recv_evacuate), onceUpgrade(false).
 
 // .decl distributedTokens(n: uint)
 // .decl companyTokens(n: uint)

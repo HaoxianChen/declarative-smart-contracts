@@ -17,15 +17,38 @@
 .decl transfer(from: address, to: address, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
 
+// ERC1400 interfaces
+// .decl shares(p: address, n: unit)[0]
+.decl permission(p: address, sendAllowed: bool, receiveAllowed: bool, expiryTime: uint)[0]
+.decl canSend(s:address)
+.decl canRecv(s:address)
+// Annotate that these two relations are implemented as functions (compute on
+// demand)
+.function canSend
+.function canRecv
+
 // New transactions
-// .decl recv_transferFrom(from: address, to: address, amount: uint)
-// .decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
+
+.decl recv_distributeInterests(n: uint)
+.decl distributeInterests(n: uint, time: uint)
+.decl *distributeTotal(n: uint)
+
+.decl *lastDistributeTime(time: uint)
+.decl *minInterval(time:uint)
+
+distributeInterests(n, t) :- recv_distributeInterests(n), now(t),
+                             minInterval(i), lastDistributeTime(t1), t1 - t > i.
+lastDistributeTime(m) :- m = max t: distributeInterests(_,t).
+distributeTotal(s) :- s = sum n: distributeInterests(n,_).
 
 // Interfaces
 .public recv_mint
 .public recv_burn
 .public recv_transfer
+.public recv_distributeInterests
 .public balanceOf(1)
 .public totalSupply(0)
 
@@ -40,7 +63,13 @@ totalSupply(0) :- constructor().
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+                   canSend(s), canRecv(r).
+
+canSend(s) :- permission(s, true, _, expire), now(t), t<expire.
+canSend(s) :- permission(s, true, _, 0).
+canRecv(s) :- permission(s, _, true, expire), now(t), t<expire.
+canRecv(s) :- permission(s, _, true, 0).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
@@ -56,13 +85,15 @@ balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), s
 .decl *allBurn(n: uint)
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
-totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+totalSupply(n) :- allMint(m), allBurn(b), distributeTotal(d), n := m - b - d.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n.
+                    msgSender(s), allowance(o,s,k), k>=n,
+                    canSend(s), canRecv(r).
+
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
@@ -74,41 +105,12 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
-///////////////////////////////////////////////////////////
-.decl recv_finalize()
-.public recv_finalize
-.decl finalize()
-.decl *finalized(b:bool)
+// Properties
+.decl *totalBalances(m: uint)
+.decl *unequalBalance(s: uint, n: uint)
 
-.decl *start(time: uint)
-.decl *end(time: uint)
+.violation unequalBalance
 
-.decl *rate(r: uint)
-.decl recv_buyToken(p:address, amount: uint)
-.decl buyToken(p:address, amount: uint)
-.public recv_buyToken
-
-buyToken(p,n) :- recv_buyToken(p,m), finalized(false), p!=0, m!=0, now(t), start(s), end(e), t>s, t<e, rate(r), n:=m*r.
-mint(p,n) :- buyToken(p,n).
-
-.decl *raised(n: uint)
-raised(s) :- s = sum n: buyToken(_,n).
-.decl *cap(n: uint)
-
-finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), now(t), end(e), t>e.
-finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), raised(m), cap(c), m>=c.
-finalized(true) :- finalize().
-
-
-//property
-.decl *onceFinalize(b:bool)
-onceFinalize(false) :- constructor().
-onceFinalize(true) :- finalize().
-
-.decl illegalFinalization()
-.violation illegalFinalization
-illegalFinalization() :- onceFinalize(true), now(t), end(e), t<e, raised(r), cap(c), r<c.
-
-.decl buyAfterFinalize()
-.violation buyAfterFinalize
-buyAfterFinalize() :- onceFinalize(true), transaction(recv_buyToken).
+totalBalances(0) :- constructor().
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.

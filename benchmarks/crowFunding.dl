@@ -63,3 +63,19 @@ send(p,r) :- withdraw(p,r).
 totalBalance(0) :- constructor(_,_).
 totalBalance(m) :- m = sum n: balanceOf(_,n).
 missingFund(m,r) :- totalBalance(m),raised(r),m!=r,closed(b), b==false.
+
+.decl *onceWithdraw(b: bool)
+.decl *onceRefund(b: bool)
+onceWithdraw(false) :- constructor(_,_).
+onceWithdraw(true) :- withdraw(_,_).
+onceRefund(false) :- constructor(_,_).
+onceRefund(true) :- refund(_,_).
+
+.decl *refundAndWithdraw()
+.violation refundAndWithdraw
+refundAndWithdraw() :- onceWithdraw(true), onceRefund(true).
+
+.decl *illegalRefund()
+.violation illegalRefund
+// once(refund) ==> always(raised < target)
+illegalRefund() :- onceRefund(true), raised(r), target(t), r>=t.
