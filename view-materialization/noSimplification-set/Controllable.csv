@@ -1,1 +1,1 @@
-allowance,recv_burn,balanceOf,recv_mint,recv_controllerRedeem,recv_transfer,recv_controllerTransfer,controller,owner,msgSender,totalSupply,recv_transferFrom,totalBalances
+recv_burn,balanceOf,recv_mint,recv_controllerRedeem,recv_transfer,recv_controllerTransfer,controller,msgSender,totalSupply,recv_approve,allowance,recv_transferFrom,totalBalances

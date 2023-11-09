@@ -41,8 +41,7 @@ bidTotal(p,n) :- bid(p, _), n = sum m: bid(p, m).
 balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
 
 // Transaction conditions
-bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m,
-            now(t1), endTime(t2), t1 < t2, end(false).
+bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m, now(t1), endTime(t2), t1 < t2, end(false).
 
 .decl withdrawCount(p:address, c:uint)[0]
 withdrawCount(p,c) :- withdraw(p,_), c = count: withdraw(p,_).

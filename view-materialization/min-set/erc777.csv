@@ -1,8 +1,0 @@
-allBurn,allMint,allowance,defaultOperator,operators,owner,revokedDefaultOperator,totalBurn,totalIn,totalMint,totalOut,,totalSupply,balanceOf
-allowanceTotal,defaultOperator,operators,owner,revokedDefaultOperator,spentTotal,totalBurn,totalIn,totalMint,totalOut,totalSupply,,allowance,balanceOf
-allBurn,allMint,allowanceTotal,balanceOf,defaultOperator,operators,owner,revokedDefaultOperator,spentTotal,,allowance,totalSupply
-allowance,balanceOf,defaultOperator,operators,owner,revokedDefaultOperator,totalSupply,
-allowance,defaultOperator,operators,owner,revokedDefaultOperator,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf
-allBurn,allMint,allowance,balanceOf,defaultOperator,operators,owner,revokedDefaultOperator,,totalSupply
-allowanceTotal,balanceOf,defaultOperator,operators,owner,revokedDefaultOperator,spentTotal,totalSupply,,allowance
-allBurn,allMint,allowanceTotal,defaultOperator,operators,owner,revokedDefaultOperator,spentTotal,totalBurn,totalIn,totalMint,totalOut,,allowance,totalSupply,balanceOf

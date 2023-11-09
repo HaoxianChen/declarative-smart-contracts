@@ -11,24 +11,26 @@ object Main extends App {
   val outDir = "solidity/dsc"
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
-  val allBenchmarks = List("crowFunding.dl", "erc20.dl",
-    "nft.dl",
-    "wallet.dl",
-    "vestingWallet.dl",
-    "paymentSplitter.dl",
-    "erc777.dl",
-    "erc1155.dl",
+  val allBenchmarks = List(
+//    "crowFunding.dl",
+//    "erc20.dl",
+//    "nft.dl",
+//    "wallet.dl",
+//    "vestingWallet.dl",
+//    "paymentSplitter.dl",
+//    "erc777.dl",
+    // "erc1155.dl", // Lan: broke when run dependency-graph
     "controllable.dl",
-    "tokenPartition.dl",
+//    "tokenPartition.dl",
     "tether.dl",
     "bnb.dl",
     "matic.dl",
-    "ltcSwapAsset.dl",
+//    "ltcSwapAsset.dl",
     "theta.dl",
     "wbtc.dl",
-    "shib.dl",
+//    "shib.dl",
     "linktoken.dl",
-    "voting.dl",
+//    "voting.dl",
     "auction.dl")
 
   def getMaterializedRelations(dl: Program, filepath: String): List[(Set[Relation],Set[Relation])] = {
@@ -222,6 +224,7 @@ object Main extends App {
   else if (args(0) == "dependency-graph") {
     for (p <- allBenchmarks) {
       val filepath = Paths.get(benchmarkDir, p).toString
+      println(filepath)
       val dl = parseProgram(filepath)
       val materializedRelations: Set[Relation] = Set()
       val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,

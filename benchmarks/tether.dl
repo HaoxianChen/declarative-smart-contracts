@@ -2,42 +2,48 @@
 
 // parameters
 .decl *owner(p: address)
-
-// views
+.decl *paused(b: bool)
 .decl *totalSupply(n: uint)
 .decl balanceOf(p: address, n: uint)[0]
-.decl constructor(n: uint)
-
-// New views
+.decl *rate(r: uint)
+.decl *maxFee(m: uint)
 .decl allowance(p: address, s: address, n:uint)[0,1]
 .decl isBlackListed(p: address, b:bool)[0]
 
-// Fees
-.decl *rate(r: uint)
-.decl *maxFee(m: uint)
+// constructor
+.decl constructor(n: uint)
+
+// transactions
 .decl transferWithFee(from:address, to:address, fee:uint, amount: uint)
 .decl transferFromWithFee(from:address, to:address, spender:address, fee:uint, amount: uint)
 
-// Transactions
 .decl issue(p: address, amount: uint)
-.decl recv_issue(p: address, amount: uint)
+.decl recv_issue(amount: uint)
+
 .decl redeem(p: address, amount: uint)
-.decl recv_redeem(p: address, amount: uint)
+.decl recv_redeem(amount: uint)
+
 .decl transfer(from: address, to: address, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
-
-// New transactions
 .decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl transferFrom(from: address, to: address, spender: address, amount: uint)
 .decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
-
-.decl destroyBlackFund(p:address,n:uint)
-.decl recv_destroyBlackFund(p:address)
-
-destroyBlackFund(p,n) :- recv_destroyBlackFund(p),msgSender(s),owner(s),
-                        isBlackListed(p,true),
-                        balanceOf(p,n), p!=0, n>0.
-redeem(p,n) :- destroyBlackFund(p,n).
+.decl approve(o: address, s: address, n: uint)
+.decl recv_addBlackList(p:address)
+.decl addBlackList(p:address)
+.decl recv_removeBlackList(p:address)
+.decl removeBlackList(p:address)
+.decl destroyBlackFunds(p:address,n:uint)
+.decl recv_destroyBlackFunds(p:address)
+.decl recv_setParams(b: uint, f: uint)
+.decl setParams(b: uint, f: uint)
+.decl recv_transferOwnership(o: address)
+.decl transferOwnership(o: address)
+.decl recv_pause()
+.decl pause()
+.decl recv_unpause()
+.decl unpause()
 
 // Interfaces
 .public recv_issue
@@ -45,32 +51,32 @@ redeem(p,n) :- destroyBlackFund(p,n).
 .public recv_transfer
 .public balanceOf(1)
 .public totalSupply(0)
-
-// New interfaces
+.public recv_destroyBlackFunds
+.public recv_addBlackList
+.public recv_removeBlackList
 .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
+.public recv_setParams
+.public recv_transferOwnership
+.public recv_pause
+.public recv_unpause
+
 
 // Rules
 owner(s) :- constructor(_), msgSender(s).
 totalSupply(n) :- constructor(n).
 balanceOf(s,n) :- constructor(n), msgSender(s).
+paused(false) :- constructor(_).
+rate(0) :- constructor(_).
+maxFee(0) :- constructor(_).
+setParams(b,f) :- recv_setParams(b,f), msgSender(s), owner(s), b<20, f<50.
+rate(b) :- setParams(b,_).
+maxFee(f) :- setParams(_,f).
 
-issue(p,n) :- recv_issue(p,n), msgSender(s), owner(s), p!=0.
-redeem(p,n) :- recv_redeem(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+transferOwnership(o) :- recv_transferOwnership(o), msgSender(s), owner(s), o!=0.
+owner(s) :- transferOwnership(s).
 
-transferWithFee(s,r,f,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
-                 isBlackListed(s,false),
-                rate(rt), maxFee(mf),
-                f := min(rt*n/10000, mf).
-
-transfer(s,r,m) :- transferWithFee(s,r,f,n), m := n-f.
-transfer(s,o,f) :- transferWithFee(s,r,f,_), owner(o).
-
-.decl recv_addBlackList(p:address)
-.decl addBlackList(p:address)
-addBlackList(p) :- recv_addBlackList(p),msgSender(s),owner(s).
-isBlackListed(p,true) :- addBlackList(p).
 
 .decl totalIssue(p: address, n: uint)[0]
 .decl totalRedeem(p: address, n: uint)[0]
@@ -88,14 +94,32 @@ allIssue(s) :- s = sum n: issue(_,n).
 allRedeem(s) :- s = sum n: redeem(_,n).
 totalSupply(n) :- allIssue(m), allRedeem(b), n := m - b.
 
-// New rules
-.decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFromWithFee(o,r,s,f,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n,
-                    isBlackListed(o,false),
-                    rate(rt), maxFee(mf),
-                    f := min(rt*n/10000, mf).
+issue(s,n) :- recv_issue(n), msgSender(s), owner(s), s!=0.
+redeem(s,n) :- recv_redeem(n), msgSender(s), owner(s), s!=0, balanceOf(s,m), n<=m.
+
+paused(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
+paused(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
+
+transferWithFee(s,r,f,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m, isBlackListed(s,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
+
+transfer(s,r,m) :- transferWithFee(s,r,f,n), m := n-f.
+transfer(s,o,f) :- transferWithFee(s,r,f,_), owner(o).
+
+
+addBlackList(p) :- recv_addBlackList(p),msgSender(s),owner(s).
+isBlackListed(p,true) :- addBlackList(p).
+
+
+removeBlackList(p) :- recv_removeBlackList(p),msgSender(s),owner(s).
+isBlackListed(p,false) :- removeBlackList(p).
+
+
+destroyBlackFunds(p,n) :- recv_destroyBlackFunds(p),msgSender(s),owner(s), isBlackListed(p,true), balanceOf(p,n), p!=0, n>0.
+redeem(p,n) :- destroyBlackFunds(p,n).
+
+
+
+transferFromWithFee(o,r,s,f,n) :- recv_transferFrom(o,r,n), balanceOf(o,m), m>=n, msgSender(s), allowance(o,s,k), k>=n, isBlackListed(o,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
 transferFrom(o,r,s,m) :- transferFromWithFee(o,r,s,f,n), m := n-f.
 transferFrom(o,p,s,f) :- transferFromWithFee(o,r,s,f,_), owner(p).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
@@ -112,9 +136,7 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 // Properties
 .decl *totalBalances(m: uint)
 .decl *unequalBalance(s: uint, n: uint)
-
 .violation unequalBalance
-
 totalBalances(n) :- constructor(n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.

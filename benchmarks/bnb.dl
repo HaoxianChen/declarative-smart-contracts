@@ -72,7 +72,7 @@ totalMint(s,n) :- constructor(n), msgSender(s).
 allMint(n) :- constructor(n).
 
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(n), msgSender(p), p!=0 ,balanceOf(p,m), n<=m.
+burn(p,n) :- recv_burn(n), msgSender(p), p!=0, balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m, n>0, r!=0, n+m>=m.
 
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
@@ -85,8 +85,7 @@ totalUnfreeze(p,s) :- unfreeze(p,_), s = sum n: unfreeze(p,n).
 
 freezeOf(p,n) :- totalFreeze(p,f), totalUnfreeze(p,u), n:=f-u.
 
-balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), 
-                freezeOf(p,f), s:=n+i-m-o-f.
+balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), freezeOf(p,f), s:=n+i-m-o-f.
 
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
@@ -94,10 +93,7 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n,
-                    n>0, r!=0, n+m>=m.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n), balanceOf(o,m), m>=n, msgSender(s), allowance(o,s,k), k>=n, n>0, r!=0, n+m>=m.
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.

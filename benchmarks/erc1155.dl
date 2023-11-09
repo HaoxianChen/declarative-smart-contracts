@@ -5,8 +5,6 @@
 .decl totalSupply(tokenId: uint, n: uint)[0]
 .decl balanceOf(tokenId: uint, p: address, n: uint)[0,1]
 .decl constructor()
-
-// New views
 .decl allowance(tokenId: uint, p: address, s: address, n:uint)[0,1,2]
 
 // Transactions
@@ -16,16 +14,27 @@
 .decl recv_burn(tokenId: uint, p: address, amount: uint)
 .decl transfer(tokenId: uint, from: address, to: address, amount: uint)
 .decl recv_transfer(tokenId: uint, to: address, amount: uint)
-
-// New transactions
 .decl recv_transferFrom(tokenId: uint, from: address, to: address, amount: uint)
 .decl increaseAllowance(tokenId: uint, p: address, s: address, n:uint)
 .decl recv_approve(tokenId: uint, s: address, n:uint)
+
+.decl recv_setApprovalForAll(operator: address, approved: bool)
+.decl setApprovalForAll(sender: address, operator: address, approved: bool)
+
+setApprovalForAll(s,o,a) :- recv_setApprovalForAll(o,a), msgSender(s), s!=o.
+recv_approve(t,s,n) :- setApprovalForAll(s,o,a), a==true, balanceOf().
+
+
+.decl recv_safeTransferFrom(f: address, t: address, id: uint, amount: uint, data: uint)
+.decl safeTransferFrom(f: address, t: address, id: uint, amount: uint, data: uint)
+
 
 // Interfaces
 .public recv_mint
 .public recv_burn
 .public recv_transfer
+.public recv_safeTransferFrom
+.public setApprovalForAll
 .public balanceOf(2)
 .public totalSupply(1)
 

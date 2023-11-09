@@ -1,1 +1,1 @@
-rate,maxFee,allowance,balanceOf,recv_transfer,owner,msgSender,totalSupply,recv_redeem,recv_issue,recv_transferFrom,totalBalances,recv_destroyBlackFund,isBlackListed
+rate,maxFee,allowance,balanceOf,recv_unpause,paused,recv_transferOwnership,recv_pause,isBlackListed,owner,msgSender,totalSupply,recv_issue,recv_transferFrom,totalBalances,recv_destroyBlackFunds,recv_transfer,recv_setParams,recv_redeem
