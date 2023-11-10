@@ -19,7 +19,8 @@ beneficiary(p) :- constructor(p,_).
 .decl withdraw(bidder: address, amount: uint)
 .decl recv_withdraw()
 .decl recv_withdrawWinner()
-.decl *end(b: bool)
+// .decl *end(b: bool)
+.decl *endAuction(b: bool)
 .decl recv_endAuction()
 
 // Interface
@@ -31,6 +32,7 @@ beneficiary(p) :- constructor(p,_).
 .decl *highestBid(bidder: address, amount: uint)
 .decl balance(p: address, n:uint)[0]
 .public balance(1)
+.decl *end(b: bool)
 
 highestBid(p,m) :- bid(p,m), m = max n: bid(_, n).
 
@@ -50,7 +52,9 @@ withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), bala
 withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
 send(p,n) :- withdraw(p,n).
 
-end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
+// end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
+endAuction(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
+end(true) :- endAuction(true).
 send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p), end(false).
 
 // Property
