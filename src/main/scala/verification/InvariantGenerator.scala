@@ -150,7 +150,8 @@ case class InvariantGenerator(ctx: Context, program: Program,
 
       /** Generate invariants in the form of implications */
       // for (eachPremise <- conditionalPremises+premise) {
-      for (eachPremise <- conditionalPremises++premises++premisesFromProperty) {
+      // for (eachPremise <- conditionalPremises++premises++premisesFromProperty) {
+      for (eachPremise <- predicatesOnKeys++premises++premisesFromProperty) {
         for (eachPred <- predicates) {
           val conclusion = ctx.mkNot(eachPred).simplify()
           val inv = if (keyConsts.nonEmpty) {
