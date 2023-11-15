@@ -8,7 +8,8 @@ object Z3Helper {
   val addressSize: Int = 16
 
   def typeToSort(ctx: Context, t: Type): Sort = t.name match {
-    case "address" => ctx.mkBitVecSort(addressSize)
+    // case "address" => ctx.mkBitVecSort(addressSize)
+    case "address" => ctx.mkIntSort()
     case "int"|"uint" => ctx.mkIntSort()
     case "bool" => ctx.mkBoolSort()
     case _ => ???
@@ -26,7 +27,8 @@ object Z3Helper {
     val _newX = param match {
       case Constant(_type, name) => {
         _type.name match {
-          case "address" => ctx.mkBV(name.toInt, addressSize)
+          // case "address" => ctx.mkBV(name.toInt, addressSize)
+          case "address" => ctx.mkInt(name.toInt)
           case "int"|"uint" => ctx.mkInt(name.toInt)
           case "bool" => name match {
             case "true" => ctx.mkTrue()
@@ -230,7 +232,8 @@ object Z3Helper {
   }
 
   def initValue(ctx: Context, _type: Type): Expr[_<:Sort] = _type.name match {
-    case "address" => ctx.mkBV(0, addressSize)
+    // case "address" => ctx.mkBV(0, addressSize)
+    case "address" => ctx.mkInt(0)
     case "int" | "uint" => ctx.mkInt(0)
     case "bool" => ctx.mkBool(false)
   }
