@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
 import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
@@ -409,23 +409,53 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
                          indices: Map[SimpleRelation, List[Int]],
                          initRule: Option[Rule],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = initRule match {
-    case Some(rule) => relation match {
-      case SimpleRelation(name, sig, memberNames) => ???
-      case SingletonRelation(name, sig, memberNames) => {
-        val bodyConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
-          map(lit=>literalToConst(ctx,lit,getIndices(lit.relation),""))
-        val assignExpr: BoolExpr = if (sig.size == 1) {
-          val litConst = literalToConst(ctx,rule.head, List(), prefix = "")
-          // ctx.mkEq(const, literalToConst(ctx,rule.head, List(), prefix = ""))
-          litConst
-        }
-        else {
-          ???
-        }
-        (ctx.mkAnd((bodyConstraints+assignExpr).toArray:_*), Array(), Array())
+    case Some(rule) => {
+      val bodyConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
+        map(lit=>literalToConst(ctx,lit,getIndices(lit.relation),""))
 
+      relation match {
+        case sr: SimpleRelation => {
+          // val const0 = ctx.mkConst(s"_${const.toString}0", const.getSort)
+          // val (defaultConstraints,_keyConst,_keyTypes) = _getDefaultConstraints(ctx,relation, const0, indices, isQuantified)
+
+          // val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+          // val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
+          // val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
+          // val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+
+          // val initValues: Expr[Sort] = if (!valueSort.isInstanceOf[TupleSort]) {
+          //   val _p = rule.head.fields(valueIndices.head)
+          //   paramToConst(ctx,_p,s"")._1
+          // }.asInstanceOf[Expr[Sort]]
+          // else {
+          //   ???
+          //   // val _initValues = valueTypes.map(t => initValue(ctx,t))
+          //   // valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*)
+          // }
+          // val keys = indices(sr).map(i=>rule.head.fields(i))
+          // val keyConstArray: Array[Expr[_]] = keys.map(p=>paramToConst(ctx,p,s"")._1).toArray
+          // val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
+          // val matchConstraint = ctx.mkEq(const,storeConstraint)
+
+          // (matchConstraint,_keyConst,_keyTypes)
+          /** todo: what to do when array type is initialized by special value?
+           *  */
+          _getDefaultConstraints(ctx,sr,const,indices,isQuantified)
+        }
+        case SingletonRelation(name, sig, memberNames) => {
+          val assignExpr: BoolExpr = if (sig.size == 1) {
+            val litConst = literalToConst(ctx,rule.head, List(), prefix = "")
+            // ctx.mkEq(const, literalToConst(ctx,rule.head, List(), prefix = ""))
+            litConst
+          }
+          else {
+            ???
+          }
+          (ctx.mkAnd((bodyConstraints+assignExpr).toArray:_*), Array(), Array())
+
+        }
+        case relation: ReservedRelation => ???
       }
-      case relation: ReservedRelation => ???
     }
     case None => _getDefaultConstraints(ctx,relation, const, indices, isQuantified)
   }
