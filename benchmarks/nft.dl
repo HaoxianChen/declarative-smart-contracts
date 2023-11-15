@@ -47,12 +47,6 @@ transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId),ownerOf(tokenId,s), r!=0,
                                 msgSender(o), isApprovedForAll(s,o,true), now(time).
 
-transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), now(time), r!=0,
-                                {
-                                     approved(tokenId,s,true);
-                                     ownerOf(tokenId,s), msgSender(o), isApprovedForAll(s,o,true);
-                                }.
-
 approval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
 isApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
 
