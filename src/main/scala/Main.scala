@@ -60,7 +60,6 @@ object Main extends App {
           arithmeticOptimization: Boolean = true): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
-    val dl = parseProgram(filepath)
     val dl_org = parseProgram(filepath)  // the program object => original dl version
     val rowLists = getMaterializedRelations(dl_org, materializePath)
     println(rowLists.getClass.getName)
@@ -80,7 +79,9 @@ object Main extends App {
           arithmeticOptimization = arithmeticOptimization, enableProjection = enableProjection)
       }
       val imperative = impTranslator.translate()
-      val solidity = SolidityTranslator(imperative, dl.interfaces, dl.violations, materializedRelations,
+//      val solidity = SolidityTranslator(imperative, dl.interfaces, dl.violations, materializedRelations,
+//        isInstrument, monitorViolations, enableProjection).translate()
+      val solidity = SolidityTranslator(imperative, dl, dl.interfaces, dl.violations, materializedRelations,
         isInstrument, monitorViolations, enableProjection).translate()
       val outfile = Paths.get(outDir, s"$filename/$filename$count.sol")
       Misc.writeToFile(solidity.toString, outfile.toString)

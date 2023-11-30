@@ -20,34 +20,35 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
   protected val simplifier = new Simplifier()
 
   // protected val queryRelations: Set[Relation] = if (program.functions.nonEmpty) program.functions else getQueryRelations()
-  protected val queryRelations: Set[Relation] = if (materializedRelations.nonEmpty) {
-    program.functions ++ getQueryRelations()
-  }
-  else {
-    program.functions
-  }
+//  protected val queryRelations: Set[Relation] = if (materializedRelations.nonEmpty) {
+//    program.functions ++ getQueryRelations()
+//  }
+//  else {
+//    program.functions
+//  }
+  protected val queryRelations: Set[Relation] = program.functions;
 
   /** For relations not materialized, they become query relations */
-  private def getQueryRelations(): Set[Relation] = {
-    def _getQueryRelations(rule: Rule): Set[Relation] = {
-      val fromThisRule = rule.body.map(_.relation).diff(materializedRelations)
-        .filterNot(_.name.contains(transactionRelationPrefix))
-        .filterNot(_.isInstanceOf[ReservedRelation])
-        .filterNot(_.name==s"constructor")
-      val fromDependentRules: Set[Relation] = {
-        var _ret: Set[Relation] = Set()
-        for (_rel <- fromThisRule) {
-          val definingRules: Set[Rule] = program.rules.filter(_.head.relation==_rel)
-          for (_r <- definingRules) {
-            _ret ++= _getQueryRelations(_r)
-          }
-        }
-        _ret
-      }
-      fromThisRule++fromDependentRules
-    }
-    program.transactionRules().flatMap(_getQueryRelations)
-  }
+//  private def getQueryRelations(): Set[Relation] = {
+//    def _getQueryRelations(rule: Rule): Set[Relation] = {
+//      val fromThisRule = rule.body.map(_.relation).diff(materializedRelations)
+//        .filterNot(_.name.contains(transactionRelationPrefix))
+//        .filterNot(_.isInstanceOf[ReservedRelation])
+//        .filterNot(_.name==s"constructor")
+//      val fromDependentRules: Set[Relation] = {
+//        var _ret: Set[Relation] = Set()
+//        for (_rel <- fromThisRule) {
+//          val definingRules: Set[Rule] = program.rules.filter(_.head.relation==_rel)
+//          for (_r <- definingRules) {
+//            _ret ++= _getQueryRelations(_r)
+//          }
+//        }
+//        _ret
+//      }
+//      fromThisRule++fromDependentRules
+//    }
+//    program.transactionRules().flatMap(_getQueryRelations)
+//  }
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
@@ -86,7 +87,8 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
   }
 
   protected def getTrigger(statement: Statement): Set[(UpdateStatement, Trigger)] = statement match {
-    case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement | _:Query => Set()
+//    case _:Empty | _:GroundVar | _:imp.Assign | _:ReadTuple | _:SolidityStatement | _:Query => Set()
+    case _:Empty | _:GroundVar | _:GroundVarFromFunction | _:imp.Assign | _:ReadTuple | _:SolidityStatement | _:Query => Set()
     case Seq(a,b) => getTrigger(a) ++ getTrigger(b)
     case If(_,s) => getTrigger(s)
     case o: OnStatement => getTrigger(o.statement)
@@ -145,7 +147,8 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
     val ruleStatements = Statement.makeSeq(
       defRules.map(r => views(r).getQueryStatement()).toSeq:_*
     )
-    val statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
+//    val statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
+    val statement = ruleStatements
 
     Query(defRules.head.head, statement)
   }

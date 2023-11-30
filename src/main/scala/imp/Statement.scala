@@ -32,6 +32,24 @@ case class GroundVar(p: Parameter, relation: Relation, keys: List[Parameter], va
     }
   }
 }
+case class GroundVarFromFunction(p: Parameter, relation: Relation, keys: List[Parameter],
+                     enableProjection:Boolean) extends Statement {
+  // override def toString: String = s"${p._type} $p = ${relation.name}[$index];"
+  override def toString: String = {
+    relation match {
+      case _:SimpleRelation => {
+        if (enableProjection) {
+          val keyStr = if (keys.nonEmpty) keys.map(k=>s"$k").mkString(",") else ""
+          s"${p._type} $p = ${relation.name}($keyStr);"  // Lan(?): Is this the correct grammar to write functions?
+        }
+        else {
+          s"${p._type} $p = ${relation.name}();"
+        }
+      }
+      case _ => throw new Exception("Function relation should not have this type")
+    }
+  }
+}
 case class Assign(p: Param, expr: Expr) extends Statement {
   // override def toString: String = s"$p := $arithmetic"
   override def toString: String = s"${p.p._type} $p = $expr;"

@@ -54,7 +54,7 @@ send(p,n) :- withdraw(p,n).
 
 // end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
 endAuction(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
-end(true) :- endAuction(true).
+end(true) :- endAuction(p), p==true.
 send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p), end(false).
 
 // Property

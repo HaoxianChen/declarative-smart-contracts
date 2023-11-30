@@ -1,8 +1,8 @@
-controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf,allowance
-balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalSupply,,allowance
+allBurn,allMint,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalBurn,totalIn,totalMint,totalOut,,totalSupply,allowance,balanceOf
 allBurn,allMint,balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,,totalSupply,allowance
+controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalBurn,totalIn,totalMint,totalOut,totalSupply,,allowance,balanceOf
 allBurn,allMint,allowance,balanceOf,controller,decimals,name,symbol,,totalSupply
-allBurn,allMint,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalBurn,totalIn,totalMint,totalOut,,totalSupply,balanceOf,allowance
-allowance,balanceOf,controller,decimals,name,symbol,totalSupply,
-allBurn,allMint,allowance,controller,decimals,name,symbol,totalBurn,totalIn,totalMint,totalOut,,balanceOf,totalSupply
 allowance,controller,decimals,name,symbol,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf
+allowance,balanceOf,controller,decimals,name,symbol,totalSupply,
+allBurn,allMint,allowance,controller,decimals,name,symbol,totalBurn,totalIn,totalMint,totalOut,,totalSupply,balanceOf
+balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,name,spentTotal,symbol,totalSupply,,allowance

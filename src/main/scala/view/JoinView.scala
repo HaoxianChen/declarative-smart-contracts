@@ -2,7 +2,7 @@ package view
 
 import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, TupleSort}
 import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
-import imp.{BooleanFunction, Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, Match, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Require, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
+import imp.{BooleanFunction, Condition, Delete, DeleteTuple, Empty, GroundVar, GroundVarFromFunction, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, Match, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Require, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
@@ -86,7 +86,8 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     // Join
     val groundedParams: Set[Parameter] = insert.fields.toSet
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
+      // val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
+      val rest = rule.body.filterNot(_.relation==insert.relation)
       sortJoinLiterals(rest)
     }
     val updates = _getJoinStatements(groundedParams, sortedLiteral, IfStatement)
@@ -95,8 +96,34 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def getQueryStatement(): Statement = {
-    val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
-    val groundedParams: Set[Parameter] = rule.head.fields.toSet
+//    val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
+//    val groundedParams: Set[Parameter] = rule.head.fields.toSet
+//    val sortedLiteral: List[Literal] = {
+//      val rest = rule.body.diff(functionLiterals)
+//      sortJoinLiterals(rest)
+//    }
+//    _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
+    val groundedParams: Set[Parameter] = primaryKeyIndices.map(i => rule.head.fields(i)).toSet
+    val returnParam: Parameter = {
+      val remainingParam = rule.head.fields.toSet.diff(groundedParams)
+      assert(remainingParam.size == 1)
+      remainingParam.head
+    }
+    val assignStatements = rule.functors.foldLeft[Statement](Empty())( // Lan: to modify
+      (stmt, f) => f match {
+        case datalog.Assign(p, a) => {
+          if(returnParam.toString.equals(p.toString)) Statement.makeSeq(stmt, imp.Assign(p, a))
+          else stmt // Lan(?): this will not happen => assign statement occurs only on non-primary fields
+        }
+        case _ => stmt
+      }
+    )
+    val innerStatement = {
+      val returnStatement = {
+        Statement.makeSeq(assignStatements, Return(returnParam))  // Lan: to do, add in this method
+      }
+      If(condition = _getConditions(), statement = returnStatement)
+    }
     val sortedLiteral: List[Literal] = {
       val rest = rule.body.diff(functionLiterals)
       sortJoinLiterals(rest)
@@ -122,12 +149,20 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   private def sortJoinLiterals(literals: Set[Literal]): List[Literal] = {
     /** Sort the list of join literals, by their relations:
      * 1. Singleton relations
-     * 2. Other relations ...  */
+     * 2. Other relations ...  (not including functions)
+     * 3. Functional relations */
     literals.toList.sortWith((a,b) => a.relation match {
       case _: SingletonRelation|_:ReservedRelation => true
       case _: SimpleRelation => b.relation match {
         case _:SingletonRelation|_:ReservedRelation => false
-        case _: SimpleRelation => true
+        case _: SimpleRelation => {
+          // true
+          if (functionLiterals.contains(a)) {
+            if (functionLiterals.contains(b)) true
+            else false
+          }
+          else true
+        }
       }
     })
   }
@@ -150,7 +185,18 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   private def getConditionFromBooleanFunctions(functionLiterals: Set[Literal]): Condition = {
-    val conditions: Set[Condition] = functionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
+    // Lan: pick out boolean functions
+    var boolFunctionLiterals: Set[Literal] = Set()
+    functionLiterals.foreach { func =>
+      func.fields match {
+        case head :: Nil => {
+          if (head._type.isInstanceOf[BooleanType]) boolFunctionLiterals += func
+        }
+        case _ => ()
+      }
+    }
+    // val conditions: Set[Condition] = functionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
+    val conditions: Set[Condition] = boolFunctionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
     Condition.makeConjunction(conditions.toList:_*)
   }
 
@@ -160,7 +206,8 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val keys = allIndices(literal.relation).map(i=>literal.fields(i))
       literal.fields.zipWithIndex.flatMap {
         case (p, i) => p match {
-          case v: Variable => if (grounded.contains(v)) {
+//          case v: Variable => if (grounded.contains(v)) {
+          case v: Variable => if (grounded.contains(v) && !functionLiterals.contains(literal)) {  // Lan(?): functionLiterals will not be constant
             Some(MatchRelationField(literal.relation, keys, i, v, enableProjection))
           }
           else None
@@ -186,11 +233,37 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       }
       stmt
     }
+    def _groundVariablesFromFunctions(groundVar: Set[Parameter], literal: Literal): Statement = {
+      var stmt: Statement = Empty()
+      for ((p, i) <- literal.fields.zipWithIndex) {
+        //local primaryKeyIndices = primaryKeyIndices(r.head.relation), local allIndices = primaryKeyIndices
+        if (allIndices(literal.relation).contains(i)){
+          assert(groundVar.contains(p)) // Lan(?): all primary key should have already been taken based on the sort order
+        }
+        else if (!groundVar.contains(p)) { // Lan(?): however, functions' non-primary fields will never already in groundVar
+          val newStmt = p match {
+            case v: Variable => if (v.name != "_") {
+              val keys = allIndices(literal.relation).map(i => literal.fields(i)) // the relation's primary keys
+//              GroundVar(v, literal.relation, keys, i, enableProjection)
+              GroundVarFromFunction(v, literal.relation, keys, enableProjection)
+            } else {
+              Empty()
+            }
+            case _: Constant => Empty()
+          }
+          stmt = Statement.makeSeq(stmt, newStmt)
+        }
+      }
+      stmt
+    }
     remainingLiterals match {
       case Nil => innerStatement
       case head::tail => {
         val newGroundedParams = (groundedParams ++ head.fields.toSet).filterNot(_.name=="_")
-        val declareNewVars: Statement = _groundVariables(groundedParams, head)
+        val declareNewVars: Statement = {
+          if (!functionLiterals.contains(head)) _groundVariables(groundedParams, head)
+          else _groundVariablesFromFunctions(groundedParams, head)
+        }
         val nextStatements = _getJoinStatements(newGroundedParams, tail, innerStatement)
         val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
         Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))

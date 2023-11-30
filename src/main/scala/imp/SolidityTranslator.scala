@@ -22,7 +22,8 @@ object Translator {
 
 }
 
-case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Set[Interface],
+case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
+                              interfaces: Set[Interface],
                               violations: Set[Relation],
                               _materializedRelations: Set[Relation],
                               isInstrument: Boolean,
@@ -95,10 +96,23 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def queryToDecl(query: Query): DeclFunction = {
-    DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement,
-        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+//    DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement, FunctionMetaData(Publicity.Private, isView = true, isTransaction = false, modifiers = Set()))
+//    DeclFunction(query.relation.name, program.indices(query.relation.asInstanceOf[SimpleRelation]).map(i => query.literal.fields(i)), UnitType(), query.statement,
+//        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+    val primaryKeyIndices: Map[Relation, List[Int]] = dl.relations.map {
+      case rel: SimpleRelation => rel -> dl.relationIndices.getOrElse(rel, List())
+      case rel: SingletonRelation => rel -> List()
+      case rel: ReservedRelation => rel -> List()
+    }.toMap
+    val primaryKeyLiterals = primaryKeyIndices(query.relation).map(i => query.literal.fields(i))
+    val returnParam: Parameter = {
+      val remainingParam = query.literal.fields.toSet.diff(primaryKeyLiterals.toSet)
+      assert(remainingParam.size == 1)
+      remainingParam.head
+    }
+    DeclFunction(query.relation.name, primaryKeyLiterals, returnParam._type, query.statement,
+      FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
         modifiers = Set()))
-
   }
 
   private def getUpdateFunctionDeclarations(): Set[DeclFunction] = {
@@ -170,7 +184,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case u: UpdateStatement => translateUpdateStatement(u)
     case UpdateDependentRelations(u) => getCallDependentFunctionsStatement(u)
     case query: Query => ???
-    case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
+//
+    case _:Empty|_:imp.Assign|_:GroundVar|_:GroundVarFromFunction|_:ReadTuple|_:SolidityStatement => statement
   }
 
   private def _flattenIfStatement(ifStatement: If): Statement = {
@@ -255,7 +270,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
         iface.relation match {
           case _rel:SimpleRelation => if (indices.contains(_rel)) {
             val keys = indices(_rel).map(i=> Variable(_rel.sig(i), _rel.memberNames(i)))
-            val groundVar = GroundVar(outputVar, rel, keys, outIndex, enableProjection)
+            val groundVar = {
+              if (!dl.functions.contains(_rel)) GroundVar(outputVar, rel, keys, outIndex, enableProjection)
+              else GroundVarFromFunction(outputVar, rel, keys, enableProjection)
+            }
             val readTuple = if (!enableProjection) ReadTuple(_rel, keys) else Empty()
             Statement.makeSeq(readTuple, groundVar,ret)
           }

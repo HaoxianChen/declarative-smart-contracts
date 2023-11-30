@@ -35,17 +35,22 @@ case class DataStructureHelper(relation: Relation, indices: List[Int], enablePro
         If(condition, search.statement)
       }
       case rel: SimpleRelation => {
-        val keys: List[Parameter] = indices.map ( i => {
-          search.conditions.find(_.index==i) match {
-            case Some(cond) => cond.p
-            case None => throw new Exception(s"all keys must be in search conditions.\n$search")
-          }
-        })
         /** todo: handle situations when not all keys are in search conditions. */
-        val readTuple = if (!enableProjection) ReadTuple(rel, keys) else Empty()
-        val remainingConditions = search.conditions.filterNot(c => keys.contains(c.p))
-        val condition = Condition.makeConjunction(remainingConditions.toList:_*)
-        Statement.makeSeq(readTuple, If(condition, search.statement))
+        // Lan: functional relations => index keys are not in search conditions
+        // how to judge a functional relation here?
+        if (search.conditions.size == 0) search.statement
+        else {
+          val keys: List[Parameter] = indices.map(i => {
+            search.conditions.find(_.index == i) match {
+              case Some(cond) => cond.p
+              case None => throw new Exception(s"all keys must be in search conditions.\n$search")
+            }
+          })
+          val readTuple = if (!enableProjection) ReadTuple(rel, keys) else Empty()
+          val remainingConditions = search.conditions.filterNot(c => keys.contains(c.p))
+          val condition = Condition.makeConjunction(remainingConditions.toList: _*)
+          Statement.makeSeq(readTuple, If(condition, search.statement))
+        }
       }
     }
   }
