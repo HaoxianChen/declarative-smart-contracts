@@ -1,0 +1,62 @@
+// Parameters
+.decl *owner(p: address)
+
+// views
+.decl balanceOf(p: address, n: uint)[0]
+.decl ownerOf(tokenId: uint, p: address)[0]
+.decl exists(tokenId: uint, b: bool)[0]
+.decl approved(tokenId: uint, p:address, b:bool)[0,1]
+
+.decl constructor()
+
+// Transactions
+.decl recv_mint(tokenId: uint, to: address)
+.decl recv_burn(tokenId: uint)
+.decl recv_transfer(to: address, tokenId: uint)
+.decl recv_transferFrom(from: address, to: address, tokenId: uint)
+.decl recv_setApproval(tokenId:uint, p:address, b: bool)
+.decl recv_setApprovalForAll(operator: address, _approved: bool)
+.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
+.decl transfer(tokenId: uint, from: address, to: address, time: uint)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_transferFrom
+.public recv_setApprovalForAll
+.public recv_setApproval
+.public approved(2)
+.public balanceOf(1)
+.public ownerOf(1)
+.public exists(1)
+.public isApprovedForAll(2)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+
+// Transactions
+transfer(tokenId,0,to,time) :- recv_mint(tokenId,to), msgSender(s), owner(s),
+                               exists(tokenId,false), now(time), to!=0.
+transfer(tokenId,p,0,time) :- recv_burn(tokenId), ownerOf(tokenId,p), msgSender(s),
+                              owner(s), exists(tokenId,true), now(time).
+transfer(tokenId,s,r,time) :- recv_transfer(r,tokenId), msgSender(s), ownerOf(tokenId,s),now(time), r!=0.
+transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s,true),now(time), r!=0.
+transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId),ownerOf(tokenId,s), r!=0,
+                                msgSender(o), isApprovedForAll(s,o,true), now(time).
+approval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
+isApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
+
+.decl latestTransfer(tokenId: uint, from: address, to: address, time: uint)[0]
+latestTransfer(tokenId,s,r,t) :- transfer(tokenId, s, r, t), t = max s: transfer(tokenId, _,_,s) .
+ownerOf(tokenId, p) :- latestTransfer(tokenId, _, p, _), p!=0.
+exists(tokenId, true) :- latestTransfer(tokenId,_,to,_), to != 0.
+approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
+
+balanceOf(p,c) :- ownerOf(_,p), c = count: ownerOf(_,p).
+
+// Properties
+.decl tokenNoOwner(tokenId: uint)[0]
+.violation tokenNoOwner
+tokenNoOwner(tokenId) :- ownerOf(tokenId,o), exists(tokenId, true), o==0.

@@ -1,0 +1,60 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor()
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0, p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0, balanceOf(p,m), n<=m.
+/* A bug caught by verification: n should be greater than zero,
+*  otherwise could lead to negative balance at r.
+ transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
+*/
+transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n, n>0.
+
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+transfer(0,p,n) :- mint(p,n).
+transfer(p,0,n) :- burn(p,n).
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+balanceOf(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+allMint(s) :- s = sum n: mint(_,n).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+
+// Properties
+// .decl *totalBalances(m: int)
+// .decl *unequalBalance(s: int, n: int)
+//
+// .violation unequalBalance
+//
+// totalBalances(s) :- s = sum n: balanceOf(_,n).
+// unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.

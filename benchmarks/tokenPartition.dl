@@ -1,0 +1,72 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: uint)
+.decl totalSupplyByPartition(q:uint, n:uint)[0]
+.decl balanceOfByPartition(p: address, q:uint, n: uint)[0,1]
+.decl constructor()
+
+
+// Transactions
+.decl issueByPartition(p: address, q:uint, amount: uint)
+.decl recv_issueByPartition(p: address, q:uint, amount: uint)
+.decl redeemByPartition(p: address, q:uint, amount: uint)
+.decl recv_redeemByPartition(p: address, q:uint, amount: uint)
+.decl transferByPartition(from: address, to: address, q:uint, amount: uint)
+.decl recv_transferByPartition(to: address, q:uint, amount: uint)
+
+// Interfaces
+.public recv_issueByPartition
+.public recv_redeemByPartition
+.public recv_transferByPartition
+.public balanceOfByPartition(2)
+.public totalSupply(0)
+.public totalSupplyByPartition(1)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+totalSupply(0) :- constructor().
+
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n), msgSender(s), owner(s), p!=0.
+redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n), msgSender(s), owner(s), 
+                          p!=0 ,balanceOfByPartition(p,q,m), n<=m.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(r,q,n), 
+                                msgSender(s), balanceOfByPartition(s,q,m), n<=m.
+
+.decl totalMint(p: address, q:uint, n: uint)[0,1]
+.decl totalBurn(p: address, q:uint, n: uint)[0,1]
+.decl totalOut(p: address, q:uint, n: uint)[0,1]
+.decl totalIn(p: address, q:uint, n: uint)[0,1]
+totalOut(p,q,s) :- transferByPartition(p,_,q,_), s = sum n: transferByPartition(p,_,q,n).
+totalIn(p,q,s) :- transferByPartition(_,p,q,_), s = sum n: transferByPartition(_,p,q,n).
+totalMint(p,q,s) :- issueByPartition(p,q,_), s = sum n: issueByPartition(p,q,n).
+totalBurn(p,q,s) :- redeemByPartition(p,q,_), s = sum n: redeemByPartition(p,q,n).
+balanceOfByPartition(p,q,s) :- totalMint(p,q,n), totalBurn(p,q,m),
+                               totalOut(p,q,o), totalIn(p,q,i), s:=n+i-m-o.
+
+.decl *allMint(n: uint)
+.decl *allBurn(n: uint)
+allMint(s) :- s = sum n: issueByPartition(_,_,n).
+allBurn(s) :- s = sum n: redeemByPartition(_,_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+
+.decl issueTotalByPartition(q: uint, n: uint)[0]
+.decl redeemTotalByPartition(q: uint, n: uint)[0]
+
+issueTotalByPartition(q,s) :- issueByPartition(_,q,_), 
+                              s = sum n: issueByPartition(_,q,n).
+redeemTotalByPartition(q,s) :- redeemByPartition(_,q,_), 
+                              s = sum n: redeemByPartition(_,q,n).
+totalSupplyByPartition(q,n) :- issueTotalByPartition(q,i),
+                               redeemTotalByPartition(q,r), n := i-r.
+
+// Properties
+.decl totalBalancesByPartition(q:uint, m: uint)[0]
+.decl unequalBalance(q:uint, s: uint, n: uint)[0]
+
+.violation unequalBalance
+
+totalBalancesByPartition(q,s) :- s = sum n: balanceOfByPartition(_,q,n).
+unequalBalance(q,s,n) :- totalBalancesByPartition(q,s),
+                         totalSupplyByPartition(q,n), s!=n.

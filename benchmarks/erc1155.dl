@@ -7,6 +7,8 @@
 .decl constructor()
 .decl allowance(tokenId: uint, p: address, s: address, n:uint)[0,1,2]
 
+
+
 // Transactions
 .decl mint(tokenId: uint, p: address, amount: uint)
 .decl recv_mint(tokenId: uint, p: address, amount: uint)

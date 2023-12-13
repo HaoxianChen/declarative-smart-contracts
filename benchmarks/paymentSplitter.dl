@@ -1,0 +1,30 @@
+.decl shares(p: address, n: uint)[0]
+.decl released(p: address, n:uint)[0]
+
+.decl *totalShares(n: uint)
+.decl *totalReleased(n: uint)
+.decl *totalReceived(n: uint)
+
+.decl recv_release(p: address)
+.decl release(p: address, n:uint)
+
+.public recv_release
+
+release(p,n) :- recv_release(p),
+                totalReceived(r), shares(p,m), totalShares(s),
+                released(p,e), n := (r * m / s ) - e,
+                // m < s,
+                // r > 0, m > 0, s>0,
+                r * m / s > e.
+
+totalShares(s) :- s = sum n: shares(_,n).
+send(p,n) :- release(p,n).
+
+totalReleased(s) :- s = sum e: release(_,e).
+released(p,s) :- release(p,_), s = sum n: release(p,n).
+totalReceived(r) :- thisBalance(n), totalReleased(e), r:= n+e.
+
+.decl overpaid(p: address, n: uint)[0]
+.violation overpaid
+overpaid(p,e) :- totalReceived(r), shares(p,m), totalShares(s),
+                 released(p,e),  e > r * m / s, s>0.

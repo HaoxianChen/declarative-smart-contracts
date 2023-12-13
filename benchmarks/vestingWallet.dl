@@ -1,0 +1,36 @@
+.decl release(n: uint)
+.decl *released(n: uint)
+.decl recv_release()
+
+.decl *beneficiary(p: address)
+.decl *start(t:uint)
+.decl *duration(t:uint)
+
+.decl constructor(s: uint, d:uint, b:address)
+
+.public recv_release
+.public released(0)
+
+beneficiary(b) :- constructor(_,_,b).
+start(s) :- constructor(a,_,_), now(t), s := a+t.
+duration(d) :- constructor(_,d,_).
+
+release(n) :- recv_release(), thisBalance(b), released(e), start(a), duration(d),
+              now(t), t>a+d, n := b-e, b>e, a < a+d, d < a+d.
+release(n) :- recv_release(), thisBalance(b), released(e), start(a), duration(d),
+              now(t), t>a, t<a+d, n := (b+e)*(t-a)/d - e, (b+e)*(t-a)/d > e,
+              d > 0, a < a+d, d < a+d,
+              b+e >= b, b+e >= e.
+
+send(b,n) :- release(n), n>0, beneficiary(b).
+
+released(s) :- s = sum n: release(n).
+
+// Property
+.decl *earlyRelease(e: uint)
+.violation earlyRelease
+earlyRelease(e) :- released(e), now(t), start(a), t<a, e > 0.
+// earlyRelease(e) :- released(e), thisBalance(b), now(t), start(a), duration(d), a<t,  e>(b+e)*(t-a)/d,
+//                         (b+e)*(t-a) >= (t-a), (b+e)*(t-a) >= (t-a),
+//                         t < a+d, d+a>a, d+a>d,
+//                         d > 0, b+e>=e, b+e>=b.

@@ -1,0 +1,14 @@
+#body,head,ruleId,isAgg,isTx
+totalReleased,totalReceived,0,false,false
+release,totalReleased,1,true,false
+shares,totalShares,2,true,false
+release,send,3,false,false
+release,released,4,true,false
+shares,overpaid,5,false,false
+totalReceived,overpaid,5,false,false
+released,overpaid,5,false,false
+totalShares,overpaid,5,false,false
+totalShares,release,6,false,true
+totalReceived,release,6,false,true
+shares,release,6,false,true
+released,release,6,false,true

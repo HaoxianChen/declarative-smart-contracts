@@ -1,4 +1,5 @@
-import datalog.{Parser, Program, Relation, TypeChecker}
+//import datalog.{Balance, MsgSender, MsgValue, Now, Parser, Program, Relation, This, TypeChecker}
+import datalog._
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
@@ -12,25 +13,25 @@ object Main extends App {
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
   val allBenchmarks = List(
-//    "crowFunding.dl",
-//    "erc20.dl",
-//    "nft.dl",
-//    "wallet.dl",
-//    "vestingWallet.dl",
-//    "paymentSplitter.dl",
-//    "erc777.dl",
-    // "erc1155.dl", // Lan: broke when run dependency-graph
+    "crowFunding.dl",
+    "erc20.dl",
+    "nft.dl",
+    "wallet.dl",
+    "vestingWallet.dl",
+    "paymentSplitter.dl",
+    "erc777.dl",
+     //"erc1155.dl", // Lan: broke when run dependency-graph
     "controllable.dl",
-//    "tokenPartition.dl",
-    //"tether.dl",
+    "tokenPartition.dl",
+    "tether.dl",
     "bnb.dl",
-    //"matic.dl",
-//    "ltcSwapAsset.dl",
+    "matic.dl",
+    "ltcSwapAsset.dl",
     "theta.dl",
-    //"wbtc.dl",
-//    "shib.dl",
+    "wbtc.dl",
+    "shib.dl",
     "linktoken.dl",
-//    "voting.dl",
+    "voting.dl",
     "auction.dl")
 
   def getMaterializedRelations(dl: Program, filepath: String): List[(Set[Relation],Set[Relation])] = {
@@ -255,16 +256,12 @@ object Main extends App {
       // complete set of relations that can not be skipped
       // => Original noSkippedSet (as above) + AnalysisBases noSkippedSet (discussed as follows)
       dl.rules.foreach { element =>
-        val head = element.head.toString.split("\\(")
-        val headTitle = head(0)
-        val headFields = head(1).split("\\)")(0).split(",")
-        println("head relation: ", headTitle, headFields.mkString(","))
+//        val head = element.head.toString.split("\\(")
+//        val headFields = head(1).split("\\)")(0).split(",")
+        val head = element.head.relation.name
+        val headFields = element.head.relation.paramList.map(p => p.name)
         val bodies = element.body.toArray
-        println("body relations: ", bodies.mkString(","))
         val formulas = element.functors.toArray
-        println("Non-aggregate calculations: ", formulas.mkString(","))
-        val aggregatedFormulas = element.aggregators.toArray
-        println("aggregators: ", aggregatedFormulas.mkString(","))
 
         // 1. if the body relation use exactly the same field as the head field
         // => differential is constant, no judgement operation
@@ -349,13 +346,70 @@ object Main extends App {
         println("finish a rule\n")
       }
 
-      val outfile = s"view-materialization/noSimplification-set/${dl.name}.csv"
+      val outfile = s"view-materialization/cannot-simplified/${dl.name}.csv"
       val outStr = noSimplificationSet.mkString(",") + "\n"
       Misc.writeToFile(outStr, outfile)
       println("finish a contract\n")
     }
   }
 
+  else if (args(0) == "function-check") {
+    for (p <- allBenchmarks) {
+      if (p == "linktoken.dl") {
+        val filepath = Paths.get(benchmarkDir, p).toString
+        val dl = parseProgram(filepath)
+        var noMaterializationSet: Set[String] = Set()
+        dl.rules.foreach { element =>
+          val head = element.head.relation.name
+          val headFields = element.head.relation.paramList.map(p => p.name)
+          val bodies = element.body.toArray
+          val formulas = element.functors.toArray
+          // type 1: body contains now (block.timestamp)
+          bodies.foreach { body =>
+            if (body.relation.name == "now") {
+              noMaterializationSet += head
+            }
+          }
+          // type 2: cardinality join => linktoken exception => validRecipient
+          if (bodies.length > 1) {
+            for (i <- bodies.indices) { // without aggregators and functors
+              val rel_i = bodies(i).relation
+              // special types: see in Statement.scala GroundVar
+              rel_i match {
+                case _: MsgSender | _: Balance | _: MsgValue | _: Now | _: This | _: SingletonRelation => {}
+                case _: Receive => {}
+                case _: SimpleRelation => {
+                  var hasJoinKey = false
+                  //              for (j <- i + 1 until bodies.length) {
+                  //                val rel_j = bodies(j)
+                  bodies.foreach { rel_j =>
+                    if (rel_i != rel_j.relation) {
+                      rel_i.paramList.foreach { param =>
+                        if (rel_j.relation.paramList.map(p => p.name).contains(param.name)) {
+                          hasJoinKey = true
+                        }
+                      }
+                    }
+                  }
+                  if (!hasJoinKey) {
+                    rel_i.paramList.foreach { param =>
+                      if (headFields.contains(param.name)) {
+                        noMaterializationSet += head
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        val outfile = s"view-materialization/cannot-materialized/${dl.name}.csv"
+        val outStr = noMaterializationSet.mkString(",") + "\n"
+        Misc.writeToFile(outStr, outfile)
+        println("finish a contract\n")
+      }
+    }
+  }
   else if (args(0) == "testz3") {
     TransitionSystem.testTS()
     // Prove.testZ3()
