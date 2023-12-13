@@ -1,1 +1,1 @@
-redeem,balanceOf,transferWithFee,transferOwnership,transfer,transferFrom,setParams,transferFromWithFee,issue
+transfer,redeem,transferFrom

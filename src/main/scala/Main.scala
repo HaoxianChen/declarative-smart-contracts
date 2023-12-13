@@ -355,59 +355,53 @@ object Main extends App {
 
   else if (args(0) == "function-check") {
     for (p <- allBenchmarks) {
-      if (p == "linktoken.dl") {
-        val filepath = Paths.get(benchmarkDir, p).toString
-        val dl = parseProgram(filepath)
-        var noMaterializationSet: Set[String] = Set()
-        dl.rules.foreach { element =>
-          val head = element.head.relation.name
-          val headFields = element.head.relation.paramList.map(p => p.name)
-          val bodies = element.body.toArray
-          val formulas = element.functors.toArray
-          // type 1: body contains now (block.timestamp)
+//      if (p == "ltcSwapAsset.dl") {
+      val filepath = Paths.get(benchmarkDir, p).toString
+      val dl = parseProgram(filepath)
+      var noMaterializationSet: Set[String] = Set()
+      dl.rules.foreach { element =>
+        val head_rel = element.head.relation
+        val headFields = element.head.relation.paramList.map(p => p.name)
+        val bodies = element.body.toArray
+        val formulas = element.functors.toArray
+
+        var afterConstructor = false
+        var isTxn = false
+        bodies.foreach { body =>
+          if (body.relation.name == "constructor") afterConstructor = true
+          if (body.relation.name.startsWith("recv_")) isTxn = true
+        }
+        // type 1: body contains now (block.timestamp)
+        if (!afterConstructor && !isTxn){
           bodies.foreach { body =>
             if (body.relation.name == "now") {
-              noMaterializationSet += head
-            }
-          }
-          // type 2: cardinality join => linktoken exception => validRecipient
-          if (bodies.length > 1) {
-            for (i <- bodies.indices) { // without aggregators and functors
-              val rel_i = bodies(i).relation
-              // special types: see in Statement.scala GroundVar
-              rel_i match {
-                case _: MsgSender | _: Balance | _: MsgValue | _: Now | _: This | _: SingletonRelation => {}
-                case _: Receive => {}
-                case _: SimpleRelation => {
-                  var hasJoinKey = false
-                  //              for (j <- i + 1 until bodies.length) {
-                  //                val rel_j = bodies(j)
-                  bodies.foreach { rel_j =>
-                    if (rel_i != rel_j.relation) {
-                      rel_i.paramList.foreach { param =>
-                        if (rel_j.relation.paramList.map(p => p.name).contains(param.name)) {
-                          hasJoinKey = true
-                        }
-                      }
-                    }
-                  }
-                  if (!hasJoinKey) {
-                    rel_i.paramList.foreach { param =>
-                      if (headFields.contains(param.name)) {
-                        noMaterializationSet += head
-                      }
-                    }
-                  }
-                }
-              }
+              noMaterializationSet += head_rel.name
             }
           }
         }
-        val outfile = s"view-materialization/cannot-materialized/${dl.name}.csv"
-        val outStr = noMaterializationSet.mkString(",") + "\n"
-        Misc.writeToFile(outStr, outfile)
-        println("finish a contract\n")
+        // type 2: without primary keys: boolean function, txn, constructor, singleton
+        // after selection => add all boolean functions, together with some txn
+        val primaryKeyIndices: Map[Relation, List[Int]] = dl.relations.map {
+          case rel: SimpleRelation => rel -> dl.relationIndices.getOrElse(rel, List())
+          case rel: SingletonRelation => rel -> List()
+          case rel: ReservedRelation => rel -> List()
+        }.toMap
+        head_rel match {
+          case _:SingletonRelation | _:ReservedRelation => {}
+          case rel: SimpleRelation => {
+            if(dl.relationIndices.getOrElse(rel, List()).isEmpty) {
+              if (!isTxn) noMaterializationSet += rel.name
+            }
+          }
+        }
+
       }
+      val outfile = s"view-materialization/cannot-materialized/${dl.name}.csv"
+      val outStr = noMaterializationSet.mkString(",") + "\n"
+      Misc.writeToFile(outStr, outfile)
+      println(dl.name)
+      println("finish a contract\n", outStr)
+
     }
   }
   else if (args(0) == "testz3") {

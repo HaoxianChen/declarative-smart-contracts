@@ -1,1 +1,1 @@
-balanceOf,transfer,transferFrom,totalMint,totalIn
+validRecipient,transfer
