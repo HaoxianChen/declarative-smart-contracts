@@ -1,6 +1,7 @@
 #body,head,ruleId,isAgg,isTx
 latestTransfer,ownerOf,0,false,false
 ownerOf,approval,1,false,true
+ ,isApprovedForAll,2,false,true
 owner,transfer,3,false,true
 exists,transfer,3,false,true
 ownerOf,approved,4,false,false

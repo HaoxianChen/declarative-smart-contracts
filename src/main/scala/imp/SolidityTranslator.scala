@@ -105,14 +105,21 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
       case rel: ReservedRelation => rel -> List()
     }.toMap
     val primaryKeyLiterals = primaryKeyIndices(query.relation).map(i => query.literal.fields(i))
-    val returnParam: Parameter = {
-      val remainingParam = query.literal.fields.toSet.diff(primaryKeyLiterals.toSet)
-      assert(remainingParam.size == 1)
-      remainingParam.head
+    if(primaryKeyIndices(query.relation).isEmpty) {
+      DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement,
+        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+          modifiers = Set()))
     }
-    DeclFunction(query.relation.name, primaryKeyLiterals, returnParam._type, query.statement,
-      FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
-        modifiers = Set()))
+    else{
+      val returnParam: Parameter = {
+        val remainingParam = query.literal.fields.toSet.diff(primaryKeyLiterals.toSet)
+        assert(remainingParam.size == 1)
+        remainingParam.head
+      }
+      DeclFunction(query.relation.name, primaryKeyLiterals, returnParam._type, query.statement,
+        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+          modifiers = Set()))
+    }
   }
 
   private def getUpdateFunctionDeclarations(): Set[DeclFunction] = {

@@ -46,7 +46,10 @@ case class GroundVarFromFunction(p: Parameter, relation: Relation, keys: List[Pa
           s"${p._type} $p = ${relation.name}();"
         }
       }
-      case _ => throw new Exception("Function relation should not have this type")
+      case _ => {
+        println(relation.toString)
+        throw new Exception("Function relation should not have this type")
+      }
     }
   }
 }

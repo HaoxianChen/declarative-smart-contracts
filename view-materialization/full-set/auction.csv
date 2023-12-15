@@ -1,1 +1,1 @@
-withdrawTotal,owner,beneficiary,end,highestBid,balance,bidTotal,endTime
+endTime,beneficiary,balance,bidTotal,owner,highestBid,withdrawTotal,end,

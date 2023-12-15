@@ -147,8 +147,10 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
     val ruleStatements = Statement.makeSeq(
       defRules.map(r => views(r).getQueryStatement()).toSeq:_*
     )
-//    val statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
-    val statement = ruleStatements
+    var statement = ruleStatements
+    if (primaryKeyIndices(relation).isEmpty) {
+      statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
+    }
 
     Query(defRules.head.head, statement)
   }
@@ -172,7 +174,9 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
                                .map(lit => Tuple5(lit.relation, rule.head.relation, ruleId, isAgg, isTx))
       val fromAggregator = rule.aggregators.map(agg =>
                               Tuple5(agg.literal.relation, rule.head.relation, ruleId, isAgg, isTx))
-      fromBody++fromAggregator
+      var returnRelationDependencies: Set[(Relation, Relation, Int, Boolean, Boolean)] = fromBody++fromAggregator
+      if(returnRelationDependencies.isEmpty) returnRelationDependencies += Tuple5(Relation.empty, rule.head.relation, ruleId, isAgg, isTx)
+      returnRelationDependencies
     }
     program.rules.filterNot(_.body.exists(_.relation.name=="constructor")).flatMap(getDependencies)
 

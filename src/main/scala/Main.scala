@@ -372,6 +372,9 @@ object Main extends App {
           if (body.relation.name.startsWith("recv_")) isTxn = true
         }
         // type 1: body contains now (block.timestamp)
+        // 1. time is used in functors, head can be stored? no, e.g., owner
+        // 2. time is used as a head field => head must be singleton, and must be stored
+        // other cases are invalid datalog
         if (!afterConstructor && !isTxn){
           bodies.foreach { body =>
             if (body.relation.name == "now") {
@@ -381,11 +384,6 @@ object Main extends App {
         }
         // type 2: without primary keys: boolean function, txn, constructor, singleton
         // after selection => add all boolean functions, together with some txn
-        val primaryKeyIndices: Map[Relation, List[Int]] = dl.relations.map {
-          case rel: SimpleRelation => rel -> dl.relationIndices.getOrElse(rel, List())
-          case rel: SingletonRelation => rel -> List()
-          case rel: ReservedRelation => rel -> List()
-        }.toMap
         head_rel match {
           case _:SingletonRelation | _:ReservedRelation => {}
           case rel: SimpleRelation => {

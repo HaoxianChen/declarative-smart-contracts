@@ -87,7 +87,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val groundedParams: Set[Parameter] = insert.fields.toSet
     val sortedLiteral: List[Literal] = {
       // val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
-      val rest = rule.body.filterNot(_.relation==insert.relation)
+      val rest = rule.body.filterNot(_.relation==insert.relation).diff(getBooleanFunctionLiterals(functionLiterals))
       sortJoinLiterals(rest)
     }
     val updates = _getJoinStatements(groundedParams, sortedLiteral, IfStatement)
@@ -96,39 +96,45 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def getQueryStatement(): Statement = {
-//    val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
-//    val groundedParams: Set[Parameter] = rule.head.fields.toSet
-//    val sortedLiteral: List[Literal] = {
-//      val rest = rule.body.diff(functionLiterals)
-//      sortJoinLiterals(rest)
-//    }
-//    _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
-    val groundedParams: Set[Parameter] = primaryKeyIndices.map(i => rule.head.fields(i)).toSet
-    val returnParam: Parameter = {
-      val remainingParam = rule.head.fields.toSet.diff(groundedParams)
-      assert(remainingParam.size == 1)
-      remainingParam.head
+    if (primaryKeyIndices.isEmpty) {
+      val groundedParams: Set[Parameter] = rule.head.fields.toSet
+      val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
+      val sortedLiteral: List[Literal] = {
+//        val rest = rule.body.diff(functionLiterals)
+        val rest = rule.body.diff(getBooleanFunctionLiterals(functionLiterals))
+        sortJoinLiterals(rest)
+      }
+      _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
     }
-    val assignStatements = rule.functors.foldLeft[Statement](Empty())( // Lan: to modify
-      (stmt, f) => f match {
-        case datalog.Assign(p, a) => {
-          if(returnParam.toString.equals(p.toString)) Statement.makeSeq(stmt, imp.Assign(p, a))
-          else stmt // Lan(?): this will not happen => assign statement occurs only on non-primary fields
+    else {
+      val groundedParams: Set[Parameter] = primaryKeyIndices.map(i => rule.head.fields(i)).toSet
+      val returnParam: Parameter = {
+        val remainingParam = rule.head.fields.toSet.diff(groundedParams)
+        assert(remainingParam.size == 1)
+        remainingParam.head
+      }
+      val assignStatements = rule.functors.foldLeft[Statement](Empty())( // Lan: to modify
+        (stmt, f) => f match {
+          case datalog.Assign(p, a) => {
+            if (returnParam.toString.equals(p.toString)) Statement.makeSeq(stmt, imp.Assign(p, a))
+            else stmt // Lan(?): this will not happen => assign statement occurs only on non-primary fields
+          }
+          case _ => stmt
         }
-        case _ => stmt
+      )
+      val innerStatement = {
+        val returnStatement = {
+          Statement.makeSeq(assignStatements, Return(returnParam)) // Lan: to do, add in this method
+        }
+        If(condition = _getConditions(), statement = returnStatement)
       }
-    )
-    val innerStatement = {
-      val returnStatement = {
-        Statement.makeSeq(assignStatements, Return(returnParam))  // Lan: to do, add in this method
+      val sortedLiteral: List[Literal] = {
+//        val rest = rule.body.diff(functionLiterals)
+        val rest = rule.body.diff(getBooleanFunctionLiterals(functionLiterals))
+        sortJoinLiterals(rest)
       }
-      If(condition = _getConditions(), statement = returnStatement)
+      _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
     }
-    val sortedLiteral: List[Literal] = {
-      val rest = rule.body.diff(functionLiterals)
-      sortJoinLiterals(rest)
-    }
-    _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
   }
 
   private def _getConditions(): Condition = {
@@ -184,17 +190,24 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     cond
   }
 
-  private def getConditionFromBooleanFunctions(functionLiterals: Set[Literal]): Condition = {
-    // Lan: pick out boolean functions
+  private def getBooleanFunctionLiterals(functionLiterals: Set[Literal]): Set[Literal] = {
     var boolFunctionLiterals: Set[Literal] = Set()
     functionLiterals.foreach { func =>
-      func.fields match {
+      func.fields match { // e.g., end(true)
         case head :: Nil => {
           if (head._type.isInstanceOf[BooleanType]) boolFunctionLiterals += func
         }
         case _ => ()
       }
+      if (allIndices(func.relation).isEmpty) boolFunctionLiterals += func // no primary key
     }
+    boolFunctionLiterals
+  }
+
+
+  private def getConditionFromBooleanFunctions(functionLiterals: Set[Literal]): Condition = {
+    // Lan: pick out boolean functions
+    val boolFunctionLiterals: Set[Literal] = getBooleanFunctionLiterals(functionLiterals)
     // val conditions: Set[Condition] = functionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
     val conditions: Set[Condition] = boolFunctionLiterals.map(l=>BooleanFunction(l.relation.name, l.fields))
     Condition.makeConjunction(conditions.toList:_*)

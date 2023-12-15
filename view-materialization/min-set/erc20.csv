@@ -1,0 +1,8 @@
+allBurn,allMint,allowanceTotal,balanceOf,owner,spentTotal,,totalSupply,allowance
+allowance,owner,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf
+allowanceTotal,owner,spentTotal,totalBurn,totalIn,totalMint,totalOut,totalSupply,,allowance,balanceOf
+allBurn,allMint,allowanceTotal,owner,spentTotal,totalBurn,totalIn,totalMint,totalOut,,totalSupply,allowance,balanceOf
+allowance,balanceOf,owner,totalSupply,
+allBurn,allMint,allowance,balanceOf,owner,,totalSupply
+allowanceTotal,balanceOf,owner,spentTotal,totalSupply,,allowance
+allBurn,allMint,allowance,owner,totalBurn,totalIn,totalMint,totalOut,,totalSupply,balanceOf

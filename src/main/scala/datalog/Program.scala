@@ -39,6 +39,11 @@ object Relation {
   val reservedRelations: Set[Relation] = Set(
     MsgSender(), MsgValue(), Now(), Send(), Balance(), Receive(), This()
   )
+  def empty: Relation = new Relation {
+    override def name: String = " "
+    override def sig: List[Type] = List()
+    override def memberNames: List[String] = List()
+  }
 }
 
 case class SimpleRelation(name: String, sig: List[Type], memberNames: List[String]) extends Relation

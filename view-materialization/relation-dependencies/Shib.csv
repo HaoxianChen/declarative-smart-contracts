@@ -1,0 +1,36 @@
+#body,head,ruleId,isAgg,isTx
+increaseAllowanceTotal,allowance,1,false,false
+spentTotal,allowance,1,false,false
+decreaseAllowanceTotal,allowance,1,false,false
+allowance,burnFrom,3,false,true
+balanceOf,burnFrom,3,false,true
+balanceOf,burn,5,false,true
+totalSupply,unequalBalance,6,false,false
+totalBalances,unequalBalance,6,false,false
+totalIn,balanceOf,7,false,false
+totalMint,balanceOf,7,false,false
+totalBurn,balanceOf,7,false,false
+totalOut,balanceOf,7,false,false
+decreaseAllowance,decreaseAllowanceTotal,8,true,false
+transferFrom,spentTotal,9,true,false
+burnFrom,transferFrom,10,false,false
+ ,increaseAllowance,11,false,true
+transferFrom,transfer,12,false,false
+allowance,decreaseAllowance,13,false,true
+mint,allMint,14,true,false
+burn,totalBurn,16,true,false
+allBurn,totalSupply,17,false,false
+allMint,totalSupply,17,false,false
+allowance,increaseAllowance,18,false,true
+mint,totalMint,19,true,false
+balanceOf,transfer,20,false,true
+burnFrom,burn,21,false,false
+transfer,totalOut,22,true,false
+balanceOf,totalBalances,23,true,false
+ ,decreaseAllowance,24,false,true
+owner,mint,25,false,true
+allowance,transferFrom,26,false,true
+balanceOf,transferFrom,26,false,true
+burn,allBurn,27,true,false
+increaseAllowance,increaseAllowanceTotal,29,true,false
+transfer,totalIn,30,true,false
