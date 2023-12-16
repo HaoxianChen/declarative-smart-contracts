@@ -16,6 +16,7 @@
 
 .decl *hasWinner(b: bool)
 .public hasWinner(0)
+hasWinner(fasle) :- constructor().
 
 .decl *quorumSize(q: uint)
 

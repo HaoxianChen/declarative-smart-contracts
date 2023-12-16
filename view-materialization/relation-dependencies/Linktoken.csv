@@ -21,8 +21,8 @@ validRecipient,increaseAllowance,12,false,true
 transferFrom,transfer,14,false,false
 burn,totalBurn,15,true,false
 mint,totalMint,16,true,false
-allBurn,totalSupply,17,false,false
 allMint,totalSupply,17,false,false
+allBurn,totalSupply,17,false,false
 totalBalances,unequalBalance,18,false,false
 totalSupply,unequalBalance,18,false,false
 transfer,totalOut,20,true,false

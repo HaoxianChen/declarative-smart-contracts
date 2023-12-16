@@ -9,6 +9,10 @@
 
 .decl constructor()
 
+// new views
+.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
+
 // Transactions
 .decl recv_mint(tokenId: uint, to: address)
 .decl recv_burn(tokenId: uint)
@@ -16,8 +20,8 @@
 .decl recv_transferFrom(from: address, to: address, tokenId: uint)
 .decl recv_setApproval(tokenId:uint, p:address, b: bool)
 .decl recv_setApprovalForAll(operator: address, _approved: bool)
-.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
-.decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
+.decl setApproval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl setApprovedForAll(owner:address, operator:address, b: bool)[0,1]
 .decl transfer(tokenId: uint, from: address, to: address, time: uint)
 
 // Interfaces
@@ -36,6 +40,10 @@
 // Rules
 owner(s) :- constructor(), msgSender(s).
 
+// New Rules
+approval(o,tokenId,p,b) :- setApproval(o,tokenId,p,b).
+isApprovedForAll(p,o,b) :- setApprovedForAll(p,o,b).
+
 // Transactions
 transfer(tokenId,0,to,time) :- recv_mint(tokenId,to), msgSender(s), owner(s),
                                exists(tokenId,false), now(time), to!=0.
@@ -45,8 +53,8 @@ transfer(tokenId,s,r,time) :- recv_transfer(r,tokenId), msgSender(s), ownerOf(to
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId), approved(tokenId,s,true),now(time), r!=0.
 transfer(tokenId,s,r,time) :- recv_transferFrom(s,r,tokenId),ownerOf(tokenId,s), r!=0,
                                 msgSender(o), isApprovedForAll(s,o,true), now(time).
-approval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
-isApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
+setApproval(o,tokenId,p,b) :- recv_setApproval(tokenId,p,b), msgSender(o), ownerOf(tokenId,o).
+setApprovedForAll(p,o,b) :- recv_setApprovalForAll(o,b), msgSender(p).
 
 .decl latestTransfer(tokenId: uint, from: address, to: address, time: uint)[0]
 latestTransfer(tokenId,s,r,t) :- transfer(tokenId, s, r, t), t = max s: transfer(tokenId, _,_,s) .

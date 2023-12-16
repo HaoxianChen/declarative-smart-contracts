@@ -11,6 +11,7 @@
 // New views
 .decl allowance(p: address, s: address, n:uint)[0,1]
 .decl *paused(b:bool)
+.decl isPauser(p: address, b: bool)[0]
 
 // Transactions
 .decl mint(p: address, amount: uint)
@@ -25,17 +26,20 @@
 .decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
 
-.decl isPauser(p: address, b: bool)[0]
+.decl addPauser(p: address, b: bool)[0]
+.decl renouncePauser(p: address, b: bool)[0]
 .decl recv_addPauser(p:address)
 .decl recv_renouncePauser()
 
-isPauser(p,true) :- recv_addPauser(p), msgSender(s), isPauser(s,true).
-isPauser(s,false) :- recv_renouncePauser(), msgSender(s), isPauser(s,true).
+addPauser(p,true):- recv_addPauser(p), msgSender(s), isPauser(s,true).
+renouncePauser(s,false) :- recv_renouncePauser(), msgSender(s), isPauser(s,true).
 
+.decl *pause(b:bool)
+.decl *unpause(b:bool)
 .decl recv_pause()
 .decl recv_unpause()
-paused(true) :- recv_pause(), msgSender(s), isPauser(s,true), paused(false).
-paused(false) :- recv_unpause(), msgSender(s), isPauser(s,true), paused(true).
+pause(true) :- recv_pause(), msgSender(s), isPauser(s,true), paused(false).
+unpause(false) :- recv_unpause(), msgSender(s), isPauser(s,true), paused(true).
 
 .public recv_pause
 .public recv_unpause
@@ -95,15 +99,15 @@ transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     paused(false).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-.decl recv_increaseApproval(p:address, n:uint)
-.decl recv_decreaseApproval(p:address, n:uint)
+.decl recv_increaseAllowance(p:address, n:uint)
+.decl recv_decreaseAllowance(p:address, n:uint)
 .decl decreaseAllowance(p: address, s: address, n:uint)
-.public recv_increaseApproval
-.public recv_decreaseApproval
+.public recv_increaseAllowance
+.public recv_decreaseAllowance
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
-increaseAllowance(o,s,n) :- recv_increaseApproval(s,n), msgSender(o).
-decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n), msgSender(o), allowance(o,s,m), m>=n.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(s,n), msgSender(o).
+decreaseAllowance(o,s,n) :- recv_decreaseAllowance(s,n), msgSender(o), allowance(o,s,m), m>=n.
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl decreaseAllowanceTotal(o:address, s:address, m:uint)[0,1]
@@ -113,6 +117,11 @@ decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_), m = sum n: decreaseAl
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
+
+paused(b) :- pause(b).
+paused(b) :- unpause(b).
+isPauser(p,b) :- addPauser(p,b).
+isPauser(p,b) :- renouncePauser(p,b).
 
 // Properties
 .decl *totalBalances(m: uint)

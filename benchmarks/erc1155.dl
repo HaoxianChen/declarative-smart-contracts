@@ -24,7 +24,7 @@
 .decl setApprovalForAll(sender: address, operator: address, approved: bool)
 
 setApprovalForAll(s,o,a) :- recv_setApprovalForAll(o,a), msgSender(s), s!=o.
-recv_approve(t,s,n) :- setApprovalForAll(s,o,a), a==true, balanceOf().
+// recv_approve(t,s,n) :- setApprovalForAll(s,o,a), a==true, balanceOf().
 
 
 .decl recv_safeTransferFrom(f: address, t: address, id: uint, amount: uint, data: uint)

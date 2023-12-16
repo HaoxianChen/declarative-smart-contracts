@@ -48,13 +48,19 @@
 
 .decl recv_pause()
 .decl recv_unpause()
-paused(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
-paused(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
+.decl *pause(b: bool)
+.decl *unpause(b: bool)
+pause(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
+paused(b) :- pause(b).
+unpause(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
+paused(b) :- pause(b).
 
 .decl recv_transferOwnership(p:address)
 .decl recv_claimOwnership()
 .decl claimOwnership(p:address)
-pendingOwner(p) :- recv_transferOwnership(p), msgSender(s), owner(s), p!=0.
+.decl *transferOwnership(p: address)
+transferOwnership(p) :- recv_transferOwnership(p), msgSender(s), owner(s), p!=0.
+pendingOwner(p) :- transferOwnership(p).
 claimOwnership(s) :- recv_claimOwnership(), msgSender(s), pendingOwner(s).
 owner(s) :- claimOwnership(s).
 pendingOwner(0) :- claimOwnership(_).

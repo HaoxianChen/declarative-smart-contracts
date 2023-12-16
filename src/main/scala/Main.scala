@@ -31,13 +31,13 @@ object Main extends App {
     "wbtc.dl",
     "shib.dl",
     "linktoken.dl",
-    "voting.dl",
+    // "voting.dl",
     "auction.dl")
 
   def getMaterializedRelations(dl: Program, filepath: String): List[(Set[Relation],Set[Relation])] = {
     if (isFileExists(filepath)) {
       val allPlans = readMaterializedRelationNames(filepath)
-      var rowLists: List[(Set[Relation],Set[Relation])] = List()
+      var rowLists: List[(Set[Relation],Set[Relation])] = List() 
       for(plan <- allPlans){
         val emptyIndex = plan.indexOf("")
         val (minList, funcList) = plan.splitAt(emptyIndex)
@@ -143,6 +143,7 @@ object Main extends App {
       arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
       enableProjection = options.getOrElse("projection", true).toString.toBoolean)
   }
+
   else if (args(0) == "compile-all") {
     val options: Map[String, Any] = if (args.length <= 1) {
       println(compileUsage)
@@ -163,6 +164,7 @@ object Main extends App {
         enableProjection = options.getOrElse("projection", true).toString.toBoolean)
     }
   }
+
   else if (args(0) == "test") {
     for (p <- allBenchmarks) {
       println(p)
@@ -173,6 +175,7 @@ object Main extends App {
         consolidateUpdates = true, enableProjection = true)
     }
   }
+
   else if (args(0) == "compile-all-versions") {
     val filepath = args(1)
 
@@ -185,6 +188,7 @@ object Main extends App {
     run(filepath, displayResult = false, outDir=_fusedOutDir, isInstrument = false, monitorViolations = false,
       consolidateUpdates = true, enableProjection = true)
   }
+
   else if (args(0) == "test-instrument") {
     val _outDir = outDirWithInstrumentations
     for (p <- allBenchmarks) {
@@ -402,6 +406,7 @@ object Main extends App {
 
     }
   }
+
   else if (args(0) == "testz3") {
     TransitionSystem.testTS()
     // Prove.testZ3()

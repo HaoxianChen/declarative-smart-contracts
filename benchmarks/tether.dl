@@ -1,6 +1,6 @@
 // Adopted from Etherscan: https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7#code
 
-// parameters
+// views
 .decl *owner(p: address)
 .decl *paused(b: bool)
 .decl *totalSupply(n: uint)
@@ -10,12 +10,17 @@
 .decl allowance(p: address, s: address, n:uint)[0,1]
 .decl isBlackListed(p: address, b:bool)[0]
 
+.decl transferWithFee(from:address, to:address, fee:uint, amount: uint)
+.decl transferWithoutFee(from: address, to: address, amount: uint)
+// .decl transfer(from: address, to: address, amount: uint)
+.decl transferFromWithFee(from:address, to:address, spender:address, fee:uint, amount: uint)
+.decl transferFromWithoutFee(from: address, to: address, spender: address, amount: uint)
+// .decl transferFrom(from: address, to: address, spender: address, amount: uint)
+
 // constructor
 .decl constructor(n: uint)
 
 // transactions
-.decl transferWithFee(from:address, to:address, fee:uint, amount: uint)
-.decl transferFromWithFee(from:address, to:address, spender:address, fee:uint, amount: uint)
 
 .decl issue(p: address, amount: uint)
 .decl recv_issue(amount: uint)
@@ -23,10 +28,10 @@
 .decl redeem(p: address, amount: uint)
 .decl recv_redeem(amount: uint)
 
-.decl transfer(from: address, to: address, amount: uint)
+.decl transfer(from:address, to:address, fee:uint, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
 .decl recv_transferFrom(from: address, to: address, amount: uint)
-.decl transferFrom(from: address, to: address, spender: address, amount: uint)
+.decl transferFrom(from:address, to:address, spender:address, fee:uint, amount: uint)
 .decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
 .decl approve(o: address, s: address, n: uint)
@@ -41,9 +46,9 @@
 .decl recv_transferOwnership(o: address)
 .decl transferOwnership(o: address)
 .decl recv_pause()
-.decl pause()
+.decl *pause(b: bool)
 .decl recv_unpause()
-.decl unpause()
+.decl *unpause(b: bool)
 
 // Interfaces
 .public recv_issue
@@ -82,8 +87,8 @@ owner(s) :- transferOwnership(s).
 .decl totalRedeem(p: address, n: uint)[0]
 .decl totalOut(p: address, n: uint)[0]
 .decl totalIn(p: address, n: uint)[0]
-totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
-totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalOut(p,s) :- transferWithoutFee(p,_,_), s = sum n: transferWithoutFee(p,_,n).
+totalIn(p,s) :- transferWithoutFee(_,p,_), s = sum n: transferWithoutFee(_,p,n).
 totalIssue(p,s) :- issue(p,_), s = sum n: issue(p,n).
 totalRedeem(p,s) :- redeem(p,_), s = sum n: redeem(p,n).
 balanceOf(p,s) :- totalIssue(p,n), totalRedeem(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
@@ -97,13 +102,16 @@ totalSupply(n) :- allIssue(m), allRedeem(b), n := m - b.
 issue(s,n) :- recv_issue(n), msgSender(s), owner(s), s!=0.
 redeem(s,n) :- recv_redeem(n), msgSender(s), owner(s), s!=0, balanceOf(s,m), n<=m.
 
-paused(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
-paused(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
+pause(true) :- recv_pause(), msgSender(s), owner(s), paused(false).
+paused(p) :- pause(p).
+unpause(false) :- recv_unpause(), msgSender(s), owner(s), paused(true).
+paused(p) :- unpause(p).
 
-transferWithFee(s,r,f,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m, isBlackListed(s,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
 
-transfer(s,r,m) :- transferWithFee(s,r,f,n), m := n-f.
-transfer(s,o,f) :- transferWithFee(s,r,f,_), owner(o).
+transfer(s,r,f,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m, isBlackListed(s,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
+transferWithFee(s,r,f,n) :- transfer(s,r,f,n).
+transferWithoutFee(s,r,m) :- transferWithFee(s,r,f,n), m := n-f.
+transferWithoutFee(s,o,f) :- transferWithFee(s,r,f,_), owner(o).
 
 
 addBlackList(p) :- recv_addBlackList(p),msgSender(s),owner(s).
@@ -119,17 +127,18 @@ redeem(p,n) :- destroyBlackFunds(p,n).
 
 
 
-transferFromWithFee(o,r,s,f,n) :- recv_transferFrom(o,r,n), balanceOf(o,m), m>=n, msgSender(s), allowance(o,s,k), k>=n, isBlackListed(o,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
-transferFrom(o,r,s,m) :- transferFromWithFee(o,r,s,f,n), m := n-f.
-transferFrom(o,p,s,f) :- transferFromWithFee(o,r,s,f,_), owner(p).
-transfer(o,r,n) :- transferFrom(o,r,_,n).
+transferFrom(o,r,s,f,n) :- recv_transferFrom(o,r,n), balanceOf(o,m), m>=n, msgSender(s), allowance(o,s,k), k>=n, isBlackListed(o,false), rate(rt), maxFee(mf), f := min(rt*n/10000, mf).
+transferFromWithFee(o,r,s,f,n) :- transferFrom(o,r,s,f,n).
+transferFromWithoutFee(o,r,s,m) :- transferFromWithFee(o,r,s,f,n), m := n-f.
+transferFromWithoutFee(o,p,s,f) :- transferFromWithFee(o,r,s,f,_), owner(p).
+transferWithoutFee(o,r,n) :- transferFromWithoutFee(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
-spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+spentTotal(o,s,m) :- transferFromWithoutFee(o,_,s,_), m = sum n: transferFromWithoutFee(o,_,s,n).
 
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 

@@ -22,8 +22,12 @@ canTransfer(p,q) :- precirculated(p,true), precirculated(q,true).
 
 .decl recv_allowPrecirculation(p:address)
 .decl recv_disallowPrecirculation(p:address)
-precirculated(p,true) :- recv_allowPrecirculation(p), msgSender(s), owner(s).
-precirculated(p,false) :- recv_disallowPrecirculation(p), msgSender(s), owner(s).
+.decl allowPrecirculation(p:address, b:bool)[0]
+.decl disallowPrecirculation(p:address, b:bool)[0]
+allowPrecirculation(p,true) :- recv_allowPrecirculation(p), msgSender(s), owner(s).
+precirculated(p,b) :- allowPrecirculation(p,b).
+disallowPrecirculation(p,false) :- recv_disallowPrecirculation(p), msgSender(s), owner(s).
+precirculated(p,b) :- disallowPrecirculation(p,b).
 .public recv_allowPrecirculation
 .public recv_disallowPrecirculation
 
@@ -60,7 +64,7 @@ unlockTime(t) :- constructor(t).
 mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
-  canTransfer(s,r).
+                canTransfer(s,r).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
