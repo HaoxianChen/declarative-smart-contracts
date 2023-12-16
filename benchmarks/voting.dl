@@ -26,6 +26,8 @@ votes(p,c) :- vote(_,p), c = count: vote(_,p).
 
 wins(p, true) :- votes(p,c), quorumSize(q), c >= q.
 hasWinner(true) :- wins(_,b), b==true.
+// hasWinner(true) :- recv_vote(p), votes(p,c), quorumSize(q), c >= q.
+// hard to update more than one relation in one recv_xxx function
 winningProposal(p) :- wins(p,b), b==true.
 
 voted(v,true) :- vote(v,_).

@@ -6,10 +6,9 @@
 .decl balanceOf(tokenId: uint, p: address, n: uint)[0,1]
 .decl constructor()
 .decl allowance(tokenId: uint, p: address, s: address, n:uint)[0,1,2]
+.decl isApprovedForAll(owner: address, operator: address, approval: bool)[0,1]
 
-
-
-// Transactions
+// // Transactions
 .decl mint(tokenId: uint, p: address, amount: uint)
 .decl recv_mint(tokenId: uint, p: address, amount: uint)
 .decl burn(tokenId: uint, p: address, amount: uint)
@@ -21,10 +20,11 @@
 .decl recv_approve(tokenId: uint, s: address, n:uint)
 
 .decl recv_setApprovalForAll(operator: address, approved: bool)
-.decl setApprovalForAll(sender: address, operator: address, approved: bool)
+.decl setApprovalForAll(sender: address, operator: address, approved: bool)[0,1]
 
 setApprovalForAll(s,o,a) :- recv_setApprovalForAll(o,a), msgSender(s), s!=o.
 // recv_approve(t,s,n) :- setApprovalForAll(s,o,a), a==true, balanceOf().
+isApprovedForAll(s,o,a) :- setApprovalForAll(s,o,a).
 
 
 .decl recv_safeTransferFrom(f: address, t: address, id: uint, amount: uint, data: uint)
@@ -36,7 +36,7 @@ setApprovalForAll(s,o,a) :- recv_setApprovalForAll(o,a), msgSender(s), s!=o.
 .public recv_burn
 .public recv_transfer
 .public recv_safeTransferFrom
-.public setApprovalForAll
+.public isApprovedForAll(2)
 .public balanceOf(2)
 .public totalSupply(1)
 
@@ -89,7 +89,7 @@ allowance(t,o,s,n) :- allowanceTotal(t,o,s,m), spentTotal(t,o,s,l), n := m-l.
 .decl totalBalances(tokenId: uint, m: uint)[0]
 .decl unequalBalance(tokenId: uint, s: uint, n: uint)[0]
 
-.violation unequalBalance
+// .violation unequalBalance
 
 totalBalances(t,s) :- s = sum n: balanceOf(t,_,n).
 unequalBalance(t,s,n) :- totalBalances(t,s), totalSupply(t,n), s!=n.
