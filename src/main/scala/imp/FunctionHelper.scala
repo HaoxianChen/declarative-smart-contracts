@@ -19,7 +19,7 @@ case class FunctionHelper(onStatement: OnStatement) {
 
   }
   private val keyIndices: List[Int] = onStatement match {
-    case OnIncrement(literal, keyIndices, updateIndex, updateTarget, statement,_) => keyIndices
+    case OnIncrement(literal, keyIndices, updateIndex, updateTarget, statement,_,_) => keyIndices
     case on @ (_:OnInsert|_:OnDelete) => {
       on.literal.fields.zipWithIndex.filterNot(_._1.name=="_").map(_._2)
     }
@@ -57,11 +57,11 @@ case class FunctionHelper(onStatement: OnStatement) {
   }
   def getFunctionDeclaration(): DeclFunction = {
     val (funcName,params, newStatement) = onStatement match {
-      case OnInsert(literal, updateTarget, statement,_) => {
+      case OnInsert(literal, updateTarget, statement,_,_) => {
         val params = literal.fields.filterNot(_.name == "_")
         (functionName, params, statement)
       }
-      case OnDelete(literal, updateTarget, statement,_) => {
+      case OnDelete(literal, updateTarget, statement,_,_) => {
         val params = literal.fields.filterNot(_.name == "_")
         (functionName, params, statement)
       }

@@ -46,6 +46,7 @@ case class GroundVarFromFunction(p: Parameter, relation: Relation, keys: List[Pa
           s"${p._type} $p = ${relation.name}();"
         }
       }
+      case _:SingletonRelation => s"${p._type} $p = ${relation.name}();"
       case _ => {
         println(relation.toString)
         throw new Exception("Function relation should not have this type")
@@ -74,14 +75,14 @@ sealed abstract class OnStatement extends Statement {
   def ruleId: Int
 }
 
-case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int) extends OnStatement {
+case class OnInsert(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int, isInterface: Boolean) extends OnStatement {
   val relation: Relation = literal.relation
   override def toString: String =
     e"""on insert $literal {
   $statement
 }""".stripMargin
 }
-case class OnDelete(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int) extends OnStatement {
+case class OnDelete(literal: Literal, updateTarget: Relation, statement: Statement, ruleId: Int, isInterface: Boolean) extends OnStatement {
   val relation: Relation = literal.relation
   override def toString: String =
     e"""on delete $literal {
@@ -89,7 +90,7 @@ case class OnDelete(literal: Literal, updateTarget: Relation, statement: Stateme
 }""".stripMargin
 }
 case class OnIncrement(literal: Literal, keyIndices: List[Int], updateIndex: Int, updateTarget: Relation,
-                       statement: Statement, ruleId: Int) extends OnStatement {
+                       statement: Statement, ruleId: Int, isInterface: Boolean) extends OnStatement {
   val relation: Relation = literal.relation
   val keys: List[Parameter] = keyIndices.map(i => literal.fields(i))
   val updateValue = literal.fields(updateIndex)
@@ -361,6 +362,10 @@ object Statement {
       val newKeys = keys.map(k => mapping.getOrElse(k,k))
       GroundVar(mapping.getOrElse(p,p), relation, newKeys, index, enableProjection)
     }
+    case GroundVarFromFunction(p, relation, keys, enableProjection) => {
+      val newKeys = keys.map(k => mapping.getOrElse(k, k))
+      GroundVarFromFunction(mapping.getOrElse(p, p), relation, newKeys, enableProjection)
+    }
     case imp.Assign(p, expr) => {
       val newP = Param(mapping.getOrElse(p.p, p.p))
       imp.Assign(newP, Arithmetic.rename(expr, mapping))
@@ -434,7 +439,8 @@ case class False() extends Condition {
   override def toString: String = "false"
 }
 case class MatchRelationField(relation: Relation, keys: List[Parameter], index: Int, p: Parameter,
-                              enableProjection: Boolean) extends Condition {
+                              enableProjection: Boolean,
+                              isFunction: Boolean) extends Condition {
   require(0 <= index && index < relation.sig.size, s"index out of bound $relation, $index, $p")
   override def toString: String = {
     relation match {
@@ -446,17 +452,27 @@ case class MatchRelationField(relation: Relation, keys: List[Parameter], index: 
       case _: Send => throw new Exception(s"Send relation should not be matched.")
       case _: Receive => ???
       case _:SingletonRelation => {
-        val fieldName = relation.memberNames(index)
-        s"$p==${relation.name}.$fieldName"
+        if (!isFunction){
+          val fieldName = relation.memberNames(index)
+          s"$p==${relation.name}.$fieldName"
+        }else{
+          s"$p==${relation.name}()"
+        }
       }
       case _:SimpleRelation => {
         val fieldName = relation.memberNames(index)
         if (enableProjection) {
-          val keyStr = keys.map(k=>s"[$k]").mkString("")
-          s"$p==${relation.name}$keyStr.$fieldName"
+          if(!isFunction){
+            val keyStr = keys.map(k => s"[$k]").mkString("")
+            s"$p==${relation.name}$keyStr.$fieldName"
+          }else{
+            val keyStr = keys.map(k => s"$k").mkString(",")
+            s"$p==${relation.name}($keyStr)"
+          }
         }
         else {
-          s"$p==${relation.name}Tuple.$fieldName"
+          if(!isFunction) s"$p==${relation.name}Tuple.$fieldName"
+          else s"$p==${relation.name}Tuple"
         }
       }
     }
@@ -516,9 +532,9 @@ object Condition {
   def rename(condition: Condition, mapping: Map[Parameter, Parameter]): Condition = condition match {
     case True() => True()
     case False() => False()
-    case MatchRelationField(relation, keys , index, p, enableProjection) => {
+    case MatchRelationField(relation, keys , index, p, enableProjection, isFunction) => {
       val newKeys = keys.map(k=>mapping.getOrElse(k,k))
-      MatchRelationField(relation,newKeys,index,mapping.getOrElse(p,p), enableProjection)
+      MatchRelationField(relation,newKeys,index,mapping.getOrElse(p,p), enableProjection, isFunction)
     }
     case Match(a, b) => Match(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
     case Greater(a, b) => Greater(Arithmetic.rename(a,mapping), Arithmetic.rename(b,mapping))
@@ -537,8 +553,8 @@ object Condition {
   def replaceArithmetic(condition: Condition, mapping: Map[Param, Arithmetic]): Condition = condition match {
     case True() => True()
     case False() => False()
-    case MatchRelationField(relation, keys, index, p, enableProjection) =>
-      MatchRelationField(relation, keys, index, p, enableProjection)
+    case MatchRelationField(relation, keys, index, p, enableProjection, isFunction) =>
+      MatchRelationField(relation, keys, index, p, enableProjection, isFunction)
     case Match(a, b) => {
       a match {
         case ar: Arithmetic => b match {

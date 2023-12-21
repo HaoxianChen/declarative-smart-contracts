@@ -45,8 +45,8 @@ contract Auction {
   event Send(address p,uint amount);
   event Bid(address bidder,uint amount);
   constructor(address beneficiary,uint biddingTime) public {
-    updateBeneficiaryOnInsertConstructor_r11(beneficiary);
     updateEndTimeOnInsertConstructor_r15(biddingTime);
+    updateBeneficiaryOnInsertConstructor_r11(beneficiary);
     updateOwnerOnInsertConstructor_r9();
   }
   function bid() public  payable  {
@@ -63,9 +63,9 @@ contract Auction {
       }
   }
   function endAuction() public    {
-      bool r13 = updateEndAuctionOnInsertRecv_endAuction_r13();
       bool r3 = updateSendOnInsertRecv_endAuction_r3();
-      if(r13==false && r3==false) {
+      bool r13 = updateEndAuctionOnInsertRecv_endAuction_r13();
+      if(r3==false && r13==false) {
         revert("Rule condition failed");
       }
   }
@@ -79,20 +79,6 @@ contract Auction {
         highestBid = HighestBidTuple(p,m,true);
       }
   }
-  function updateWithdrawOnInsertRecv_withdraw_r5() private   returns (bool) {
-      if(true==end.b) {
-        address h = highestBid.bidder;
-        address p = msg.sender;
-        uint n = balance[p].n;
-        if(p!=h && n>0) {
-          updateWithdrawTotalOnInsertWithdraw_r4(p,n);
-          updateSendOnInsertWithdraw_r8(p,n);
-          emit Withdraw(p,n);
-          return true;
-        }
-      }
-      return false;
-  }
   function updateEndAuctionOnInsertRecv_endAuction_r13() private   returns (bool) {
       uint t1 = block.timestamp;
       address s = msg.sender;
@@ -102,6 +88,60 @@ contract Auction {
           if(t1>=t2) {
             updateEndOnInsertEndAuction_r0(bool(true));
             emit EndAuction(true);
+            return true;
+          }
+        }
+      }
+      return false;
+  }
+  function updateuintByint(uint x,int delta) private   returns (uint) {
+      int convertedX = int(x);
+      int value = convertedX+delta;
+      uint convertedValue = uint(value);
+      return convertedValue;
+  }
+  function updateOwnerOnInsertConstructor_r9() private    {
+      address s = msg.sender;
+      owner = OwnerTuple(s,true);
+  }
+  function updateBalanceOnIncrementBidTotal_r7(address p,int b) private    {
+      int _delta = int(b);
+      uint newValue = updateuintByint(balance[p].n,_delta);
+      balance[p].n = newValue;
+  }
+  function updateBidTotalOnInsertBid_r12(address p,uint m) private    {
+      int delta0 = int(m);
+      updateBalanceOnIncrementBidTotal_r7(p,delta0);
+      bidTotal[p].n += m;
+  }
+  function updateWithdrawTotalOnInsertWithdraw_r4(address p,uint m) private    {
+      int delta0 = int(m);
+      updateBalanceOnIncrementWithdrawTotal_r7(p,delta0);
+      withdrawTotal[p].n += m;
+  }
+  function updateBeneficiaryOnInsertConstructor_r11(address p) private    {
+      beneficiary = BeneficiaryTuple(p,true);
+  }
+  function updateEndTimeOnInsertConstructor_r15(uint d) private    {
+      uint t = block.timestamp;
+      uint t2 = t+d;
+      endTime = EndTimeTuple(t2,true);
+  }
+  function updateSendOnInsertWithdraw_r8(address p,uint n) private    {
+      payable(p).send(n);
+      emit Send(p,n);
+  }
+  function updateWithdrawOnInsertRecv_withdraw_r2() private   returns (bool) {
+      address p = highestBid.bidder;
+      uint m = highestBid.amount;
+      if(true==end.b) {
+        if(p==msg.sender) {
+          uint n = balance[p].n;
+          if(n>m) {
+            uint s = n-m;
+            updateWithdrawTotalOnInsertWithdraw_r4(p,s);
+            updateSendOnInsertWithdraw_r8(p,s);
+            emit Withdraw(p,s);
             return true;
           }
         }
@@ -124,48 +164,6 @@ contract Auction {
       }
       return false;
   }
-  function updateuintByint(uint x,int delta) private   returns (uint) {
-      int convertedX = int(x);
-      int value = convertedX+delta;
-      uint convertedValue = uint(value);
-      return convertedValue;
-  }
-  function updateOwnerOnInsertConstructor_r9() private    {
-      address s = msg.sender;
-      owner = OwnerTuple(s,true);
-  }
-  function updateBalanceOnIncrementBidTotal_r7(address p,int b) private    {
-      int _delta = int(b);
-      uint newValue = updateuintByint(balance[p].n,_delta);
-      balance[p].n = newValue;
-  }
-  function updateWithdrawOnInsertRecv_withdraw_r2() private   returns (bool) {
-      address p = highestBid.bidder;
-      uint m = highestBid.amount;
-      if(true==end.b) {
-        if(p==msg.sender) {
-          uint n = balance[p].n;
-          if(n>m) {
-            uint s = n-m;
-            updateWithdrawTotalOnInsertWithdraw_r4(p,s);
-            updateSendOnInsertWithdraw_r8(p,s);
-            emit Withdraw(p,s);
-            return true;
-          }
-        }
-      }
-      return false;
-  }
-  function updateBidTotalOnInsertBid_r12(address p,uint m) private    {
-      int delta0 = int(m);
-      updateBalanceOnIncrementBidTotal_r7(p,delta0);
-      bidTotal[p].n += m;
-  }
-  function updateWithdrawTotalOnInsertWithdraw_r4(address p,uint m) private    {
-      int delta0 = int(m);
-      updateBalanceOnIncrementWithdrawTotal_r7(p,delta0);
-      withdrawTotal[p].n += m;
-  }
   function updateSendOnInsertRecv_endAuction_r3() private   returns (bool) {
       uint t1 = block.timestamp;
       address s = msg.sender;
@@ -183,17 +181,19 @@ contract Auction {
       }
       return false;
   }
-  function updateBeneficiaryOnInsertConstructor_r11(address p) private    {
-      beneficiary = BeneficiaryTuple(p,true);
-  }
-  function updateEndTimeOnInsertConstructor_r15(uint d) private    {
-      uint t = block.timestamp;
-      uint t2 = t+d;
-      endTime = EndTimeTuple(t2,true);
-  }
-  function updateSendOnInsertWithdraw_r8(address p,uint n) private    {
-      payable(p).send(n);
-      emit Send(p,n);
+  function updateWithdrawOnInsertRecv_withdraw_r5() private   returns (bool) {
+      if(true==end.b) {
+        address h = highestBid.bidder;
+        address p = msg.sender;
+        uint n = balance[p].n;
+        if(p!=h && n>0) {
+          updateWithdrawTotalOnInsertWithdraw_r4(p,n);
+          updateSendOnInsertWithdraw_r8(p,n);
+          emit Withdraw(p,n);
+          return true;
+        }
+      }
+      return false;
   }
   function updateBalanceOnIncrementWithdrawTotal_r7(address p,int w) private    {
       int _delta = int(-w);

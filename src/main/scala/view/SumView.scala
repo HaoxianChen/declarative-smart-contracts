@@ -7,7 +7,7 @@ import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{fieldsToConst, functorExprToZ3}
 
-case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
+case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, isInterface: Boolean) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Sum])
   val sum: Sum = rule.aggregators.head.asInstanceOf[Sum]
@@ -23,7 +23,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     //   Arithmetic.updateArithmeticType(d, View.getDeltaType(d._type))
     // }
     val increment = Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta = delta)
-    OnInsert(insertedLiteral, rule.head.relation, increment, ruleId)
+    OnInsert(insertedLiteral, rule.head.relation, increment, ruleId, isInterface)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
@@ -44,7 +44,7 @@ case class SumView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extend
     }
     val increment = Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta = delta)
     OnIncrement(insertedLiteral, keyIndices, updateIndex = incrementValue.valueIndex, updateTarget = rule.head.relation,
-      increment, ruleId)
+      increment, ruleId, isInterface)
   }
 
   def getInsertedLiteral(relation: Relation): Literal = {

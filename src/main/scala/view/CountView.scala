@@ -7,7 +7,7 @@ import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{getSort, paramToConst, uintSize}
 
-case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) extends View {
+case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, isInterface: Boolean) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Count])
   val count: Count = rule.aggregators.head.asInstanceOf[Count]
@@ -33,7 +33,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
       val increment = Increment(rule.head.relation, rule.head, primaryKeyIndices, resultIndex, delta = delta)
       Statement.makeSeq(delete, increment)
     }
-    OnInsert(insertedLiteral, rule.head.relation, statement, ruleId)
+    OnInsert(insertedLiteral, rule.head.relation, statement, ruleId, isInterface)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
@@ -44,7 +44,7 @@ case class CountView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int) exte
       d
     }
     val decrement = Increment(rule.head.relation, rule.head, primaryKeyIndices, resultIndex, delta = delta)
-    OnDelete(deletedLiteral, rule.head.relation, statement = decrement, ruleId)
+    OnDelete(deletedLiteral, rule.head.relation, statement = decrement, ruleId, isInterface)
   }
 
   def updateRow(incrementValue: IncrementValue): OnStatement = ???

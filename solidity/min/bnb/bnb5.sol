@@ -19,7 +19,15 @@ contract Bnb {
     address p;
     bool _valid;
   }
+  struct FreezeSumTuple {
+    uint m;
+    bool _valid;
+  }
   struct AllowanceTotalTuple {
+    uint m;
+    bool _valid;
+  }
+  struct TotalBalancesTuple {
     uint m;
     bool _valid;
   }
@@ -33,10 +41,12 @@ contract Bnb {
   }
   mapping(address=>TotalFreezeTuple) totalFreeze;
   mapping(address=>TotalUnfreezeTuple) totalUnfreeze;
-  OwnerTuple owner;
+  FreezeSumTuple freezeSum;
   AllMintTuple allMint;
   mapping(address=>mapping(address=>AllowanceTotalTuple)) allowanceTotal;
+  TotalBalancesTuple totalBalances;
   mapping(address=>mapping(address=>SpentTotalTuple)) spentTotal;
+  OwnerTuple owner;
   mapping(address=>BalanceOfTuple) balanceOf;
   AllBurnTuple allBurn;
   event TransferFrom(address from,address to,address spender,uint amount);
@@ -48,13 +58,13 @@ contract Bnb {
   event Freeze(address p,uint n);
   event Transfer(address from,address to,uint amount);
   constructor(uint initialSupply) public {
-    updateTotalSupplyOnInsertConstructor_r5(initialSupply);
-    updateOwnerOnInsertConstructor_r7();
-    updateTotalInOnInsertConstructor_r30(initialSupply);
     updateAllMintOnInsertConstructor_r9(initialSupply);
-    updateTotalMintOnInsertConstructor_r32(initialSupply);
+    updateTotalSupplyOnInsertConstructor_r5(initialSupply);
     updateBalanceOfOnInsertConstructor_r4(initialSupply);
     updateTotalBalancesOnInsertConstructor_r25(initialSupply);
+    updateTotalMintOnInsertConstructor_r32(initialSupply);
+    updateOwnerOnInsertConstructor_r7();
+    updateTotalInOnInsertConstructor_r30(initialSupply);
   }
   function approve(address s,uint n) public    {
       bool r29 = updateIncreaseAllowanceOnInsertRecv_approve_r29(s,n);
@@ -68,6 +78,16 @@ contract Bnb {
         revert("Rule condition failed");
       }
   }
+  function getTotalSupply() public view  returns (uint) {
+      uint n = totalSupply();
+      return n;
+  }
+  function transferFrom(address from,address to,uint amount) public    {
+      bool r14 = updateTransferFromOnInsertRecv_transferFrom_r14(from,to,amount);
+      if(r14==false) {
+        revert("Rule condition failed");
+      }
+  }
   function freeze(uint n) public    {
       bool r24 = updateFreezeOnInsertRecv_freeze_r24(n);
       if(r24==false) {
@@ -77,16 +97,6 @@ contract Bnb {
   function getAllowance(address p,address s) public view  returns (uint) {
       uint n = allowance(p,s);
       return n;
-  }
-  function getTotalSupply() public view  returns (uint) {
-      uint n = totalSupply.n;
-      return n;
-  }
-  function transferFrom(address from,address to,uint amount) public    {
-      bool r14 = updateTransferFromOnInsertRecv_transferFrom_r14(from,to,amount);
-      if(r14==false) {
-        revert("Rule condition failed");
-      }
   }
   function unfreeze(uint n) public    {
       bool r6 = updateUnfreezeOnInsertRecv_unfreeze_r6(n);
@@ -110,23 +120,40 @@ contract Bnb {
         revert("Rule condition failed");
       }
   }
-  function updateTotalInOnInsertTransfer_r31(address p,uint n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalIn_r15(p,delta0);
-  }
   function updateBalanceOfOnInsertConstructor_r4(uint n) private    {
       address s = msg.sender;
       balanceOf[s] = BalanceOfTuple(n,true);
-  }
-  function updateBalanceOfOnIncrementTotalIn_r15(address p,int i) private    {
-      int _delta = int(i);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
   }
   function updateBalanceOfOnIncrementTotalBurn_r15(address p,int m) private    {
       int _delta = int(-m);
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
+  }
+  function updateIncreaseAllowanceOnInsertRecv_approve_r29(address s,uint n) private   returns (bool) {
+      address o = msg.sender;
+      uint m = allowance(o,s);
+      uint d = n-m;
+      updateAllowanceTotalOnInsertIncreaseAllowance_r33(o,s,d);
+      emit IncreaseAllowance(o,s,d);
+      return true;
+      return false;
+  }
+  function updateBurnOnInsertRecv_burn_r16(uint n) private   returns (bool) {
+      address p = msg.sender;
+      uint m = balanceOf[p].n;
+      if(p!=address(0) && n<=m) {
+        updateAllBurnOnInsertBurn_r28(n);
+        updateTotalBurnOnInsertBurn_r17(p,n);
+        emit Burn(p,n);
+        return true;
+      }
+      return false;
+  }
+  function freezeOf(address p) private view  returns (uint) {
+      uint u = totalUnfreeze[p].n;
+      uint f = totalFreeze[p].n;
+      uint n = f-u;
+      return n;
   }
   function updateTotalBurnOnInsertBurn_r17(address p,uint n) private    {
       int delta0 = int(n);
@@ -135,6 +162,31 @@ contract Bnb {
   function updateAllMintOnInsertConstructor_r9(uint n) private    {
       allMint = AllMintTuple(n,true);
   }
+  function updateTotalInOnInsertTransfer_r31(address p,uint n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalIn_r15(p,delta0);
+  }
+  function updateUnfreezeOnInsertRecv_unfreeze_r6(uint n) private   returns (bool) {
+      address p = msg.sender;
+      uint m = freezeOf(p);
+      if(n<=m && n>0) {
+        updateTotalUnfreezeOnInsertUnfreeze_r13(p,n);
+        emit Unfreeze(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateBalanceOfOnIncrementTotalIn_r15(address p,int i) private    {
+      int _delta = int(i);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
+  }
+  function totalSupply() private view  returns (uint) {
+      uint b = allBurn.n;
+      uint m = allMint.n;
+      uint n = m-b;
+      return n;
+  }
   function updateTotalMintOnInsertConstructor_r32(uint n) private    {
       address s = msg.sender;
       // Empty()
@@ -142,9 +194,6 @@ contract Bnb {
   function updateOwnerOnInsertConstructor_r7() private    {
       address s = msg.sender;
       owner = OwnerTuple(s,true);
-  }
-  function updateTotalBalancesOnInsertConstructor_r25(uint n) private    {
-      // Empty()
   }
   function updateTotalOutOnInsertTransfer_r20(address p,uint n) private    {
       int delta0 = int(n);
@@ -176,32 +225,11 @@ contract Bnb {
       uint newValue = updateuintByint(balanceOf[p].n,_delta);
       balanceOf[p].n = newValue;
   }
-  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
-      address p = owner.p;
-      if(p==msg.sender) {
-        updateSendOnInsertWithdrawEther_r3(p,n);
-        emit WithdrawEther(p,n);
-        return true;
-      }
-      return false;
-  }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
       int value = convertedX+delta;
       uint convertedValue = uint(value);
       return convertedValue;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r14(address o,address r,uint n) private   returns (bool) {
-      address s = msg.sender;
-      uint m = balanceOf[o].n;
-      uint k = allowance(o,s);
-      if(m>=n && r!=address(0) && n+m>=m && n>0 && k>=n) {
-        updateSpentTotalOnInsertTransferFrom_r22(o,s,n);
-        updateTransferOnInsertTransferFrom_r1(o,r,n);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
   }
   function updateTotalSupplyOnInsertConstructor_r5(uint n) private    {
       // Empty()
@@ -218,46 +246,14 @@ contract Bnb {
   function updateTotalUnfreezeOnInsertUnfreeze_r13(address p,uint n) private    {
       totalUnfreeze[p].n += n;
   }
-  function updateBurnOnInsertRecv_burn_r16(uint n) private   returns (bool) {
-      address p = msg.sender;
-      uint m = balanceOf[p].n;
-      if(p!=address(0) && n<=m) {
-        updateAllBurnOnInsertBurn_r28(n);
-        updateTotalBurnOnInsertBurn_r17(p,n);
-        emit Burn(p,n);
-        return true;
-      }
-      return false;
-  }
-  function totalSupply() private view  returns (uint) {
-      uint n = constructor.initialSupply;
-      return n;
-      uint b = allBurn.n;
-      uint m = allMint.n;
-      uint n = m-b;
-      return n;
-  }
-  function updateIncreaseAllowanceOnInsertRecv_approve_r29(address s,uint n) private   returns (bool) {
-      address o = msg.sender;
-      uint m = allowance(o,s);
-      uint d = n-m;
-      updateAllowanceTotalOnInsertIncreaseAllowance_r33(o,s,d);
-      emit IncreaseAllowance(o,s,d);
-      return true;
-      return false;
-  }
-  function freezeOf(address p) private view  returns (uint) {
-      uint u = totalUnfreeze[p].n;
-      uint f = totalFreeze[p].n;
-      uint n = f-u;
-      return n;
-  }
-  function updateUnfreezeOnInsertRecv_unfreeze_r6(uint n) private   returns (bool) {
-      address p = msg.sender;
-      uint m = freezeOf(p);
-      if(n<=m && n>0) {
-        updateTotalUnfreezeOnInsertUnfreeze_r13(p,n);
-        emit Unfreeze(p,n);
+  function updateTransferFromOnInsertRecv_transferFrom_r14(address o,address r,uint n) private   returns (bool) {
+      address s = msg.sender;
+      uint m = balanceOf[o].n;
+      uint k = allowance(o,s);
+      if(m>=n && r!=address(0) && n+m>=m && n>0 && k>=n) {
+        updateSpentTotalOnInsertTransferFrom_r22(o,s,n);
+        updateTransferOnInsertTransferFrom_r1(o,r,n);
+        emit TransferFrom(o,r,s,n);
         return true;
       }
       return false;
@@ -282,5 +278,17 @@ contract Bnb {
   }
   function updateSendOnInsertWithdrawEther_r3(address p,uint n) private    {
       payable(p).send(n);
+  }
+  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
+      address p = owner.p;
+      if(p==msg.sender) {
+        updateSendOnInsertWithdrawEther_r3(p,n);
+        emit WithdrawEther(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateTotalBalancesOnInsertConstructor_r25(uint n) private    {
+      totalBalances = TotalBalancesTuple(n,true);
   }
 }

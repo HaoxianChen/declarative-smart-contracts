@@ -74,9 +74,9 @@ contract Shib {
   constructor(uint name,uint symbol,uint decimals,uint totalSupply,address feeReceiver,address tokenOwnerAddress) public {
     updateBalanceOfOnInsertConstructor_r0(totalSupply,tokenOwnerAddress);
     updateSendOnInsertConstructor_r2(feeReceiver);
+    updateTotalSupplyOnInsertConstructor_r4(totalSupply);
     updateOwnerOnInsertConstructor_r15();
     updateTotalBalancesOnInsertConstructor_r28(totalSupply);
-    updateTotalSupplyOnInsertConstructor_r4(totalSupply);
   }
   function getTotalSupply() public view  returns (uint) {
       uint n = totalSupply.n;

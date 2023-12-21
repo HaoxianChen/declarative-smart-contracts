@@ -7,7 +7,7 @@ import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{getArraySort, getSort, makeTupleSort, paramToConst}
 
-case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enableProjection:Boolean) extends View {
+case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enableProjection:Boolean, isInterface: Boolean) extends View {
   require(rule.aggregators.size==1)
   require(rule.aggregators.head.isInstanceOf[Max])
   val max: Max = rule.aggregators.head.asInstanceOf[Max]
@@ -30,7 +30,7 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enable
     val condition = imp.Greater(newValue,oldValue)
     val insert: Insert = Insert(rule.head)
     val stmt = Statement.makeSeq(readTuple, groundVar, If(condition, insert))
-    OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt, ruleId)
+    OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt, ruleId, isInterface)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = ???

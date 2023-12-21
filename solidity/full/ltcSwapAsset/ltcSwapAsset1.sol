@@ -76,10 +76,10 @@ contract LtcSwapAsset {
   event IncreaseAllowance(address p,address s,uint n);
   event Transfer(address from,address to,uint amount);
   constructor() public {
-    updateTotalBalancesOnInsertConstructor_r28();
-    updateNewOwnerOnInsertConstructor_r9();
-    updateEffectiveTimeOnInsertConstructor_r1();
     updateTotalSupplyOnInsertConstructor_r13();
+    updateNewOwnerOnInsertConstructor_r9();
+    updateTotalBalancesOnInsertConstructor_r28();
+    updateEffectiveTimeOnInsertConstructor_r1();
   }
   function approve(address s,uint n) public    {
       bool r26 = updateIncreaseAllowanceOnInsertRecv_approve_r26(s,n);
@@ -133,6 +133,11 @@ contract LtcSwapAsset {
       updateTotalOutOnInsertTransfer_r18(o,n);
       updateTotalInOnInsertTransfer_r11(r,n);
       emit Transfer(o,r,n);
+  }
+  function updateBalanceOfOnIncrementTotalOut_r7(address p,int o) private    {
+      int _delta = int(-o);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
   }
   function updateAllMintOnInsertMint_r3(uint n) private    {
       int delta0 = int(n);
@@ -215,28 +220,6 @@ contract LtcSwapAsset {
       }
       return false;
   }
-  function owner(address p) private view  returns (bool) {
-      if(p==oldOwner.p) {
-        uint t2 = effectiveTime.t;
-        uint t = block.timestamp;
-        if(t<t2) {
-          return true;
-        }
-      }
-      if(p==newOwner.p) {
-        uint t2 = effectiveTime.t;
-        uint t = block.timestamp;
-        if(t>=t2) {
-          return true;
-        }
-      }
-      return false;
-  }
-  function updateBalanceOfOnIncrementTotalOut_r7(address p,int o) private    {
-      int _delta = int(-o);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
-  }
   function updateNewOwnerOnInsertSwapOwner_r25(address q) private    {
       newOwner = NewOwnerTuple(q,true);
   }
@@ -288,6 +271,23 @@ contract LtcSwapAsset {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalMint_r7(p,delta0);
       totalMint[p].n += n;
+  }
+  function owner(address p) private view  returns (bool) {
+      if(p==newOwner.p) {
+        uint t2 = effectiveTime.t;
+        uint t = block.timestamp;
+        if(t>=t2) {
+          return true;
+        }
+      }
+      if(p==oldOwner.p) {
+        uint t2 = effectiveTime.t;
+        uint t = block.timestamp;
+        if(t<t2) {
+          return true;
+        }
+      }
+      return false;
   }
   function updateBalanceOfOnIncrementTotalBurn_r7(address p,int m) private    {
       int _delta = int(-m);

@@ -10,7 +10,7 @@
 .decl constructor()
 
 // new views
-.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1,2]
 .decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
 
 // Transactions
@@ -20,7 +20,7 @@
 .decl recv_transferFrom(from: address, to: address, tokenId: uint)
 .decl recv_setApproval(tokenId:uint, p:address, b: bool)
 .decl recv_setApprovalForAll(operator: address, _approved: bool)
-.decl setApproval(o:address, tokenId:uint, p:address, b: bool)[0,1]
+.decl setApproval(o:address, tokenId:uint, p:address, b: bool)[0,1,2]
 .decl setApprovedForAll(owner:address, operator:address, b: bool)[0,1]
 .decl transfer(tokenId: uint, from: address, to: address, time: uint)
 

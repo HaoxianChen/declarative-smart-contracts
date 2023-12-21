@@ -96,9 +96,6 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
   }
 
   private def queryToDecl(query: Query): DeclFunction = {
-//    DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement, FunctionMetaData(Publicity.Private, isView = true, isTransaction = false, modifiers = Set()))
-//    DeclFunction(query.relation.name, program.indices(query.relation.asInstanceOf[SimpleRelation]).map(i => query.literal.fields(i)), UnitType(), query.statement,
-//        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
     val primaryKeyIndices: Map[Relation, List[Int]] = dl.relations.map {
       case rel: SimpleRelation => rel -> dl.relationIndices.getOrElse(rel, List())
       case rel: SingletonRelation => rel -> List()
@@ -106,9 +103,17 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
     }.toMap
     val primaryKeyLiterals = primaryKeyIndices(query.relation).map(i => query.literal.fields(i))
     if(primaryKeyIndices(query.relation).isEmpty) {
-      DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement,
-        FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
-          modifiers = Set()))
+      /** need a better way to identify functions declared manually and act as boolean functions*/
+      if (dl.interfaces.map(i=>i.relation).contains(query.relation) || query.relation.name=="totalReceived") {
+        assert(query.relation.paramList.size==1)
+        DeclFunction(query.relation.name, List(), query.relation.paramList.head._type, query.statement,
+          FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+            modifiers = Set()))
+      } else {
+        DeclFunction(query.relation.name, query.relation.paramList, BooleanType(), query.statement,
+          FunctionMetaData(Publicity.Private, isView = true, isTransaction = false,
+            modifiers = Set()))
+      }
     }
     else{
       val returnParam: Parameter = {
@@ -215,7 +220,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
       } else {
       DeclFunction(name,params,returnType,stmt,metaData)
       }
-    case o @ (_:Empty|_:GroundVar|_:imp.Assign|_:OnStatement|_:UpdateStatement|_:UpdateDependentRelations|_:Search|_:SolidityStatement) => o
+    case o @ (_:Empty|_:GroundVar|_:GroundVarFromFunction|_:imp.Assign|_:OnStatement|_:UpdateStatement|_:UpdateDependentRelations|_:Search|_:SolidityStatement) => o
   }
 
 
@@ -287,8 +292,11 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, dl: Program,
           else {
             throw new Exception(s"Do not support simple relation without indices: ${rel}")
           }
-          case _:SingletonRelation => {
-            val groundVar = GroundVar(outputVar, rel, List(), outIndex, enableProjection)
+          case _rel:SingletonRelation => {
+            val groundVar = {
+              if (!dl.functions.contains(_rel)) GroundVar(outputVar, rel, List(), outIndex, enableProjection)
+              else GroundVarFromFunction(outputVar, rel, List(), enableProjection)
+            }
             Statement.makeSeq(groundVar,ret)
           }
           case _:ReservedRelation => throw new Exception(s"Do not support interface on reserved relation: $rel")

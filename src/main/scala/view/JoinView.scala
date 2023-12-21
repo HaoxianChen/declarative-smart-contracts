@@ -11,7 +11,7 @@ import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort,
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
                     functions: Set[Relation],
                     arithmeticOptimization: Boolean,
-                    enableProjection: Boolean) extends View {
+                    enableProjection: Boolean, isInterface: Boolean) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
   val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
@@ -20,7 +20,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     val delete = getInsertedLiteral(deleteTuple.relation)
     val updateStatement: UpdateStatement = Delete(rule.head)
     val statement = getNewRowDerivationStatements(delete, updateStatement)
-    OnDelete(delete, rule.head.relation, statement, ruleId)
+    OnDelete(delete, rule.head.relation, statement, ruleId, isInterface)
   }
 
   def updateRow(incrementValue: IncrementValue): OnStatement = {
@@ -30,7 +30,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val updates = updateOnIncrementValue(incrementValue)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,
-        updateTarget = rule.head.relation, statement = updates, ruleId)
+        updateTarget = rule.head.relation, statement = updates, ruleId, isInterface)
     }
     else {
       /** todo: Check case where the incremented value directly matched to the head. */
@@ -43,7 +43,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val incrementAndInsert = IncrementAndInsert(increment)
       OnIncrement(literal = literal, keyIndices=incrementValue.keyIndices,
         updateIndex = incrementValue.valueIndex,
-        updateTarget = rule.head.relation, statement = incrementAndInsert, ruleId)
+        updateTarget = rule.head.relation, statement = incrementAndInsert, ruleId, isInterface)
     }
   }
 
@@ -67,7 +67,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val ret = if (isTransaction) Return(Constant(BooleanType(), "false")) else Empty()
       Statement.makeSeq(delete, deriveUpdate, ret)
     }
-    OnInsert(insert, rule.head.relation, statement, ruleId)
+    OnInsert(insert, rule.head.relation, statement, ruleId, isInterface)
   }
 
   private def getNewRowDerivationStatements(insert: Literal, updateStatement: Statement): Statement = {
@@ -96,7 +96,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def getQueryStatement(): Statement = {
-    if (primaryKeyIndices.isEmpty) {
+//    if (primaryKeyIndices.isEmpty && !isInterface) {
+    // paymentSplitter: .decl *totalReceived(n: uint)
+    /** need a better way to identify functions declared manually and act as boolean functions */
+    if (primaryKeyIndices.isEmpty && !isInterface && rule.head.relation.name!="totalReceived") {
       val groundedParams: Set[Parameter] = rule.head.fields.toSet
       val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
       val sortedLiteral: List[Literal] = {
@@ -199,7 +202,8 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         }
         case _ => ()
       }
-      if (allIndices(func.relation).isEmpty) boolFunctionLiterals += func // no primary key
+      /** need a better way to identify functions declared manually and act as boolean functions */
+      if (allIndices(func.relation).isEmpty && func.relation.name!="totalReceived") boolFunctionLiterals += func // no primary key
     }
     boolFunctionLiterals
   }
@@ -221,10 +225,14 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         case (p, i) => p match {
 //          case v: Variable => if (grounded.contains(v)) {
           case v: Variable => if (grounded.contains(v) && !functionLiterals.contains(literal)) {  // Lan(?): functionLiterals will not be constant
-            Some(MatchRelationField(literal.relation, keys, i, v, enableProjection))
+            Some(MatchRelationField(literal.relation, keys, i, v, enableProjection, isFunction = false))
           }
           else None
-          case c: Constant => Some(MatchRelationField(literal.relation, keys, i, c, enableProjection))
+          case c: Constant => {
+            if(!functionLiterals.contains(literal))
+              Some(MatchRelationField(literal.relation, keys, i, c, enableProjection, isFunction = false))
+            else Some(MatchRelationField(literal.relation, keys, i, c, enableProjection, isFunction = true))
+          }
         }
       }.toSet
     }
@@ -272,14 +280,20 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     remainingLiterals match {
       case Nil => innerStatement
       case head::tail => {
-        val newGroundedParams = (groundedParams ++ head.fields.toSet).filterNot(_.name=="_")
-        val declareNewVars: Statement = {
-          if (!functionLiterals.contains(head)) _groundVariables(groundedParams, head)
-          else _groundVariablesFromFunctions(groundedParams, head)
+        /**Need a better way to design relation orders*/
+        // Nft: approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
+        if (head.relation.name=="approval" && tail.nonEmpty) {
+          _getJoinStatements(groundedParams, tail:::List(head), innerStatement)
+        }else{
+          val newGroundedParams = (groundedParams ++ head.fields.toSet).filterNot(_.name == "_")
+          val declareNewVars: Statement = {
+            if (!functionLiterals.contains(head)) _groundVariables(groundedParams, head)
+            else _groundVariablesFromFunctions(groundedParams, head)
+          }
+          val nextStatements = _getJoinStatements(newGroundedParams, tail, innerStatement)
+          val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
+          Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))
         }
-        val nextStatements = _getJoinStatements(newGroundedParams, tail, innerStatement)
-        val condition: Set[MatchRelationField] = _getCondition(groundedParams, head)
-        Search(head.relation, condition, Statement.makeSeq(declareNewVars, nextStatements))
       }
     }
   }

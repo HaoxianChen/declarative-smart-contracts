@@ -52,7 +52,8 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
-      arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection))
+      arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection,
+      isInterface = program.interfaces.map(i=>i.relation).contains(r.head.relation)))
   }.toMap
 
   protected def isTransactionRule(rule: Rule): Boolean = {
@@ -142,13 +143,16 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
     // require(program.functions.contains(relation))
     require(queryRelations.contains(relation))
 
-    val defRules = program.rules.filter(_.head.relation==relation)
+    //val defRules = program.rules.filter(_.head.relation==relation)
+    val defRules = program.rules.filter(_.head.relation==relation).filterNot(_.body.map(i=>i.relation.name).exists(str=>str.startsWith("constructor")))
 
     val ruleStatements = Statement.makeSeq(
       defRules.map(r => views(r).getQueryStatement()).toSeq:_*
     )
     var statement = ruleStatements
-    if (primaryKeyIndices(relation).isEmpty) {
+    /** need a better way to identify functions declared manually and act as boolean functions */
+    if (primaryKeyIndices(relation).isEmpty && !program.interfaces.map(i=>i.relation).contains(relation)
+      && relation.name!="totalReceived") {
       statement = Statement.makeSeq(ruleStatements,Return(Constant.CFalse))
     }
 
@@ -312,15 +316,15 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
 
     trigger match {
       case InsertTuple(relation, keyIndices) => OnInsert(updateProgram.literal, updateProgram.updateTarget, fused,
-        ruleId = views(rule).ruleId)
+        ruleId = views(rule).ruleId, isInterface = views(rule).isInterface)
       case DeleteTuple(relation, keyIndices) => OnDelete(updateProgram.literal,updateProgram.updateTarget, fused,
-        ruleId = views(rule).ruleId)
+        ruleId = views(rule).ruleId, isInterface = views(rule).isInterface)
       case ReplacedByKey(relation, keyIndices, targetRelation) => {
         OnDelete(updateProgram.literal, updateProgram.updateTarget, fused,
-          ruleId = views(rule).ruleId)
+          ruleId = views(rule).ruleId, isInterface = views(rule).isInterface)
       }
       case IncrementValue(relation, keyIndices, valueIndex, delta) => OnIncrement(updateProgram.literal, keyIndices,
-        valueIndex, updateTarget = updateProgram.updateTarget, fused, ruleId = views(rule).ruleId)
+        valueIndex, updateTarget = updateProgram.updateTarget, fused, ruleId = views(rule).ruleId, isInterface = views(rule).isInterface)
     }
   }
 
@@ -362,7 +366,11 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
         var groundVar: Statement = Empty()
         for (valueIndex <- valueIndices) {
           val localVar = Variable(relation.sig(valueIndex), s"${localVariablePrefix}_${literal.fields(valueIndex)}")
-          groundVar = Statement.makeSeq(groundVar,GroundVar(localVar, relation, keys, valueIndex, enableProjection))
+//          groundVar = Statement.makeSeq(groundVar,GroundVar(localVar, relation, keys, valueIndex, enableProjection))
+          groundVar = {
+            if (!program.functions.contains(relation)) Statement.makeSeq(groundVar,GroundVar(localVar, relation, keys, valueIndex, enableProjection))
+            else Statement.makeSeq(groundVar, GroundVarFromFunction(localVar, relation, keys, enableProjection))
+          }
           mapping += (literal.fields(valueIndex)) -> localVar
         }
 
@@ -386,6 +394,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
   def replaceArithmetic(statement: Statement, mapping: Map[Param, Arithmetic]): Statement = statement match {
     case s: Empty  => s
     case g: GroundVar => g
+    case gf: GroundVarFromFunction => gf
     case imp.Assign(p, expr) => expr match {
       case a: Arithmetic => imp.Assign(p, Arithmetic.replace(a,mapping))
     }
@@ -413,7 +422,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
 
   // def replaceUpdateStatement(statement: Statement, updates: Statement): Statement = statement match {
   def replaceUpdateStatement(statement: Statement, dependentUpdates: Map[UpdateStatement, Set[Statement]]): Statement = statement match {
-    case _:Empty | _:GroundVar | _:imp.Assign => statement
+    case _:Empty | _:GroundVar | _:GroundVarFromFunction | _:imp.Assign => statement
     case Seq(a, b) => Seq(replaceUpdateStatement(a,dependentUpdates), replaceUpdateStatement(b,dependentUpdates))
     case If(condition, _statement) => If(condition, replaceUpdateStatement(_statement, dependentUpdates))
     case statement: OnStatement => ???

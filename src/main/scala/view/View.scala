@@ -12,6 +12,7 @@ abstract class View {
   def rule: Rule
   def primaryKeyIndices: List[Int]
   def ruleId: Int
+  def isInterface: Boolean
   val relation: Relation = rule.head.relation
 
   /** Interfaces */
@@ -176,17 +177,18 @@ abstract class View {
 }
 object View {
   def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
-            functions: Set[Relation], arithmeticOptimization: Boolean, enableProjection: Boolean): View = {
+            functions: Set[Relation], arithmeticOptimization: Boolean, enableProjection: Boolean,
+            isInterface: Boolean): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
       JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, arithmeticOptimization,
-        enableProjection=enableProjection)
+        enableProjection=enableProjection, isInterface)
     }
     else {
       rule.aggregators.head match {
-        case _:Sum => SumView(rule, primaryKeyIndices, ruleId)
-        case _:Max => MaxView(rule, primaryKeyIndices, ruleId, enableProjection)
-        case _:Count => CountView(rule, primaryKeyIndices, ruleId)
+        case _:Sum => SumView(rule, primaryKeyIndices, ruleId, isInterface)
+        case _:Max => MaxView(rule, primaryKeyIndices, ruleId, enableProjection, isInterface)
+        case _:Count => CountView(rule, primaryKeyIndices, ruleId, isInterface)
       }
     }
   }

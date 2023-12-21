@@ -3,6 +3,10 @@ contract Auction {
     address p;
     bool _valid;
   }
+  struct WithdrawCountTuple {
+    uint c;
+    bool _valid;
+  }
   struct BeneficiaryTuple {
     address p;
     bool _valid;
@@ -28,20 +32,21 @@ contract Auction {
     uint n;
     bool _valid;
   }
-  OwnerTuple owner;
+  mapping(address=>WithdrawCountTuple) withdrawCount;
   BeneficiaryTuple beneficiary;
   mapping(address=>WithdrawTotalTuple) withdrawTotal;
   HighestBidTuple highestBid;
   EndTimeTuple endTime;
   mapping(address=>BidTotalTuple) bidTotal;
+  OwnerTuple owner;
   EndTuple end;
   event Withdraw(address bidder,uint amount);
   event EndAuction(bool b);
   event Send(address p,uint amount);
   event Bid(address bidder,uint amount);
   constructor(address beneficiary,uint biddingTime) public {
-    updateBeneficiaryOnInsertConstructor_r11(beneficiary);
     updateEndTimeOnInsertConstructor_r15(biddingTime);
+    updateBeneficiaryOnInsertConstructor_r11(beneficiary);
     updateOwnerOnInsertConstructor_r9();
   }
   function bid() public  payable  {
@@ -51,16 +56,16 @@ contract Auction {
       }
   }
   function withdraw() public    {
-      bool r2 = updateWithdrawOnInsertRecv_withdraw_r2();
       bool r5 = updateWithdrawOnInsertRecv_withdraw_r5();
-      if(r2==false && r5==false) {
+      bool r2 = updateWithdrawOnInsertRecv_withdraw_r2();
+      if(r5==false && r2==false) {
         revert("Rule condition failed");
       }
   }
   function endAuction() public    {
-      bool r13 = updateEndAuctionOnInsertRecv_endAuction_r13();
       bool r3 = updateSendOnInsertRecv_endAuction_r3();
-      if(r13==false && r3==false) {
+      bool r13 = updateEndAuctionOnInsertRecv_endAuction_r13();
+      if(r3==false && r13==false) {
         revert("Rule condition failed");
       }
   }
@@ -77,12 +82,6 @@ contract Auction {
   function updateBidTotalOnInsertBid_r12(address p,uint m) private    {
       bidTotal[p].n += m;
   }
-  function updateHighestBidOnInsertBid_r1(address p,uint m) private    {
-      uint _max = highestBid.amount;
-      if(m>_max) {
-        highestBid = HighestBidTuple(p,m,true);
-      }
-  }
   function updateBidOnInsertRecv_bid_r10() private   returns (bool) {
       uint t1 = block.timestamp;
       uint t2 = endTime.t;
@@ -95,6 +94,38 @@ contract Auction {
           updateBidTotalOnInsertBid_r12(p,n);
           emit Bid(p,n);
           return true;
+        }
+      }
+      return false;
+  }
+  function updateEndAuctionOnInsertRecv_endAuction_r13() private   returns (bool) {
+      uint t1 = block.timestamp;
+      address s = msg.sender;
+      uint t2 = endTime.t;
+      if(false==end.b) {
+        if(s==owner.p) {
+          if(t1>=t2) {
+            updateEndOnInsertEndAuction_r0(bool(true));
+            emit EndAuction(true);
+            return true;
+          }
+        }
+      }
+      return false;
+  }
+  function updateWithdrawOnInsertRecv_withdraw_r2() private   returns (bool) {
+      address p = highestBid.bidder;
+      uint m = highestBid.amount;
+      if(true==end.b) {
+        if(p==msg.sender) {
+          uint n = balance(p);
+          if(n>m) {
+            uint s = n-m;
+            updateWithdrawTotalOnInsertWithdraw_r4(p,s);
+            updateSendOnInsertWithdraw_r8(p,s);
+            emit Withdraw(p,s);
+            return true;
+          }
         }
       }
       return false;
@@ -141,42 +172,16 @@ contract Auction {
       payable(p).send(n);
       emit Send(p,n);
   }
-  function updateWithdrawOnInsertRecv_withdraw_r2() private   returns (bool) {
-      address p = highestBid.bidder;
-      uint m = highestBid.amount;
-      if(true==end.b) {
-        if(p==msg.sender) {
-          uint n = balance(p);
-          if(n>m) {
-            uint s = n-m;
-            updateWithdrawTotalOnInsertWithdraw_r4(p,s);
-            updateSendOnInsertWithdraw_r8(p,s);
-            emit Withdraw(p,s);
-            return true;
-          }
-        }
-      }
-      return false;
-  }
   function updateEndOnInsertEndAuction_r0(bool p) private    {
       if(p==true) {
         end = EndTuple(true,true);
       }
   }
-  function updateEndAuctionOnInsertRecv_endAuction_r13() private   returns (bool) {
-      uint t1 = block.timestamp;
-      address s = msg.sender;
-      uint t2 = endTime.t;
-      if(false==end.b) {
-        if(s==owner.p) {
-          if(t1>=t2) {
-            updateEndOnInsertEndAuction_r0(bool(true));
-            emit EndAuction(true);
-            return true;
-          }
-        }
+  function updateHighestBidOnInsertBid_r1(address p,uint m) private    {
+      uint _max = highestBid.amount;
+      if(m>_max) {
+        highestBid = HighestBidTuple(p,m,true);
       }
-      return false;
   }
   function updateWithdrawOnInsertRecv_withdraw_r5() private   returns (bool) {
       if(true==end.b) {

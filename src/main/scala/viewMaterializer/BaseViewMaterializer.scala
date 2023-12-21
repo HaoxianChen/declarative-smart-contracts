@@ -1,6 +1,6 @@
 package viewMaterializer
 import datalog.{Interface, Program, Relation}
-import imp.{Empty, GroundVar, If, ImperativeAbstractProgram, IncrementAndInsert, OnStatement, Query, ReadTuple, Search, Seq, SolidityStatement, Statement, UpdateDependentRelations, UpdateStatement}
+import imp.{Empty, GroundVar, GroundVarFromFunction, If, ImperativeAbstractProgram, IncrementAndInsert, OnStatement, Query, ReadTuple, Search, Seq, SolidityStatement, Statement, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 
 class BaseViewMaterializer extends ViewMaterializer {
@@ -23,7 +23,7 @@ class BaseViewMaterializer extends ViewMaterializer {
     case on: OnStatement => relationsToMaterialize(on.statement)
     case inc: IncrementAndInsert => Set(inc.relation)
     case Query(_,_statement) => relationsToMaterialize(_statement)
-    case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement => Set()
+    case _:Empty|_:imp.Assign|_:UpdateStatement|_:UpdateDependentRelations|_:SolidityStatement|_:GroundVarFromFunction => Set()
   }
 
 }

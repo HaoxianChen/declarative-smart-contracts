@@ -44,11 +44,11 @@ contract CrowFunding {
   event Closed(bool b);
   event Withdraw(address p,uint n);
   constructor(uint t,address b) public {
-    updateTotalBalanceOnInsertConstructor_r12();
-    updateTargetOnInsertConstructor_r11(t);
     updateRaisedOnInsertConstructor_r6();
-    updateOwnerOnInsertConstructor_r7();
     updateBeneficiaryOnInsertConstructor_r16(b);
+    updateTotalBalanceOnInsertConstructor_r12();
+    updateOwnerOnInsertConstructor_r7();
+    updateTargetOnInsertConstructor_r11(t);
   }
   function getClosed() public view  returns (bool) {
       bool b = closed.b;
@@ -85,6 +85,21 @@ contract CrowFunding {
   function updateBeneficiaryOnInsertConstructor_r16(address p) private    {
       beneficiary = BeneficiaryTuple(p,true);
   }
+  function updateRefundOnInsertRecv_refund_r3() private   returns (bool) {
+      if(true==closed.b) {
+        address p = msg.sender;
+        uint t = target.t;
+        uint r = raised.n;
+        uint n = balanceOf[p].n;
+        if(r<t && n>0) {
+          updateRefundTotalOnInsertRefund_r14(p,n);
+          updateSendOnInsertRefund_r1(p,n);
+          emit Refund(p,n);
+          return true;
+        }
+      }
+      return false;
+  }
   function updateSendOnInsertRefund_r1(address p,uint n) private    {
       payable(p).send(n);
   }
@@ -93,22 +108,46 @@ contract CrowFunding {
       updateBalanceOfOnIncrementInvestTotal_r2(p,delta0);
       investTotal[p].n += m;
   }
+  function updateTotalBalanceOnInsertConstructor_r12() private    {
+      // Empty()
+  }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
       int value = convertedX+delta;
       uint convertedValue = uint(value);
       return convertedValue;
   }
+  function updateRaisedOnInsertConstructor_r6() private    {
+      raised = RaisedTuple(0,true);
+  }
+  function updateWithdrawOnInsertRecv_withdraw_r8() private   returns (bool) {
+      address p = beneficiary.p;
+      uint t = target.t;
+      uint r = raised.n;
+      if(p==msg.sender) {
+        if(r>=t) {
+          updateSendOnInsertWithdraw_r0(p,r);
+          emit Withdraw(p,r);
+          return true;
+        }
+      }
+      return false;
+  }
+  function updateRaisedOnInsertInvest_r13(uint m) private    {
+      raised.n += m;
+  }
+  function updateTargetOnInsertConstructor_r11(uint t) private    {
+      target = TargetTuple(t,true);
+  }
+  function updateBalanceOfOnIncrementRefundTotal_r2(address p,int r) private    {
+      int _delta = int(-r);
+      uint newValue = updateuintByint(balanceOf[p].n,_delta);
+      balanceOf[p].n = newValue;
+  }
   function updateRefundTotalOnInsertRefund_r14(address p,uint m) private    {
       int delta0 = int(m);
       updateBalanceOfOnIncrementRefundTotal_r2(p,delta0);
       refundTotal[p].n += m;
-  }
-  function updateRaisedOnInsertConstructor_r6() private    {
-      raised = RaisedTuple(0,true);
-  }
-  function updateRaisedOnInsertInvest_r13(uint m) private    {
-      raised.n += m;
   }
   function updateInvestOnInsertRecv_invest_r4() private   returns (bool) {
       if(false==closed.b) {
@@ -131,45 +170,6 @@ contract CrowFunding {
         closed = ClosedTuple(true,true);
         emit Closed(true);
         return true;
-      }
-      return false;
-  }
-  function updateTargetOnInsertConstructor_r11(uint t) private    {
-      target = TargetTuple(t,true);
-  }
-  function updateBalanceOfOnIncrementRefundTotal_r2(address p,int r) private    {
-      int _delta = int(-r);
-      uint newValue = updateuintByint(balanceOf[p].n,_delta);
-      balanceOf[p].n = newValue;
-  }
-  function updateTotalBalanceOnInsertConstructor_r12() private    {
-      // Empty()
-  }
-  function updateRefundOnInsertRecv_refund_r3() private   returns (bool) {
-      if(true==closed.b) {
-        address p = msg.sender;
-        uint t = target.t;
-        uint r = raised.n;
-        uint n = balanceOf[p].n;
-        if(r<t && n>0) {
-          updateRefundTotalOnInsertRefund_r14(p,n);
-          updateSendOnInsertRefund_r1(p,n);
-          emit Refund(p,n);
-          return true;
-        }
-      }
-      return false;
-  }
-  function updateWithdrawOnInsertRecv_withdraw_r8() private   returns (bool) {
-      address p = beneficiary.p;
-      uint t = target.t;
-      uint r = raised.n;
-      if(p==msg.sender) {
-        if(r>=t) {
-          updateSendOnInsertWithdraw_r0(p,r);
-          emit Withdraw(p,r);
-          return true;
-        }
       }
       return false;
   }

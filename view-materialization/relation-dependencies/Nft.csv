@@ -1,7 +1,7 @@
 #body,head,ruleId,isAgg,isTx
  ,setApprovedForAll,0,false,true
-exists,transfer,1,false,true
 owner,transfer,1,false,true
+exists,transfer,1,false,true
 approval,approved,2,false,false
 ownerOf,approved,2,false,false
 setApprovedForAll,isApprovedForAll,3,false,false

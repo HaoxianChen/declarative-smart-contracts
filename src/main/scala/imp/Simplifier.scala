@@ -17,12 +17,12 @@ class Simplifier {
         case _ => If(condition, simplify(_statement))
       }
     case _on: OnStatement => _on match {
-      case OnInsert(literal, updateTarget, _statement, ruleId) =>
-        OnInsert(literal, updateTarget, simplify(_statement), ruleId)
-      case OnDelete(literal, updateTarget, _statement, ruleId) =>
-        OnDelete(literal, updateTarget, simplify(_statement), ruleId)
-      case OnIncrement(literal, keyIndices, updateIndex, updateTarget, _statement, ruleId) =>
-        OnIncrement(literal, keyIndices, updateIndex, updateTarget, simplify(_statement), ruleId)
+      case OnInsert(literal, updateTarget, _statement, ruleId, isInterface) =>
+        OnInsert(literal, updateTarget, simplify(_statement), ruleId, isInterface)
+      case OnDelete(literal, updateTarget, _statement, ruleId, isInterface) =>
+        OnDelete(literal, updateTarget, simplify(_statement), ruleId, isInterface)
+      case OnIncrement(literal, keyIndices, updateIndex, updateTarget, _statement, ruleId, isInterface) =>
+        OnIncrement(literal, keyIndices, updateIndex, updateTarget, simplify(_statement), ruleId, isInterface)
     }
     case Search(relation, conditions, _statement) => Search(relation, conditions, simplify(_statement))
     case _updateStatement: UpdateStatement => _updateStatement match {

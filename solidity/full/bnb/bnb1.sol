@@ -83,13 +83,13 @@ contract Bnb {
   event Freeze(address p,uint n);
   event Transfer(address from,address to,uint amount);
   constructor(uint initialSupply) public {
-    updateTotalSupplyOnInsertConstructor_r5(initialSupply);
-    updateOwnerOnInsertConstructor_r7();
-    updateTotalInOnInsertConstructor_r30(initialSupply);
     updateAllMintOnInsertConstructor_r9(initialSupply);
-    updateTotalMintOnInsertConstructor_r32(initialSupply);
+    updateTotalSupplyOnInsertConstructor_r5(initialSupply);
     updateBalanceOfOnInsertConstructor_r4(initialSupply);
     updateTotalBalancesOnInsertConstructor_r25(initialSupply);
+    updateTotalMintOnInsertConstructor_r32(initialSupply);
+    updateOwnerOnInsertConstructor_r7();
+    updateTotalInOnInsertConstructor_r30(initialSupply);
   }
   function approve(address s,uint n) public    {
       bool r29 = updateIncreaseAllowanceOnInsertRecv_approve_r29(s,n);
@@ -202,10 +202,6 @@ contract Bnb {
   function updateAllMintOnInsertConstructor_r9(uint n) private    {
       allMint = AllMintTuple(n,true);
   }
-  function updateTotalMintOnInsertConstructor_r32(uint n) private    {
-      address s = msg.sender;
-      totalMint[s] = TotalMintTuple(n,true);
-  }
   function updateFreezeOfOnIncrementTotalFreeze_r12(address p,int f) private    {
       int delta0 = int(f);
       updateBalanceOfOnIncrementFreezeOf_r15(p,delta0);
@@ -288,15 +284,6 @@ contract Bnb {
       return true;
       return false;
   }
-  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
-      address p = owner.p;
-      if(p==msg.sender) {
-        updateSendOnInsertWithdrawEther_r3(p,n);
-        emit WithdrawEther(p,n);
-        return true;
-      }
-      return false;
-  }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
       int value = convertedX+delta;
@@ -344,5 +331,18 @@ contract Bnb {
       int delta0 = int(n);
       updateAllowanceOnIncrementSpentTotal_r26(o,s,delta0);
       spentTotal[o][s].m += n;
+  }
+  function updateWithdrawEtherOnInsertRecv_withdrawEther_r23(uint n) private   returns (bool) {
+      address p = owner.p;
+      if(p==msg.sender) {
+        updateSendOnInsertWithdrawEther_r3(p,n);
+        emit WithdrawEther(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateTotalMintOnInsertConstructor_r32(uint n) private    {
+      address s = msg.sender;
+      totalMint[s] = TotalMintTuple(n,true);
   }
 }

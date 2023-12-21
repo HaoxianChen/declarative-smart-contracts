@@ -20,7 +20,7 @@ object Main extends App {
     "vestingWallet.dl",
     "paymentSplitter.dl",
     "erc777.dl",
-     //"erc1155.dl", // Lan: broke when run dependency-graph
+     "erc1155.dl", // Lan: broke when run dependency-graph
     "controllable.dl",
     "tokenPartition.dl",
     "tether.dl",
@@ -247,21 +247,16 @@ object Main extends App {
   }
 
   // adding new features for simplification
-  else if (args(0) == "simplification-check") {
+  else if (args(0) == "judgement-check") {
     for (p <- allBenchmarks) {
       val filepath = Paths.get(benchmarkDir, p).toString
       val dl = parseProgram(filepath)
       var noSimplificationSet: Set[String] = Set()
 
-      // originally, relations that can not be skipped:
       // => Original noSkippedSet: public relations, txns, direct body relations for txns, manually defined functions
-      // 1. write in scala: complex; 2. write in python: separate code
-
       // complete set of relations that can not be skipped
       // => Original noSkippedSet (as above) + AnalysisBases noSkippedSet (discussed as follows)
       dl.rules.foreach { element =>
-//        val head = element.head.toString.split("\\(")
-//        val headFields = head(1).split("\\)")(0).split(",")
         val head = element.head.relation.name
         val headFields = element.head.relation.paramList.map(p => p.name)
         val bodies = element.body.toArray
@@ -275,48 +270,6 @@ object Main extends App {
         // => may contain judgement operations: <, <=, >, >=, !=, == (we have to manually list out all cases)
         // => otherwise, differential is constant, no judgement operation: =, :=, +, -
 
-        // Question: if the rule contains a judgement, all relations in the rule can not be skipped?
-        // Or only relations whose fields are in the rule can not be skipped?
-        // version 1:
-        for (formula <- formulas) {
-          println("current formula:", formula)
-          val judgementPattern = """[<>!=]=|[<>](?![=<>])""".r
-          val judgementMatches = judgementPattern.findAllIn(formula.toString).toList
-
-          if (judgementMatches.nonEmpty) {
-            println("contain judgement operator")
-            // for every body relation whose field is in this judgement, this body relation can not be skipped
-
-            val separatorPattern = """(?![<>=!:])=(?![<>=!:])|[<>=!:]=|[<>](?![=<>])|[\-+()]""".r
-            val formulaFields = separatorPattern.split(formula.toString).map(_.trim).filter(_.nonEmpty)
-            println("formula fields: ", formulaFields.mkString(","))
-
-            // find all the body/head relations containing fields appearing in judgement operations
-            for (formulaField <- formulaFields) {
-              for (body <- bodies) {
-                body.fields.foreach { bodyField =>
-                  if (bodyField.toString == formulaField) { // this body relation can not be skipped
-                    // Lan: to do
-                  }
-                }
-              }
-              for (headField <- headFields) {
-                if (headField == formulaField) { // this head relation can not be skipped
-                  // Lan: to do
-                }
-              }
-            }
-          }
-        }
-        for (body <- bodies) { // if body itself contains a judgement operation (true, false), it can not be skipped
-          // "closed(true)"  equals to   "close(p), p==true"
-          body.fields.foreach { bodyField =>
-            if (bodyField.toString == "true" || bodyField.toString == "false") { // this body relation can not be skipped
-              // Lan: to do
-            }
-          }
-        }
-        // version 2:
         // if the judgement turn from false to true, then we will have to update the head based on all other bodies
         // if it contains a judgement in the rule, all body relations should not be skipped
         var judgementFlag = false
@@ -338,9 +291,18 @@ object Main extends App {
           }
         }
         if (judgementFlag) { // all body relations can not be skipped
-          for(body <- bodies){
-            noSimplificationSet += body.relation.name
+          for (body <- bodies) {
+            if (!body.toString.startsWith("recv_"))
+              noSimplificationSet += body.relation.name
           }
+        }
+        // contain relation which depend on others to be updated (hard to decide)
+        // nft (approval): approved(tokenId, p, b) :- approval(o,tokenId,p,b), ownerOf(tokenId,o).
+        // tether (transferFromWithFee): transferFromWithoutFee(o,p,s,f) :- transferFromWithFee(o,r,s,f,_), owner(p).
+        if (dl.name == "Nft") noSimplificationSet += "approval"
+        if (dl.name == "Tether") {
+          noSimplificationSet += "transferFromWithFee"
+          noSimplificationSet += "transferWithFee"
         }
 
         // 3. if some field(s) from the body relation have a aggregated formula relationship with this head field
@@ -350,7 +312,7 @@ object Main extends App {
         println("finish a rule\n")
       }
 
-      val outfile = s"view-materialization/cannot-simplified/${dl.name}.csv"
+      val outfile = s"view-materialization/contain-judgement/${dl.name}.csv"
       val outStr = noSimplificationSet.mkString(",") + "\n"
       Misc.writeToFile(outStr, outfile)
       println("finish a contract\n")

@@ -101,19 +101,6 @@ contract TokenPartition {
       uint newValue = updateuintByint(totalSupply.n,_delta);
       totalSupply.n = newValue;
   }
-  function updateIssueByPartitionOnInsertRecv_issueByPartition_r1(address p,uint q,uint n) private   returns (bool) {
-      address s = owner.p;
-      if(s==msg.sender) {
-        if(p!=address(0)) {
-          updateIssueTotalByPartitionOnInsertIssueByPartition_r5(q,n);
-          updateTotalMintOnInsertIssueByPartition_r8(p,q,n);
-          updateAllMintOnInsertIssueByPartition_r0(n);
-          emit IssueByPartition(p,q,n);
-          return true;
-        }
-      }
-      return false;
-  }
   function updateRedeemByPartitionOnInsertRecv_redeemByPartition_r9(address p,uint q,uint n) private   returns (bool) {
       address s = owner.p;
       if(s==msg.sender) {
@@ -152,6 +139,19 @@ contract TokenPartition {
       int _delta = int(-r);
       uint newValue = updateuintByint(totalSupplyByPartition[q].n,_delta);
       totalSupplyByPartition[q].n = newValue;
+  }
+  function updateIssueByPartitionOnInsertRecv_issueByPartition_r1(address p,uint q,uint n) private   returns (bool) {
+      address s = owner.p;
+      if(s==msg.sender) {
+        if(p!=address(0)) {
+          updateIssueTotalByPartitionOnInsertIssueByPartition_r5(q,n);
+          updateTotalMintOnInsertIssueByPartition_r8(p,q,n);
+          updateAllMintOnInsertIssueByPartition_r0(n);
+          emit IssueByPartition(p,q,n);
+          return true;
+        }
+      }
+      return false;
   }
   function updateTotalSupplyOnInsertConstructor_r3() private    {
       totalSupply = TotalSupplyTuple(0,true);

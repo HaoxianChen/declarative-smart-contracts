@@ -1,0 +1,16 @@
+allBurn,allMint,allowance,freezeOf,freezeSum,msgSender,owner,totalBalances,totalBurn,totalIn,totalMint,totalOut,,balanceOf,totalSupply
+allBurn,allMint,allowance,freezeSum,msgSender,owner,totalBalances,totalBurn,totalFreeze,totalIn,totalMint,totalOut,totalUnfreeze,,freezeOf,balanceOf,totalSupply
+allowance,balanceOf,freezeSum,msgSender,owner,totalBalances,totalFreeze,totalSupply,totalUnfreeze,,freezeOf
+allowanceTotal,balanceOf,freezeSum,msgSender,owner,spentTotal,totalBalances,totalFreeze,totalSupply,totalUnfreeze,,freezeOf,allowance
+allBurn,allMint,allowance,balanceOf,freezeSum,msgSender,owner,totalBalances,totalFreeze,totalUnfreeze,,freezeOf,totalSupply
+allowance,freezeSum,msgSender,owner,totalBalances,totalBurn,totalFreeze,totalIn,totalMint,totalOut,totalSupply,totalUnfreeze,,freezeOf,balanceOf
+allowance,freezeOf,freezeSum,msgSender,owner,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf
+allBurn,allMint,allowance,balanceOf,freezeOf,freezeSum,msgSender,owner,totalBalances,,totalSupply
+allowanceTotal,freezeOf,freezeSum,msgSender,owner,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf,allowance
+allowanceTotal,freezeSum,msgSender,owner,spentTotal,totalBalances,totalBurn,totalFreeze,totalIn,totalMint,totalOut,totalSupply,totalUnfreeze,,freezeOf,balanceOf,allowance
+allowance,balanceOf,freezeOf,freezeSum,msgSender,owner,totalBalances,totalSupply,
+allBurn,allMint,allowanceTotal,balanceOf,freezeSum,msgSender,owner,spentTotal,totalBalances,totalFreeze,totalUnfreeze,,freezeOf,allowance,totalSupply
+allBurn,allMint,allowanceTotal,freezeSum,msgSender,owner,spentTotal,totalBalances,totalBurn,totalFreeze,totalIn,totalMint,totalOut,totalUnfreeze,,freezeOf,balanceOf,allowance,totalSupply
+allBurn,allMint,allowanceTotal,balanceOf,freezeOf,freezeSum,msgSender,owner,spentTotal,totalBalances,,allowance,totalSupply
+allowanceTotal,balanceOf,freezeOf,freezeSum,msgSender,owner,spentTotal,totalBalances,totalSupply,,allowance
+allBurn,allMint,allowanceTotal,freezeOf,freezeSum,msgSender,owner,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,,balanceOf,allowance,totalSupply
