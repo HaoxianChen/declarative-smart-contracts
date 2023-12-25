@@ -10,7 +10,7 @@
 .decl constructor()
 
 // new views
-.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1,2]
+.decl approval(o:address, tokenId:uint, p:address, b: bool)[0,1]
 .decl isApprovedForAll(owner:address, operator:address, b: bool)[0,1]
 
 // Transactions

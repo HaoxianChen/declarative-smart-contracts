@@ -1,8 +1,8 @@
-allIssue,allRedeem,allowance,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,transferFromWithFee,transferWithFee,,totalSupply
-allowance,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,totalSupply,transferFromWithFee,transferWithFee,,balanceOf
-allowanceTotal,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,totalSupply,transferFromWithFee,transferWithFee,,balanceOf,allowance
-allowanceTotal,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalSupply,transferFromWithFee,transferWithFee,,allowance
-allIssue,allRedeem,allowance,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,transferFromWithFee,transferWithFee,,balanceOf,totalSupply
 allowance,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,totalSupply,transferFromWithFee,transferWithFee,
-allIssue,allRedeem,allowanceTotal,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,transferFromWithFee,transferWithFee,,balanceOf,allowance,totalSupply
-allIssue,allRedeem,allowanceTotal,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,transferFromWithFee,transferWithFee,,allowance,totalSupply
+allIssue,allRedeem,allowanceTotal,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,transferFromWithFee,transferWithFee,,totalSupply,allowance,balanceOf
+allIssue,allRedeem,allowanceTotal,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,transferFromWithFee,transferWithFee,,totalSupply,allowance
+allowanceTotal,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalSupply,transferFromWithFee,transferWithFee,,allowance
+allowance,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,totalSupply,transferFromWithFee,transferWithFee,,balanceOf
+allIssue,allRedeem,allowance,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,transferFromWithFee,transferWithFee,,totalSupply,balanceOf
+allIssue,allRedeem,allowance,balanceOf,isBlackListed,maxFee,msgSender,owner,paused,rate,totalBalances,transferFromWithFee,transferWithFee,,totalSupply
+allowanceTotal,isBlackListed,maxFee,msgSender,owner,paused,rate,spentTotal,totalBalances,totalIn,totalIssue,totalOut,totalRedeem,totalSupply,transferFromWithFee,transferWithFee,,allowance,balanceOf

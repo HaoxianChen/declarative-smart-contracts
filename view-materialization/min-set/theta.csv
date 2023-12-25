@@ -1,8 +1,8 @@
-allBurn,allMint,allowance,msgSender,now,owner,precirculated,totalBalances,totalBurn,totalIn,totalMint,totalOut,unlockTime,,balanceOf,totalSupply
-allowanceTotal,balanceOf,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalSupply,unlockTime,,allowance
-allBurn,allMint,allowance,balanceOf,msgSender,now,owner,precirculated,totalBalances,unlockTime,,totalSupply
-allBurn,allMint,allowanceTotal,balanceOf,msgSender,now,owner,precirculated,spentTotal,totalBalances,unlockTime,,allowance,totalSupply
+allBurn,allMint,allowanceTotal,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,unlockTime,,totalSupply,allowance,balanceOf
 allowance,balanceOf,msgSender,now,owner,precirculated,totalBalances,totalSupply,unlockTime,
+allBurn,allMint,allowanceTotal,balanceOf,msgSender,now,owner,precirculated,spentTotal,totalBalances,unlockTime,,totalSupply,allowance
+allowanceTotal,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,unlockTime,,allowance,balanceOf
 allowance,msgSender,now,owner,precirculated,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,unlockTime,,balanceOf
-allBurn,allMint,allowanceTotal,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,unlockTime,,balanceOf,allowance,totalSupply
-allowanceTotal,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,unlockTime,,balanceOf,allowance
+allBurn,allMint,allowance,balanceOf,msgSender,now,owner,precirculated,totalBalances,unlockTime,,totalSupply
+allBurn,allMint,allowance,msgSender,now,owner,precirculated,totalBalances,totalBurn,totalIn,totalMint,totalOut,unlockTime,,totalSupply,balanceOf
+allowanceTotal,balanceOf,msgSender,now,owner,precirculated,spentTotal,totalBalances,totalSupply,unlockTime,,allowance

@@ -1,8 +1,8 @@
-allowance,balanceOf,controller,decimals,msgSender,name,symbol,totalBalances,totalSupply,
-controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf,allowance
+controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,,allowance,balanceOf
 allowance,controller,decimals,msgSender,name,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,totalSupply,,balanceOf
-balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalSupply,,allowance
-allBurn,allMint,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,,balanceOf,allowance,totalSupply
+allBurn,allMint,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,,totalSupply,allowance,balanceOf
+allBurn,allMint,balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,,totalSupply,allowance
+allowance,balanceOf,controller,decimals,msgSender,name,symbol,totalBalances,totalSupply,
+allBurn,allMint,allowance,controller,decimals,msgSender,name,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,,totalSupply,balanceOf
 allBurn,allMint,allowance,balanceOf,controller,decimals,msgSender,name,symbol,totalBalances,,totalSupply
-allBurn,allMint,balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,,allowance,totalSupply
-allBurn,allMint,allowance,controller,decimals,msgSender,name,symbol,totalBalances,totalBurn,totalIn,totalMint,totalOut,,balanceOf,totalSupply
+balanceOf,controller,decimals,decreaseAllowanceTotal,increaseAllowanceTotal,msgSender,name,spentTotal,symbol,totalBalances,totalSupply,,allowance

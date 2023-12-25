@@ -29,9 +29,9 @@ transfer,totalOut,25,true,false
 balanceOf,totalBalances,26,true,false
 controllerRedeem,burn,27,false,false
 totalIn,balanceOf,28,false,false
+totalMint,balanceOf,28,false,false
 totalBurn,balanceOf,28,false,false
 totalOut,balanceOf,28,false,false
-totalMint,balanceOf,28,false,false
 balanceOf,burn,29,false,true
 allowance,transferFrom,32,false,true
 balanceOf,transferFrom,32,false,true
