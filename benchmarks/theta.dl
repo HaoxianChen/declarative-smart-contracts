@@ -1,7 +1,7 @@
 // Adopted from: https://etherscan.io/token/0x3883f5e181fccaf8410fa61e12b59bad963fb645#code
 
 // parameters
-.decl *owner(p: address)
+.decl *controller(p: address)
 
 // views
 .decl *totalSupply(n: uint)
@@ -24,9 +24,9 @@ canTransfer(p,q) :- precirculated(p,true), precirculated(q,true).
 .decl recv_disallowPrecirculation(p:address)
 .decl allowPrecirculation(p:address, b:bool)[0]
 .decl disallowPrecirculation(p:address, b:bool)[0]
-allowPrecirculation(p,true) :- recv_allowPrecirculation(p), msgSender(s), owner(s).
+allowPrecirculation(p,true) :- recv_allowPrecirculation(p), msgSender(s), controller(s).
 precirculated(p,b) :- allowPrecirculation(p,b).
-disallowPrecirculation(p,false) :- recv_disallowPrecirculation(p), msgSender(s), owner(s).
+disallowPrecirculation(p,false) :- recv_disallowPrecirculation(p), msgSender(s), controller(s).
 precirculated(p,b) :- disallowPrecirculation(p,b).
 .public recv_allowPrecirculation
 .public recv_disallowPrecirculation
@@ -43,6 +43,8 @@ precirculated(p,b) :- disallowPrecirculation(p,b).
 .decl recv_transferFrom(from: address, to: address, amount: uint)
 .decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
+.decl recv_changeController(n: address)
+.decl recv_changeUnlockTime(t: uint)
 
 // Interfaces
 .public recv_mint
@@ -55,14 +57,18 @@ precirculated(p,b) :- disallowPrecirculation(p,b).
 .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
+.public recv_changeController
+.public recv_changeUnlockTime
 
 // Rules
-owner(s) :- constructor(_), msgSender(s).
+controller(s) :- constructor(_), msgSender(s).
 totalSupply(0) :- constructor(_).
 unlockTime(t) :- constructor(t).
+controller(n) :- recv_changeController(n), msgSender(s), controller(s), n!=0.
+unlockTime(n) :- recv_changeUnlockTime(n), msgSender(s), controller(s).
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+mint(p,n) :- recv_mint(p,n), msgSender(s), controller(s), p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), controller(s), p!=0 ,balanceOf(p,m), n<=m.
 transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
                 canTransfer(s,r).
 
