@@ -1,10 +1,9 @@
 package synthesis
 
-import datalog.Program
+import datalog.{Program,Rule}
 import verification.{TransitionSystem, Verifier}
 
-case class Synthesizer(dl: Program, example_traces: Set[ExampleTrace],
-                       temporalProperties: Set[TemporalProperty]) {
+case class Synthesizer(dl: Program, violationRules: Set[Rule]) {
 
   val verifier: Verifier = ???
   def go(): Program = {

@@ -34,6 +34,8 @@ sealed abstract class Relation {
   def paramList: List[Parameter] = sig.zip(memberNames).map {
     case (t,n) => Variable(t,n)
   }
+
+  def arity: Int = sig.size
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(

@@ -13,6 +13,8 @@ import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, simplifyB
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
+import scala.collection.mutable.Queue
+
 class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
   extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = Set(),
     isInstrument = true, monitorViolations = false, enableProjection = true, arithmeticOptimization = true) {
@@ -72,8 +74,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     case relation: ReservedRelation => List()
   }
 
-  def check(): Unit = {
-    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
+  private def getTransitionSystem(): TransitionSystem = {
     val tr = TransitionSystem(program.name, ctx)
 
     /** Variable keeps track of the current transaction name. */
@@ -91,7 +92,34 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
     val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
     tr.setTr(fullTransitionCondition, transactionConditions)
+    tr
+  }
 
+  def traverseExpression(): Unit = {
+    val tr = getTransitionSystem()
+    val constraint = tr.getTrs().head
+
+    val queue: Queue[Expr[_]] = Queue()
+    for (arg <- constraint.getArgs) {
+      queue.enqueue(arg)
+    }
+    while (queue.nonEmpty) {
+      val e: Expr[_] = queue.dequeue()
+      if (e.isConst) {
+        println(e,e.getSort)
+      }
+      else {
+        for (a <- e.getArgs) {
+            queue.enqueue(a)
+        }
+      }
+    }
+
+  }
+
+  def check(): Unit = {
+    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
+    val tr = getTransitionSystem()
     for (vr <- violationRules) {
       val property = getProperty(ctx, vr)
       println(property)
@@ -415,32 +443,28 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
       relation match {
         case sr: SimpleRelation => {
-          // val const0 = ctx.mkConst(s"_${const.toString}0", const.getSort)
-          // val (defaultConstraints,_keyConst,_keyTypes) = _getDefaultConstraints(ctx,relation, const0, indices, isQuantified)
+          val const0 = ctx.mkConst(s"_${const.toString}0", const.getSort)
+          val (defaultConstraints,_keyConst,_keyTypes) = _getDefaultConstraints(ctx,relation, const0, indices, isQuantified)
 
-          // val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
-          // val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
-          // val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
-          // val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+          val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+          val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
 
-          // val initValues: Expr[Sort] = if (!valueSort.isInstanceOf[TupleSort]) {
-          //   val _p = rule.head.fields(valueIndices.head)
-          //   paramToConst(ctx,_p,s"")._1
-          // }.asInstanceOf[Expr[Sort]]
-          // else {
-          //   ???
-          //   // val _initValues = valueTypes.map(t => initValue(ctx,t))
-          //   // valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*)
-          // }
-          // val keys = indices(sr).map(i=>rule.head.fields(i))
-          // val keyConstArray: Array[Expr[_]] = keys.map(p=>paramToConst(ctx,p,s"")._1).toArray
-          // val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
-          // val matchConstraint = ctx.mkEq(const,storeConstraint)
+          val initValues: Expr[Sort] = if (!valueSort.isInstanceOf[TupleSort]) {
+            val _p = rule.head.fields(valueIndices.head)
+            paramToConst(ctx,_p,s"")._1
+          }.asInstanceOf[Expr[Sort]]
+          else {
+            val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
+            val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+            val _initValues = valueTypes.map(t => initValue(ctx,t))
+            valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*).asInstanceOf[Expr[Sort]]
+          }
+          val keys = indices(sr).map(i=>rule.head.fields(i))
+          val keyConstArray: Array[Expr[_]] = keys.map(p=>paramToConst(ctx,p,s"")._1).toArray
+          val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
+          val matchConstraint = ctx.mkEq(const,storeConstraint)
 
-          // (matchConstraint,_keyConst,_keyTypes)
-          /** todo: what to do when array type is initialized by special value?
-           *  */
-          _getDefaultConstraints(ctx,sr,const,indices,isQuantified)
+          (ctx.mkAnd(defaultConstraints, matchConstraint),keyConstArray,_keyTypes)
         }
         case SingletonRelation(name, sig, memberNames) => {
           val assignExpr: BoolExpr = if (sig.size == 1) {

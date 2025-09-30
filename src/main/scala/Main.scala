@@ -216,6 +216,37 @@ object Main extends App {
     }
   }
 
+  else if (args(0) == "synthesis") {
+    /** Input:
+     *    - Datalog: a smart contract in Datalog, without transaction validation rules
+     *    - Temporal properties
+     *
+     *  Output:
+     *    - Fill in the transaction validation rules for the input Datalog file,
+     *      such that it is consistent with the temporal properties.
+     *  */
+    val datalog_filepath = args(1)
+
+    val program = parseProgram(datalog_filepath)
+    val candidates = synthesis.PredicateEnumerator.enumerate(program)
+
+    println(s"[synthesis] program: ${program.name}")
+    println(s"[synthesis] candidate predicates: ${candidates.size}")
+    /** Synthesize by adding validation condition */
+  }
+
+  else if (args(0) == "dump-expression") {
+    val filepath = args(1)
+    val dl = parseProgram(filepath)
+    val materializedRelations: Set[Relation] = Set()
+    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
+      monitorViolations = false, arithmeticOptimization = true)
+    val imperative = impTranslator.translate()
+    // println(imperative)
+    val verifier = new Verifier(dl, imperative)
+    verifier.traverseExpression()
+  }
+
   else if (args(0) == "test-invariant-generator") {
     for (p<-invariantGenerationBenchmarks) {
       runVerification(p)

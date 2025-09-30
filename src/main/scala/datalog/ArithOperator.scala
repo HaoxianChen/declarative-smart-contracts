@@ -200,8 +200,14 @@ case class Leq(a: Arithmetic, b: Arithmetic) extends ArithOperator {
 case class Unequal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a!=$b"
 }
+object Unequal {
+  def apply(a: Parameter, b: Parameter): Unequal = Unequal(Param(a), Param(b))
+}
 case class Equal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a==$b"
+}
+object Equal {
+  def apply(a: Parameter, b: Parameter): Equal = Equal(Param(a), Param(b))
 }
 case class Assign(a: Param, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a := $b"
