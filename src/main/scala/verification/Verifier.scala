@@ -118,9 +118,8 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
   }
 
   def check(): Unit = {
-    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
     val tr = getTransitionSystem()
-    for (vr <- violationRules) {
+    for (vr <- program.violationRules) {
       val property = getProperty(ctx, vr)
       println(property)
 

@@ -9,7 +9,7 @@ case class BoundedModelChecker() {
    *  Output:
    *    - Result: Boolean
    *    - Counter example if result is false. */
-  def check(program: Program, violationRules: Set[Rule] ): (Boolean, Option[Trace]) = {
+  def check(program: Program, violationRules: Set[Rule], bound: Int): (Boolean, Option[Trace]) = {
     ???
   }
 }

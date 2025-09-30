@@ -1,3 +1,6 @@
+> **Warning:** Always run regression tests before submitting pull requests.  
+> See [Running Regression Test](#running-regression-test) for instructions.
+
 # Declarative smart contracts
 
 A compiler that translates Declarative smart contracts
@@ -69,3 +72,30 @@ Examples of declarative smart contrats are located in [benchmarks](benchmarks/).
     }
     ```
 5. In sbt configuration, set working directory as the project directory, so that Java runtime can locate the two dylib file.
+
+## Running Synthesis
+
+To run synthesis (fill in transaction validation rules based on temporal properties), use:
+```bash
+sbt "run synthesis benchmarks/[contract_name].dl"
+```
+This will enumerate candidate predicates and synthesize validation conditions for the input Datalog file.
+
+## Running BMC Test
+
+To run the Bounded Model Checker (BMC) test:
+```bash
+sbt "run bmc benchmarks/[contract_name].dl [bound]"
+```
+- `[contract_name]` is the name of your contract file.
+- `[bound]` (optional) is the number of steps to check; default is 10 if omitted.
+
+This will perform bounded model checking on the contract to verify violation rules.
+
+## Running Regression Test
+
+To run regression tests on all benchmark contracts, use:
+```bash
+sbt "run test-verification"
+```
+This will compile all benchmark contracts and generate the corresponding Solidity programs for validation.

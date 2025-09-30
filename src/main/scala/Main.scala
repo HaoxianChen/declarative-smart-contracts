@@ -1,5 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
+import synthesis.BoundedModelChecker
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
@@ -233,6 +234,15 @@ object Main extends App {
     println(s"[synthesis] program: ${program.name}")
     println(s"[synthesis] candidate predicates: ${candidates.size}")
     /** Synthesize by adding validation condition */
+  }
+
+  /** Test the bounded model checker. */
+  else if (args(0) == "bmc") {
+    val filepath = args(1)
+    val bound = if (args.length > 2) args(2).toInt else 10 // default bound
+    val dl = parseProgram(filepath)
+    val bmc = BoundedModelChecker()
+    bmc.check(dl, dl.violationRules, bound)
   }
 
   else if (args(0) == "dump-expression") {
