@@ -251,9 +251,30 @@ object Main extends App {
   else if (args(0) == "bmc") {
     val filepath = args(1)
     val bound = if (args.length > 2) args(2).toInt else 10 // default bound
+    
+    println(s"[BMC] Loading program from: $filepath")
+    println(s"[BMC] Bound: $bound")
+    
     val dl = parseProgram(filepath)
+    println(s"[BMC] Program: ${dl.name}")
+    println(s"[BMC] Violation rules to check: ${dl.violationRules.size}")
+    
     val bmc = BoundedModelChecker()
-    bmc.check(dl, dl.violationRules, bound)
+    val (isValid, traceOpt) = bmc.check(dl, dl.violationRules, bound)
+    
+    if (isValid) {
+      println(s"[BMC] ✓ No violation found within bound $bound")
+      println(s"[BMC] The property holds for all executions up to $bound steps")
+    } else {
+      println(s"[BMC] ✗ Violation found!")
+      traceOpt match {
+        case Some(trace) =>
+          println(s"[BMC] Counterexample trace (${trace.length} steps):")
+          println(trace)
+        case None =>
+          println(s"[BMC] Violation detected but no trace available")
+      }
+    }
   }
 
   else if (args(0) == "dump-expression") {
