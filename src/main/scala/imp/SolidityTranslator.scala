@@ -330,4 +330,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
 object SolidityTranslator {
   val transactionRelationPrefix = "recv_"
+
+  def isTransactionTriggerRelation(relation: Relation): Boolean = {
+      relation.name.startsWith(transactionRelationPrefix)
+  }
 }

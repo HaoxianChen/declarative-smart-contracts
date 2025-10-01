@@ -1,7 +1,24 @@
 // Scala
 package synthesis
 
-import datalog.{Constant, Equal, Functor, Greater, Literal, Param, Parameter, Program, Relation, Unequal, Variable}
+import datalog.{Constant, Equal, Functor, Literal, Param, Parameter, Program, Relation, Rule, Unequal, Variable}
+import imp.SolidityTranslator.isTransactionTriggerRelation
+
+import scala.collection.mutable
+
+
+case class Context(tx: Literal, bindingLiterals: Set[Literal]) {
+  override def toString: String = {
+    val txStr = tx.toString
+    val bindingsStr = bindingLiterals.map(_.toString).mkString(", ")
+    s"tx: $txStr, bindings: [$bindingsStr]"
+  }
+}
+case class Predicate(context: Context, functor: Functor) {
+  override def toString: String = {
+    s"Predicate(context: $context, functor: $functor)"
+  }
+}
 
 /**
  * Enumerates candidate Datalog literals directly from the program schema.
@@ -23,6 +40,32 @@ object PredicateEnumerator {
 
     (singles ++ pairwiseEqs)
   }
+
+  /** Alternative enumerate method.
+   *  For each transaction relation, return a set of Predicates:
+   *   -   */
+  def enumeratePredicates(program: Program): Map[Rule,Set[Predicate]] = {
+    val txRules = program.transactionRules()
+
+    // init a mutable mapping from rule to set of predicate objects
+    val predicates: mutable.Map[Rule, Set[Predicate]] = mutable.Map.empty
+
+
+    /** 1. Simply comparing parameter in the txRule  */
+    for (txRule <- txRules) {
+      val txLiteral = extractTxLiteral(txRule)
+      val preds = singlePredicate(txLiteral)
+      predicates.update(txRule, preds)
+    }
+    predicates.toMap
+  }
+
+  private def singlePredicate(txLiteral: Literal): Set[Predicate] = {
+    val context = Context(txLiteral, Set.empty)
+    val functors: Set[Functor] = singleAtomCandidates(txLiteral)
+    functors.map(f => Predicate(context, f))
+  }
+
 
   /** For each relation, return a type consistent literal,
    * and each literal uses unique variable name */
@@ -84,4 +127,20 @@ object PredicateEnumerator {
       }
     }.collect { case eq: Equal => eq }.toSet
   }
+
+  def extractTxLiteral(txRule: Rule): Literal = {
+    val txLits: Seq[Literal] =
+      txRule.body.collect { case lit: Literal
+        if isTransactionTriggerRelation(lit.relation) => lit
+      }.toSeq
+
+    txLits match {
+      case Seq(lit) => lit
+      case Seq() =>
+        throw new IllegalArgumentException(s"No transaction literal found in rule: $txRule")
+      case _ =>
+        throw new IllegalArgumentException(s"Multiple transaction literals found in rule: $txRule")
+    }
+  }
+
 }

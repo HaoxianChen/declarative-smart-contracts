@@ -1,6 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
-import synthesis.BoundedModelChecker
+import synthesis.{BoundedModelChecker, Interpreter, Predicate}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
@@ -229,11 +229,24 @@ object Main extends App {
     val datalog_filepath = args(1)
 
     val program = parseProgram(datalog_filepath)
-    val candidates = synthesis.PredicateEnumerator.enumerate(program)
+    // val candidates = synthesis.PredicateEnumerator.enumerate(program)
+    val candidates = synthesis.PredicateEnumerator.enumeratePredicates(program)
 
     println(s"[synthesis] program: ${program.name}")
     println(s"[synthesis] candidate predicates: ${candidates.size}")
     /** Synthesize by adding validation condition */
+  }
+
+  else if (args(0) == "test-interpreter") {
+    val datalog_filepath = args(1)
+
+    val program = parseProgram(datalog_filepath)
+    val candidates = synthesis.PredicateEnumerator.enumeratePredicates(program)
+
+    for ((rule, preds) <- candidates) {
+      Interpreter.test1(rule, preds)
+    }
+
   }
 
   /** Test the bounded model checker. */
