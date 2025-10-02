@@ -54,3 +54,4 @@ negativeBalance(net) :- balance(bal), withdrawTotal(w), bal < w, net := bal - w.
 
 
 
+

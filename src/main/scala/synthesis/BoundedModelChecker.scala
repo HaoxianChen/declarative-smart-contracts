@@ -67,6 +67,7 @@ case class BoundedModelChecker() {
     val init = ts.getInit()         // Initial state formula
 
     // Step 4: Collect state variables (current and next-state pairs)
+    // 需要看一下这里的reflection
     val variables: Seq[(Expr[_], Expr[_])] = BoundedModelChecker.ReflectionUtils.getField[Set[(Expr[_], Expr[_])]](ts, "variables").toSeq
     val (xs, xns) = BoundedModelChecker.BmcUtilities.splitStateVariables(variables)
 
@@ -93,11 +94,28 @@ case class BoundedModelChecker() {
         .diff(stateExprs)
       val fvs = BoundedModelChecker.BmcUtilities.orderExprArray(fvsSet)
 
+      // Print the five parameters
+      println("=== BMC Parameters ===")
+      println(s"init: $init")
+      println(s"combinedTrans: $combinedTrans")
+      println(s"violationGoal: $violationGoal")
+      println(s"fvs: ${fvs.mkString("[", ", ", "]")}")
+      println(s"xs: ${xs.mkString("[", ", ", "]")}")
+      println(s"xns: ${xns.mkString("[", ", ", "]")}")
+      println(s"bound: $bound")
+      println("====================")
+
       // Run bounded model checking for this violation rule
       BoundedModelChecker.SimpleBMC.bmc(ctx, init, combinedTrans, violationGoal, fvs, xs, xns, bound) match {
         case Some(model) if model.nonEmpty =>
           // Violation found! Extract counterexample trace from the model
-          val traceOpt = BoundedModelChecker.BmcUtilities.modelToTrace(model, relationByName)
+          // Build helper maps for enriched trace printing
+          val interfacesByName: Map[String, datalog.Interface] = program.interfaces.map(i => i.relation.name -> i).toMap
+          // Derive the set of state variable base names (normalized names) from (cur,next) pairs
+          val stateVarBaseNames: Set[String] = variables.map { case (cur, _) =>
+            BoundedModelChecker.BmcUtilities.pureName(cur.toString)
+          }.toSet
+          val traceOpt = BoundedModelChecker.BmcUtilities.modelToTrace(model, relationByName, interfacesByName, stateVarBaseNames)
           return (false, traceOpt)
         case _ =>
           // No violation found for this rule within the bound
@@ -324,6 +342,10 @@ object BoundedModelChecker {
      * @param name The variable name (possibly wrapped)
      * @return The pure name without wrapper symbols
      */
+    /**
+     * Extract the pure name for a Z3 symbol.
+     * Z3 may wrap names with vertical bars like |name|; this removes the wrappers.
+     */
     private def pureName(name: String): String = {
       if (name.contains("|")) {
         val first = name.indexOf("|")
@@ -397,6 +419,10 @@ object BoundedModelChecker {
 
         // If SAT, we found a trace that reaches the goal
         if (res == Status.SATISFIABLE) {
+          // 打印出当前找到的可满足模型（counterexample trace），便于调试和分析
+          println("=== SAT Model (Counterexample Trace) ===")
+          println(solver.getModel)
+          println("========================================")
           return Some(extractModel(solver.getModel))
         }
 
@@ -516,6 +542,18 @@ object BoundedModelChecker {
    * - Extracting execution traces from SMT models
    */
   private object BmcUtilities {
+    /**
+     * Extract the pure name for a Z3 symbol.
+     * Z3 may wrap names with vertical bars like |name|; this removes the wrappers.
+     */
+    def pureName(name: String): String = {
+      if (name.contains("|")) {
+        val first = name.indexOf("|")
+        val second = name.indexOf("|", first + 1)
+        if (first >= 0 && second > first) name.substring(first + 1, second)
+        else name
+      } else name
+    }
     
     /**
      * Splits state variable pairs into separate arrays for current and next states.
@@ -562,9 +600,23 @@ object BoundedModelChecker {
      * @param relations Map from relation name to Relation object
      * @return Some(Trace) if transactions found, None if trace is empty
      */
+    /**
+     * Convert a BMC model (bucketed by rounds) into a human-readable trace.
+     *
+     * Enhancements:
+     *  - Print, per step, the transaction name (if any), its parameter types and concrete values,
+     *    and all state variable values.
+     *  - Parameter values are retrieved from explicit transaction parameter state variables created
+     *    by the verifier, following naming convention: tx_<relName>_<paramName>.
+     *
+     * Note: The returned Trace structure still carries only relation names with placeholder params,
+     *       while detailed per-step values are printed to stdout for inspection.
+     */
     def modelToTrace(
       model: Array[mutable.Map[String, Expr[_]]],
-      relations: Map[String, Relation]
+      relations: Map[String, Relation],
+      interfacesByName: Map[String, datalog.Interface],
+      stateVarBaseNames: Set[String]
     ): Option[Trace] = {
       // Print model summary for debugging
       println(s"[BMC][Trace] Analyzing counterexample model with ${model.length} steps")
@@ -597,7 +649,43 @@ object BoundedModelChecker {
         }
       }
       
-      // Extract transaction sequence
+      // Extract transaction sequence, while printing detailed arguments and state variables
+      // Print init snapshot (full values) before diffs
+      if (model.nonEmpty) {
+        val initEntry = model.head
+        println(s"[BMC][Diff] Init snapshot:")
+        // state snapshot
+        val initState = initEntry.filter { case (k, _) => stateVarBaseNames.contains(k) }
+        if (initState.nonEmpty) {
+          val stateStr = initState.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
+          println(s"[BMC][Diff]           state: ${stateStr}")
+        }
+        // tx params snapshot (heuristic: keys starting with tx_)
+        val initParams = initEntry.filter { case (k, _) => k.startsWith("tx_") }
+        if (initParams.nonEmpty) {
+          val paramsStr = initParams.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
+          println(s"[BMC][Diff]           params: ${paramsStr}")
+        }
+        // internal snapshot
+        val initInternal = initEntry.filter { case (k, _) =>
+          !stateVarBaseNames.contains(k) && k != "transaction" && !k.startsWith("P:") && !k.startsWith("tx_")
+        }
+        if (initInternal.nonEmpty) {
+          val internalStr = initInternal.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
+          println(s"[BMC][Diff]           internal: ${internalStr}")
+        }
+      }
+
+      // Helper to compute changed pairs for a set of keys
+      def changedPairs(keys: Set[String], prev: mutable.Map[String, Expr[_]], curr: mutable.Map[String, Expr[_]]): List[String] = {
+        keys.toList.sorted.flatMap { k =>
+          val oldStr = prev.get(k).map(_.toString).getOrElse("_")
+          val newStr = curr.get(k).map(_.toString).getOrElse("_")
+          if (oldStr != newStr) Some(s"${k}: ${oldStr} -> ${newStr}") else None
+        }
+      }
+
+      // Extract transaction sequence, while printing detailed arguments and state variables
       val steps = model.zipWithIndex.flatMap { case (entry, stepIdx) =>
         // Look for transaction identifier (either "transaction" or "func" variable)
         val txValueOpt = entry.get("transaction").orElse(entry.get("func"))
@@ -611,8 +699,83 @@ object BoundedModelChecker {
           } else {
             // Map transaction name to its Datalog relation
             relations.get(name).map { rel =>
-              // Create wildcard parameters (actual values not extracted from model)
-              val params = rel.sig.map(t => Constant(t, "_"))
+              // Print transaction header
+              println(s"[BMC][Trace]   Step ${stepIdx}: tx=${name}")
+
+              // Gather interface and parameter typing info
+              val memberNames: List[String] = rel.memberNames
+              val types: List[datalog.Type] = rel.sig
+              val inputIdxs: List[Int] = interfacesByName.get(name).map(_.inputIndices).getOrElse(Nil)
+
+              // Extract parameter values using naming convention: tx_<rel>_<param>
+              val argReprs: List[String] = inputIdxs.zipWithIndex.map { case (paramIdx, argPos) =>
+                val pName = if (paramIdx >= 0 && paramIdx < memberNames.length && memberNames(paramIdx) != null && memberNames(paramIdx).nonEmpty) memberNames(paramIdx) else s"arg${paramIdx}"
+                val tpe = if (paramIdx >= 0 && paramIdx < types.length) types(paramIdx) else datalog.AnyType()
+                val key = s"tx_${name}_${pName}"
+                val valueStr = entry.get(key).map(_.toString).getOrElse("_")
+                s"(${tpe.toString} ${pName} = ${valueStr})"
+              }
+              if (argReprs.nonEmpty) println(s"[BMC][Trace]           args: ${argReprs.mkString(", ")}")
+
+              // Print all state variables for this step
+              val stateEntries = entry.filter { case (k, _) => stateVarBaseNames.contains(k) || k == "transaction" }
+              if (stateEntries.nonEmpty) {
+                val stateStr = stateEntries.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
+                println(s"[BMC][Trace]           state: ${stateStr}")
+              }
+
+              // Print internal variables (non-state, non-param, non-tx guard)
+              val paramKeys: Set[String] = inputIdxs.map { idx =>
+                val pName = if (idx >= 0 && idx < memberNames.length && memberNames(idx) != null && memberNames(idx).nonEmpty) memberNames(idx) else s"arg${idx}"
+                s"tx_${name}_${pName}"
+              }.toSet
+              val internalEntries = entry.filter { case (k, _) =>
+                !stateVarBaseNames.contains(k) && k != "transaction" && !paramKeys.contains(k) && !k.startsWith("P:")
+              }
+              if (internalEntries.nonEmpty) {
+                val internalStr = internalEntries.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
+                println(s"[BMC][Trace]           internal: ${internalStr}")
+              }
+
+              // Per-step diffs starting from step 1
+              if (stepIdx > 0) {
+                val prev = model(stepIdx - 1)
+                // Keys for categories
+                val stateKeys: Set[String] = stateVarBaseNames
+                val paramKeys: Set[String] = inputIdxs.map { idx =>
+                  val pName = if (idx >= 0 && idx < memberNames.length && memberNames(idx) != null && memberNames(idx).nonEmpty) memberNames(idx) else s"arg${idx}"
+                  s"tx_${name}_${pName}"
+                }.toSet
+                val internalKeys: Set[String] = (entry.keySet ++ prev.keySet).filter { k =>
+                  !stateVarBaseNames.contains(k) && k != "transaction" && !paramKeys.contains(k) && !k.startsWith("P:")
+                }.toSet
+
+                val stateDiffs = changedPairs(stateKeys, prev, entry)
+                val paramDiffs = changedPairs(paramKeys, prev, entry)
+                val internalDiffs = changedPairs(internalKeys, prev, entry)
+
+                if (stateDiffs.nonEmpty) println(s"[BMC][Diff]           state: ${stateDiffs.mkString(", ")}")
+                if (paramDiffs.nonEmpty) println(s"[BMC][Diff]           params: ${paramDiffs.mkString(", ")}")
+                if (internalDiffs.nonEmpty) println(s"[BMC][Diff]           internal: ${internalDiffs.mkString(", ")}")
+              }
+
+              /**
+               * Build concrete parameters to satisfy Trace API:
+               * - length equals rel.arity
+               * - for indices in inputIdxs, try to use concrete value from model via key tx_<rel>_<paramName>
+               * - otherwise, use wildcard Constant(t, "_") to bypass type checks
+               */
+              val params = types.zipWithIndex.map { case (tpe, idx) =>
+                if (inputIdxs.contains(idx)) {
+                  val pName = if (idx >= 0 && idx < memberNames.length && memberNames(idx) != null && memberNames(idx).nonEmpty) memberNames(idx) else s"arg${idx}"
+                  val key = s"tx_${name}_${pName}"
+                  // Convert Z3 Expr to a readable string; drop quotes for strings
+                  val valueStr = entry.get(key).map(_.toString.replace("\"", "")).getOrElse("_")
+                  Constant(tpe, valueStr)
+                } else {
+                  Constant(tpe, "_")
+                }
+              }
               Transaction(rel, params.toList)
             }
           }

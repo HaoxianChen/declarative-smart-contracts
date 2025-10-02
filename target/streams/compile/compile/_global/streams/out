@@ -1,0 +1,6 @@
+[0m[[0m[31merror[0m] [0m[0m/home/youch/tolin/Smart-Contract-Synthesis/src/main/scala/synthesis/BoundedModelChecker.scala:749:86: type mismatch;[0m
+[0m[[0m[31merror[0m] [0m[0m found   : Set[String] (in scala.collection) [0m
+[0m[[0m[31merror[0m] [0m[0m required: Set[String] (in scala.collection.immutable) [0m
+[0m[[0m[31merror[0m] [0m[0m                val internalKeys: Set[String] = (entry.keySet ++ prev.keySet).filter { k =>[0m
+[0m[[0m[31merror[0m] [0m[0m                                                                                     ^[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m
