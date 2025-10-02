@@ -221,7 +221,7 @@ object Interpreter {
   def test1(interpreterContext: InterpreterContext, rule: Rule, predicates: Set[Predicate]): Unit = {
     val txLiteral = extractTxLiteral(rule)
     val params: List[Constant] = txLiteral.relation.sig.map(randomConstant)
-    val tx = Transaction(txLiteral.relation, params)
+    val tx = Transaction(txLiteral.relation, params, ImplicitParameters())
 
     println(s"Tx: ${tx}")
     val interpreter = Interpreter(interpreterContext)
@@ -263,7 +263,7 @@ object Interpreter {
       case _: SymbolType => addressConstants(scala.util.Random.nextInt(addressConstants.size))
       case t => Interpreter.randomConstant(t)
     }
-    val tx = Transaction(txRel, txParams)
+    val tx = Transaction(txRel, txParams, ImplicitParameters())
 
     val interpreter = Interpreter(interpreterContext)
     for (p <- predicates) {

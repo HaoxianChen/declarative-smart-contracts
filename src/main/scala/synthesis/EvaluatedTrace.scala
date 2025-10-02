@@ -41,8 +41,8 @@ object EvaluatedTrace {
     val params2 = rel2.sig.zipWithIndex.map { case (t, i) => Constant(t, s"p${i+1}") }.toList
 
     // Transactions using extracted relations and parameters
-    val tx1: Transaction = Transaction(rel1, params1)
-    val tx2: Transaction = Transaction(rel2, params2)
+    val tx1: Transaction = Transaction(rel1, params1, ImplicitParameters())
+    val tx2: Transaction = Transaction(rel2, params2, ImplicitParameters())
 
     val tx1Bits: List[Boolean] = List(true, false, true)
     val tx2Bits: List[Boolean] = List(false, true, true)

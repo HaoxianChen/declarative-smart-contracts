@@ -1,17 +1,29 @@
 package synthesis
 
-import datalog.{Relation, Constant}
+import datalog.{Constant, Relation}
+
+import scala.util.Random
+
+case class ImplicitParameters(msgSender: Int, value: Int) {
+  override def toString: String = s"msgSender: $msgSender, value: $value"
+}
+
+object ImplicitParameters {
+  def apply(): ImplicitParameters = {
+    val msgSender = Random.nextInt(100)
+    val value = Random.nextInt(100)
+    ImplicitParameters(msgSender, value)
+  }
+
+}
 
 /** Transaction: relation + concrete list of parameters. */
-case class Transaction(relation: Relation, parameters: List[Constant]) {
+case class Transaction(relation: Relation, parameters: List[Constant],
+                       implicitParameters: ImplicitParameters) {
   def arity: Int = relation.arity
-  override def toString: String = s"${relation.name}(${parameters.mkString(",")})"
+  override def toString: String = s"${relation.name}(${parameters.mkString(",")}) [${implicitParameters}]"
 }
 
-object Transaction {
-  /** helper constructor from varargs parameters */
-  def apply(relation: Relation, parameters: Constant*): Transaction = Transaction(relation, parameters.toList)
-}
 
 /** Trace: consist of a sequence of transactions. */
 case class Trace(steps: Seq[Transaction]) {
