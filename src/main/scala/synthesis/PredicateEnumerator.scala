@@ -126,37 +126,30 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
   }
 
 
-  /** Given a txLiteral with parameters a,b,c...,
+  /** Refactored: Given a txLiteral with parameters a,b,c...,
    *  make a set of literals of the indexed relation
    *  where each literal has the indexed parameter bind to one of the
-   *  type consistent parameter in txLiteral. */
+   *  type consistent parameter in txLiteral, msgSender, or msgValue. */
   private def makeOneBinding(txLiteral: Literal, indexedRelation: Relation,
                              indices: List[Int]): Set[Literal] = {
-    // Gather candidate parameters from txLiteral, msgSender, and msgValue
-    val extraParams = Context.msgSender.fields ++ Context.msgValue.fields
-    val txParams = txLiteral.fields ++ extraParams
-
-    // For each index, find all type-consistent txParams
+    // Step 1: Gather candidate parameters from txLiteral, msgSender, and msgValue
+    val candidates = txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields
+    // Step 2: For each index, find all type-consistent candidates
     val bindings = indices.flatMap { idx =>
       val relType = indexedRelation.sig(idx)
-      txParams.collect {
-        case p if p._type == relType => (idx, p)
-      }
+      candidates.collect { case p if p._type == relType => (idx, p) }
     }
-
     if (bindings.isEmpty) Set.empty
     else {
-      // Group bindings by index, so we can replace all indexed parameters at once
-      val grouped: Map[Int, Seq[(Int, Parameter)]] = bindings.groupBy(_._1)
-      // For each combination of parameters for all indices, create a new literal
       val allIdxs = indices
+      // Step 3: For each index, collect all possible parameters
       val allParams = allIdxs.map(idx => bindings.filter(_._1 == idx).map(_._2)).filter(_.nonEmpty)
-      // Cartesian product of all possible parameter choices for each index
+      // Step 4: Cartesian product of all possible parameter choices for each index
       val combos = allParams.foldLeft(Seq(Seq.empty[Parameter])) { (acc, params) =>
         for (a <- acc; p <- params) yield a :+ p
       }
+      // Step 5: Build fields for the new literal
       combos.map { paramsForIndices =>
-        // Build fields for the new literal
         val fields = indexedRelation.sig.zipWithIndex.map { case (t, i) =>
           val idxInIndices = allIdxs.indexOf(i)
           if (idxInIndices >= 0) paramsForIndices(idxInIndices) else Variable(t, s"${indexedRelation.name}_x$i")
