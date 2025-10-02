@@ -2,50 +2,40 @@ package synthesis
 
 import datalog.{Parameter, Constant, Program, Relation, Type}
 
-/** Given a trace, and a set of predicates, this represents the
- * bit-vector (List[Boolean]) value of each predicate (Transaction).
- * Each Transaction maps to a List[Boolean] where index = time step.
- * */
+/**
+ * Represents the execution trace of a sequence of transactions:
+ * - initialState: the state before any transaction
+ * - steps: a sequence of (Transaction, State) pairs, where State is the result after executing the transaction
+ */
 case class EvaluatedTrace(
-  // Map from transaction to its bit-vector across time steps
-  data: Map[Transaction, List[Boolean]]
+  initialState: State,
+  steps: Seq[(Transaction, State)]
 ) {
-  // Number of time steps in the trace (max length of bit-vectors; 0 if empty)
-  def length: Int = data.size
-
-  // Get the truth value of a transaction at a specific step
-  def get(step: Int, tx: Transaction): Option[Boolean] =
-    data.get(tx).flatMap(_.lift(step))
-
-  // Get all predicates (transactions) tracked
-  def predicates: Set[Transaction] = data.keySet
+  // Number of steps in the trace
+  def length: Int = steps.length
 
   override def toString: String =
-    s"EvaluatedTrace(steps=$length, predicates=${predicates.size})"
+    s"EvaluatedTrace(initialState=$initialState, steps=$length)"
 }
 
 object EvaluatedTrace {
   // Create an empty EvaluatedTrace
-  def empty: EvaluatedTrace = EvaluatedTrace(Map.empty)
+  def empty: EvaluatedTrace = EvaluatedTrace(State(), Seq.empty)
 
-  // Create some test evaluated trace.
+  // Create a test evaluated trace
   def testTrace1(program: Program): EvaluatedTrace = {
-    // Extract relations from the program
     val rels = program.relations.toList
     require(rels.length >= 2, "Program must contain at least two relations for the test.")
     val rel1 = rels(0)
     val rel2 = rels(1)
-
-    // Create parameters matching the relation signatures
-    val params1 = rel1.sig.zipWithIndex.map { case (t, i) => Constant(t, s"p${i+1}") }.toList
-    val params2 = rel2.sig.zipWithIndex.map { case (t, i) => Constant(t, s"p${i+1}") }.toList
-
-    // Transactions using extracted relations and parameters
+    val params1 = rel1.sig.zipWithIndex.map { case (t, i) => Constant(t, i.toString) }.toList
+    val params2 = rel2.sig.zipWithIndex.map { case (t, i) => Constant(t, i.toString) }.toList
     val tx1: Transaction = Transaction(rel1, params1, ImplicitParameters())
     val tx2: Transaction = Transaction(rel2, params2, ImplicitParameters())
-
-    val tx1Bits: List[Boolean] = List(true, false, true)
-    val tx2Bits: List[Boolean] = List(false, true, true)
-    EvaluatedTrace(Map(tx1 -> tx1Bits, tx2 -> tx2Bits))
+    val initialState = State()
+    // For demonstration, just use the same state (no real execution)
+    val state1 = State()
+    val state2 = State()
+    EvaluatedTrace(initialState, Seq((tx1, state1), (tx2, state2)))
   }
 }
