@@ -227,11 +227,10 @@ object Main extends App {
      *      such that it is consistent with the temporal properties.
      *  */
     val datalog_filepath = args(1)
-
     val program = parseProgram(datalog_filepath)
-    // val candidates = synthesis.PredicateEnumerator.enumerate(program)
-    val candidates = synthesis.PredicateEnumerator.enumeratePredicates(program)
-
+    val interpreterContext = synthesis.InterpreterContext.makeContext(program)
+    val enumerator = synthesis.PredicateEnumerator(interpreterContext)
+    val candidates = enumerator.enumeratePredicates(program)
     println(s"[synthesis] program: ${program.name}")
     println(s"[synthesis] candidate predicates: ${candidates.size}")
     /** Synthesize by adding validation condition */
@@ -239,14 +238,13 @@ object Main extends App {
 
   else if (args(0) == "test-interpreter") {
     val datalog_filepath = args(1)
-
     val program = parseProgram(datalog_filepath)
-    val candidates = synthesis.PredicateEnumerator.enumeratePredicates(program)
-
+    val interpreterContext = synthesis.InterpreterContext.makeContext(program)
+    val enumerator = synthesis.PredicateEnumerator(interpreterContext)
+    val candidates = enumerator.enumeratePredicates(program)
     for ((rule, preds) <- candidates) {
-      Interpreter.test1(rule, preds)
+      Interpreter.test2(interpreterContext, rule, preds)
     }
-
   }
 
   /** Test the bounded model checker. */

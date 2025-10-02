@@ -167,6 +167,22 @@ object Arithmetic {
   def rename(expr: Expr, mapping: Map[Parameter,Parameter]): Expr = expr match {
     case arithmetic: Arithmetic => rename(arithmetic, mapping)
   }
+
+  def extractParameters(expr: datalog.Expr): Seq[Parameter] = expr match {
+    case arithmetic: Arithmetic => arithmetic match {
+      case Zero(_type) => Seq.empty
+      case One(_type) => Seq.empty
+      case Param(p) => Seq(p)
+      case Negative(e) => extractParameters(e)
+      case operator: BinaryOperator => operator match {
+        case Add(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Sub(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Mul(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Div(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Min(a, b) => extractParameters(a) ++ extractParameters(b)
+      }
+    }
+  }
 }
 
 
