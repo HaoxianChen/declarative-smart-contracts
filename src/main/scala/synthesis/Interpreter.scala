@@ -137,9 +137,19 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       context.tx.fields.zip(transaction.parameters).collect {
         case (v: Variable, c: Constant) => State.Binding.Scalar(v, c)
       }
-    // Build a map from variable to its bound value from step 1
+    // Step 1b: Bind implicit parameters (msgSender and msgValue)
+    val msgSenderVar = Context.msgSender.fields.head.asInstanceOf[Variable]
+    val msgValueVar = Context.msgValue.fields.head.asInstanceOf[Variable]
+    val msgSenderConst = Constant(datalog.Type.uintType, transaction.implicitParameters.msgSender.toString)
+    val msgValueConst = Constant(datalog.Type.uintType, transaction.implicitParameters.value.toString)
+    val implicitBindings: Seq[State.Binding] = Seq(
+      State.Binding.Scalar(msgSenderVar, msgSenderConst),
+      State.Binding.Scalar(msgValueVar, msgValueConst)
+    )
+    val allScalarBindings = scalarBindings ++ implicitBindings
+    // Build a map from variable to its bound value from step 1 and implicit bindings
     val scalarBindingMap: Map[Variable, Constant] =
-      scalarBindings.collect { case State.Binding.Scalar(v, c) => v -> c }.toMap
+      allScalarBindings.collect { case State.Binding.Scalar(v, c) => v -> c }.toMap
 
     // Step 2: For each binding literal, bind the value variable to the lookup result from state
     val mapBindings = {
@@ -176,7 +186,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       }
       bindings.toSeq
     }
-    scalarBindings ++ mapBindings
+    allScalarBindings ++ mapBindings
   }
 
   def evaluate(state: State, functor: Functor): Boolean = functor match {

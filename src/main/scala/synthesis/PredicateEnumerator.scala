@@ -1,7 +1,7 @@
 // Scala
 package synthesis
 
-import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
+import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
@@ -15,6 +15,10 @@ case class Context(tx: Literal, bindingLiterals: Set[Literal]) {
     val bindingsStr = bindingLiterals.map(_.toString).mkString(", ")
     s"tx: $txStr, bindings: [$bindingsStr]"
   }
+}
+object Context {
+  val msgSender: Literal = Literal(MsgSender(), List(Variable(datalog.Type.addressType, "msgSender")))
+  val msgValue: Literal = Literal(MsgValue(), List(Variable(datalog.Type.uintType, "msgValue")))
 }
 case class Predicate(context: Context, functor: Functor) {
   override def toString: String = {
@@ -108,13 +112,14 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
 
         // Only keep functors that refer to at least one variable in bindingLiteral
         val singles = singleAtomCandidates(bindingLiteral)
-        val crossRelation = crossRelationComparison(txLiteral, bindingLiteral)
-        val functors = (singles ++ crossRelation)
+        val crossTx = crossRelationComparison(txLiteral, bindingLiteral)
+        val crossMsgSender = crossRelationComparison(bindingLiteral, Context.msgSender)
+        val crossMsgValue = crossRelationComparison(bindingLiteral, Context.msgValue)
+        val functors = (singles ++ crossTx ++ crossMsgSender ++ crossMsgValue)
           .filter { f => functorParams(f).exists {
             case v: Variable => bindingVars.contains(v)
             case _ => false
-          }
-        }
+          }}
         functors.map(f => Predicate(context, f))
       }
     }
@@ -127,7 +132,9 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
    *  type consistent parameter in txLiteral. */
   private def makeOneBinding(txLiteral: Literal, indexedRelation: Relation,
                              indices: List[Int]): Set[Literal] = {
-    val txParams = txLiteral.fields
+    // Gather candidate parameters from txLiteral, msgSender, and msgValue
+    val extraParams = Context.msgSender.fields ++ Context.msgValue.fields
+    val txParams = txLiteral.fields ++ extraParams
 
     // For each index, find all type-consistent txParams
     val bindings = indices.flatMap { idx =>
@@ -216,13 +223,19 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       val fieldA = a.fields(i)
       val fieldB = b.fields(j)
       if fieldA._type == fieldB._type && fieldA != fieldB // avoid reflexive comparison
-    } yield Set(
-      Equal(a.fields(i), b.fields(j)),
-      Greater(Param(a.fields(i)), Param(b.fields(j))),
-      Geq(Param(a.fields(i)), Param(b.fields(j))),
-      Lesser(Param(a.fields(i)), Param(b.fields(j))),
-      Leq(Param(a.fields(i)), Param(b.fields(j))),
-    )).flatten.toSet
+    } yield {
+      val eqSet = Set(Equal(fieldA, fieldB))
+      fieldA._type match {
+        case datalog.NumberType(_) =>
+          eqSet ++ Set(
+            Greater(Param(fieldA), Param(fieldB)),
+            Geq(Param(fieldA), Param(fieldB)),
+            Lesser(Param(fieldA), Param(fieldB)),
+            Leq(Param(fieldA), Param(fieldB))
+          )
+        case _ => eqSet
+      }
+    }).flatten.toSet
   }
 }
 
