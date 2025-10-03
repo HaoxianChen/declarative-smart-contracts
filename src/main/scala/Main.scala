@@ -1,5 +1,5 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
-import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
+import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner, SolidityTranslator, Translator}
 import synthesis.{BoundedModelChecker, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
@@ -321,6 +321,44 @@ object Main extends App {
     TransitionSystem.testTS()
     // Prove.testZ3()
     // Prove.testTuple()
+  }
+
+  else if (args(0) == "test-sol-interpreter") {
+    // Read datalog file path from args(1)
+    val filepath = args(1)
+    // Parse the datalog program
+    val dl = parseProgram(filepath)
+    // No materialized relations for this test
+    val materializedRelations: Set[Relation] = Set()
+    // Translate to imperative
+    val impTranslator = new ImperativeTranslator(
+      dl,
+      materializedRelations,
+      isInstrument = false,
+      monitorViolations = false,
+      arithmeticOptimization = true,
+      enableProjection = true
+    )
+    val imperative = impTranslator.translate()
+    // Translate to Solidity
+    val solidity = SolidityTranslator(
+      imperative,
+      dl.interfaces,
+      dl.violations,
+      materializedRelations,
+      isInstrument = false,
+      monitorViolation = false,
+      enableProjection = true
+    ).translate()
+    // Print results
+    println(dl)
+    println(imperative)
+    println(s"Solidity program:\n${solidity}")
+    println(s"${impTranslator.ruleSize} rules.")
+
+    val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
+    val inlinedSol = inliner.run()
+    println(s"inlined Solidity:\n${inlinedSol}")
   }
 
   else {
