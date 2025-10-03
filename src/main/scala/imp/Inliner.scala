@@ -235,9 +235,6 @@ case class Inliner(solidityProgram: Statement,
       case DeclVariable(name, _type) => DeclVariable(name, _type)
       case Require(condition, msg) =>
         Require(substituteParamsCondition(condition, paramMap), msg)
-      case ConvertType(from, to) =>  ConvertType(
-        substituteParamsArithmetic(from, paramMap),
-        paramMap.getOrElse(to, to).asInstanceOf[Variable] )
       case _ => s
     }
     case _ => stmt
