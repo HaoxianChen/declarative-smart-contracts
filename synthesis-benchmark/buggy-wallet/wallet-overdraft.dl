@@ -22,7 +22,7 @@
 balance(0) :- constructor().
 
 // Transaction: deposit - always allowed
-deposit(p, amount) :- recv_deposit(), msgSender(p), msgValue(amount).
+deposit(p, amount) :- recv_deposit(), msgSender(p), msgValue(amount), amount >= 0.
 
 // Update deposits
 .decl depositTotal(p: address, n: uint)[0]
@@ -34,7 +34,7 @@ balance(total) :- total = sum amount: deposit(_, amount).
 
 // Transaction: withdraw - BUG! Should check balance >= amount
 // Buggy version: no balance check, always allows withdrawal
-withdraw(p, amount) :- recv_withdraw(), msgSender(p), msgValue(amount).
+withdraw(p, amount) :- recv_withdraw(), msgSender(p), msgValue(amount), amount >= 0, balance(bal), bal > 0.
 
 send(p, amount) :- withdraw(p, amount).
 

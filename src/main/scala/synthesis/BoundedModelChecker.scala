@@ -420,9 +420,9 @@ object BoundedModelChecker {
         // If SAT, we found a trace that reaches the goal
         if (res == Status.SATISFIABLE) {
           // 打印出当前找到的可满足模型（counterexample trace），便于调试和分析
-          println("=== SAT Model (Counterexample Trace) ===")
-          println(solver.getModel)
-          println("========================================")
+          // println("=== SAT Model (Counterexample Trace) ===")
+          // println(solver.getModel)
+          // println("========================================")
           return Some(extractModel(solver.getModel))
         }
 
@@ -715,13 +715,12 @@ object BoundedModelChecker {
                 val valueStr = entry.get(key).map(_.toString).getOrElse("_")
                 s"(${tpe.toString} ${pName} = ${valueStr})"
               }
-              if (argReprs.nonEmpty) println(s"[BMC][Trace]           args: ${argReprs.mkString(", ")}")
+            
 
               // Print all state variables for this step
               val stateEntries = entry.filter { case (k, _) => stateVarBaseNames.contains(k) || k == "transaction" }
               if (stateEntries.nonEmpty) {
                 val stateStr = stateEntries.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
-                println(s"[BMC][Trace]           state: ${stateStr}")
               }
 
               // Print internal variables (non-state, non-param, non-tx guard)
@@ -734,7 +733,6 @@ object BoundedModelChecker {
               }
               if (internalEntries.nonEmpty) {
                 val internalStr = internalEntries.toSeq.sortBy(_._1).map { case (k, v) => s"${k}=${v}" }.mkString(", ")
-                println(s"[BMC][Trace]           internal: ${internalStr}")
               }
 
               // Per-step diffs starting from step 1
@@ -776,7 +774,19 @@ object BoundedModelChecker {
                   Constant(tpe, "_")
                 }
               }
-              Transaction(rel, params.toList)
+              // Build implicit parameters from model if available
+              def parseInt(str: String): Int = {
+                val s = str.replace("\"", "").trim
+                // handle patterns like -1 or ( - 1 ) already normalized by entry.toString earlier
+                try s.toInt catch { case _: Throwable => 0 }
+              }
+              val implicitParams = {
+                val sender = entry.get("msgSender").map(e => parseInt(e.toString)).getOrElse(0)
+                val value = entry.get("msgValue").map(e => parseInt(e.toString))
+                  .orElse(entry.get("value").map(e => parseInt(e.toString))).getOrElse(0)
+                ImplicitParameters(sender, value)
+              }
+              Transaction(rel, params.toList, implicitParams)
             }
           }
         }
