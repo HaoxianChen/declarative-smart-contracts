@@ -1,6 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
-import synthesis.{BoundedModelChecker, Interpreter, Predicate}
+import synthesis.{BoundedModelChecker, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
@@ -233,7 +233,11 @@ object Main extends App {
     val candidates = enumerator.enumeratePredicates(program)
     println(s"[synthesis] program: ${program.name}")
     println(s"[synthesis] candidate predicates: ${candidates.size}")
+
     /** Synthesize by adding validation condition */
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    val testTrace = EvaluatedTrace.testTrace1(program)
+    synthesizer.synthesize(testTrace)
   }
 
   else if (args(0) == "test-interpreter") {

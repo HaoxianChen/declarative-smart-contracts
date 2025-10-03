@@ -1,7 +1,6 @@
-// Scala
 package synthesis
 
-import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
+import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
@@ -15,6 +14,10 @@ case class Context(tx: Literal, bindingLiterals: Set[Literal]) {
     val bindingsStr = bindingLiterals.map(_.toString).mkString(", ")
     s"tx: $txStr, bindings: [$bindingsStr]"
   }
+}
+object Context {
+  val msgSender: Literal = Literal(MsgSender(), List(Variable(datalog.Type.addressType, "msgSender")))
+  val msgValue: Literal = Literal(MsgValue(), List(Variable(datalog.Type.uintType, "msgValue")))
 }
 case class Predicate(context: Context, functor: Functor) {
   override def toString: String = {
@@ -108,48 +111,44 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
 
         // Only keep functors that refer to at least one variable in bindingLiteral
         val singles = singleAtomCandidates(bindingLiteral)
-        val crossRelation = crossRelationComparison(txLiteral, bindingLiteral)
-        val functors = (singles ++ crossRelation)
+        val crossTx = crossRelationComparison(txLiteral, bindingLiteral)
+        val crossMsgSender = crossRelationComparison(bindingLiteral, Context.msgSender)
+        val crossMsgValue = crossRelationComparison(bindingLiteral, Context.msgValue)
+        val functors = (singles ++ crossTx ++ crossMsgSender ++ crossMsgValue)
           .filter { f => functorParams(f).exists {
             case v: Variable => bindingVars.contains(v)
             case _ => false
-          }
-        }
+          }}
         functors.map(f => Predicate(context, f))
       }
     }
   }
 
 
-  /** Given a txLiteral with parameters a,b,c...,
+  /** Refactored: Given a txLiteral with parameters a,b,c...,
    *  make a set of literals of the indexed relation
    *  where each literal has the indexed parameter bind to one of the
-   *  type consistent parameter in txLiteral. */
+   *  type consistent parameter in txLiteral, msgSender, or msgValue. */
   private def makeOneBinding(txLiteral: Literal, indexedRelation: Relation,
                              indices: List[Int]): Set[Literal] = {
-    val txParams = txLiteral.fields
-
-    // For each index, find all type-consistent txParams
+    // Step 1: Gather candidate parameters from txLiteral, msgSender, and msgValue
+    val candidates = txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields
+    // Step 2: For each index, find all type-consistent candidates
     val bindings = indices.flatMap { idx =>
       val relType = indexedRelation.sig(idx)
-      txParams.collect {
-        case p if p._type == relType => (idx, p)
-      }
+      candidates.collect { case p if p._type == relType => (idx, p) }
     }
-
     if (bindings.isEmpty) Set.empty
     else {
-      // Group bindings by index, so we can replace all indexed parameters at once
-      val grouped: Map[Int, Seq[(Int, Parameter)]] = bindings.groupBy(_._1)
-      // For each combination of parameters for all indices, create a new literal
       val allIdxs = indices
+      // Step 3: For each index, collect all possible parameters
       val allParams = allIdxs.map(idx => bindings.filter(_._1 == idx).map(_._2)).filter(_.nonEmpty)
-      // Cartesian product of all possible parameter choices for each index
+      // Step 4: Cartesian product of all possible parameter choices for each index
       val combos = allParams.foldLeft(Seq(Seq.empty[Parameter])) { (acc, params) =>
         for (a <- acc; p <- params) yield a :+ p
       }
+      // Step 5: Build fields for the new literal
       combos.map { paramsForIndices =>
-        // Build fields for the new literal
         val fields = indexedRelation.sig.zipWithIndex.map { case (t, i) =>
           val idxInIndices = allIdxs.indexOf(i)
           if (idxInIndices >= 0) paramsForIndices(idxInIndices) else Variable(t, s"${indexedRelation.name}_x$i")
@@ -216,13 +215,19 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       val fieldA = a.fields(i)
       val fieldB = b.fields(j)
       if fieldA._type == fieldB._type && fieldA != fieldB // avoid reflexive comparison
-    } yield Set(
-      Equal(a.fields(i), b.fields(j)),
-      Greater(Param(a.fields(i)), Param(b.fields(j))),
-      Geq(Param(a.fields(i)), Param(b.fields(j))),
-      Lesser(Param(a.fields(i)), Param(b.fields(j))),
-      Leq(Param(a.fields(i)), Param(b.fields(j))),
-    )).flatten.toSet
+    } yield {
+      val eqSet = Set(Equal(fieldA, fieldB))
+      fieldA._type match {
+        case datalog.NumberType(_) =>
+          eqSet ++ Set(
+            Greater(Param(fieldA), Param(fieldB)),
+            Geq(Param(fieldA), Param(fieldB)),
+            Lesser(Param(fieldA), Param(fieldB)),
+            Leq(Param(fieldA), Param(fieldB))
+          )
+        case _ => eqSet
+      }
+    }).flatten.toSet
   }
 }
 
