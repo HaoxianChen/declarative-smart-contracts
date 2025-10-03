@@ -1,4 +1,3 @@
-// Scala
 package synthesis
 
 import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
