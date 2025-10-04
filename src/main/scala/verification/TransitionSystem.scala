@@ -19,6 +19,7 @@ case class TransitionSystem(name: String, ctx: Context) {
   def getInit(): BoolExpr = init
   def getTr(): BoolExpr = tr
   def getTrs(): Set[BoolExpr] = trs
+  def getVariables(): Set[(Expr[_], Expr[_])] = variables
 
   def newVar[T<:Sort](name: String, sort: T): (Expr[T], Expr[T]) = {
     val (v_in,v_out) = makeStateVar(ctx, name, sort)
@@ -29,10 +30,13 @@ case class TransitionSystem(name: String, ctx: Context) {
   /** Change every variable in f into post variable */
   def toPost(f: Expr[BoolSort]): Expr[BoolSort] = {
     val vs = variables.toArray
-    f.substitute(vs.map(_._1), vs.map(_._2))
+    // substitute each input variable to its corresponding output (post) variable
+    val from = vs.map(_._1)
+    val to = vs.map(_._2)
+    val res = f.substitute(from, to).asInstanceOf[Expr[BoolSort]]
 
-    /** Rename the remaining free variables */
-
+    // Return the substituted expression. (Optionally more renaming could be done here.)
+    res
   }
 }
 

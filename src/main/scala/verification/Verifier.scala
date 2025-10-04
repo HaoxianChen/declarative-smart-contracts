@@ -74,7 +74,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     case relation: ReservedRelation => List()
   }
 
-  private def getTransitionSystem(): TransitionSystem = {
+  def getTransitionSystem(): TransitionSystem = {
     val tr = TransitionSystem(program.name, ctx)
 
     /** Variable keeps track of the current transaction name. */
@@ -181,7 +181,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     assert(trRes2 == Status.UNSATISFIABLE)
   }
 
-  private def getProperty(ctx: Context, rule: Rule): BoolExpr = {
+  def getProperty(ctx: Context, rule: Rule): BoolExpr = {
     /** Each violation query rule is translated into a property as follows:
      *  ! \E (V), P1 /\ P2 /\ ...
      *  where V is the set of variable appears in the rule body,
@@ -216,6 +216,41 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     else {
       ctx.mkNot(constraints)
     }
+  }
+
+  /**
+   * Like getProperty but do NOT add an existential quantifier; instead produce the
+   * (negated) constraint where the rule body variables are created as named
+   * (free) constants using the provided variable prefix. This is useful when the
+   * caller wants concrete variable names instead of quantified variables.
+   *
+   * @param ctx Z3 context
+   * @param rule violation rule
+   * @param varPrefix prefix used to name the variables that appear in the rule body
+   * @return a BoolExpr representing the (negated) property with free vars named by varPrefix
+   */
+  def getViolationCheck(ctx: Context, rule: Rule, varPrefix: String = "kv"): BoolExpr = {
+    val prefix = varPrefix
+    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
+
+    // Construct the (named) key constants for clarity (but do not existentially bind them)
+    val keyConsts: Array[Expr[_]] = {
+      var keys: Set[Parameter] = Set()
+      for (lit <- rule.body) {
+        val _indicies = getIndices(lit.relation)
+        keys ++= _indicies.map(i => lit.fields(i)).toSet
+      }
+      keys.map(p => paramToConst(ctx, p, prefix)._1).toArray
+    }
+
+    val constraints = {
+      val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)
+      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
+      renamed
+    }
+    // the query for violation
+    constraints.asInstanceOf[BoolExpr]
   }
 
   private def getTransitionConstraints(transactionThis: Expr[_], transactionNext: Expr[_]): (BoolExpr, Set[BoolExpr]) = {
