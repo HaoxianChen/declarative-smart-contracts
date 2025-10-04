@@ -566,7 +566,7 @@ object Verifier {
                          indices: Map[SimpleRelation, List[Int]],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
     case sr: SimpleRelation => {
-      val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+      val (arraySort, keySort, valueSort) = getArraySort(ctx, sr, indices(sr))
       val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
       val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
       val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
@@ -584,10 +584,8 @@ object Verifier {
       }
 
       val initConstraints = if (isQuantified) {
-        ctx.mkForall(keyConstArray, ctx.mkEq(
-          ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray),
-          initValues),
-          1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+        val constArray =  ctx.mkConstArray(keySort, initValues)
+        ctx.mkEq(const, constArray)
       }
       else {
         ctx.mkEq(ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray), initValues)
