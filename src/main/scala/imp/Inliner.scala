@@ -78,6 +78,10 @@ case class Inliner(solidityProgram: Statement,
     require(funcOpt.isDefined, s"Function $functionName not found for inlining.")
     val func = funcOpt.get
     // 2. Substitute parameters
+    /** todo: also need to rename all local variable in the body
+     *    to avoid naming contention.
+     *    Reuse the substituteParams method.
+     */
     val paramMap: Map[Parameter, Parameter] = func.params.zip(params).toMap
     val inlinedBody = substituteParams(func.stmt, paramMap)
     // 3. Handle return value
@@ -160,7 +164,7 @@ case class Inliner(solidityProgram: Statement,
   def substituteParams(stmt: Statement, paramMap: Map[Parameter, Parameter]): Statement = stmt match {
     case Assign(p, expr) => Assign(Param(paramMap.getOrElse(p.p, p.p)), substituteParamsExpr(expr, paramMap))
     case Seq(a, b) => Seq(substituteParams(a, paramMap), substituteParams(b, paramMap))
-    case If(cond, s) => If(cond, substituteParams(s, paramMap))
+    case If(cond, s) => If(substituteParamsCondition(cond, paramMap), substituteParams(s, paramMap))
     case us: UpdateStatement => us match {
       case Insert(literal) =>
         Insert(literal.copy(fields = literal.fields.map(p => paramMap.getOrElse(p, p))))
@@ -179,6 +183,8 @@ case class Inliner(solidityProgram: Statement,
       case IncrementAndInsert(increment) =>
         IncrementAndInsert(substituteParams(increment, paramMap).asInstanceOf[Increment])
     }
+    case GroundVar(p, relation, keys, valueIndex, enableProjection) =>
+      GroundVar(p, relation, keys.map(k => paramMap.getOrElse(k, k)), valueIndex, enableProjection)
     case s: SolidityStatement => s match {
       case ReadTuple(relation, keyList, outputVar) =>
         ReadTuple(relation, keyList.map(k => paramMap.getOrElse(k, k)), outputVar)
@@ -227,6 +233,8 @@ case class Inliner(solidityProgram: Statement,
         DeclContract(name, substituteParams(statement, paramMap))
       case DefineStruct(name, _type) => DefineStruct(name, _type)
       case DeclVariable(name, _type) => DeclVariable(name, _type)
+      case Require(condition, msg) =>
+        Require(substituteParamsCondition(condition, paramMap), msg)
       case _ => s
     }
     case _ => stmt
@@ -249,6 +257,24 @@ case class Inliner(solidityProgram: Statement,
 
   private def substituteParamsExpr(expr: Expr, paramMap: Map[Parameter,Parameter]): Expr = expr match {
     case arithmetic: Arithmetic => substituteParamsArithmetic(arithmetic, paramMap)
+  }
+
+  /**
+    * Substitute parameters in a Condition according to paramMap.
+    */
+  private def substituteParamsCondition(cond: Condition, paramMap: Map[Parameter, Parameter]): Condition = cond match {
+    case True() => True()
+    case False() => False()
+    case Match(a, b) => Match(substituteParamsExpr(a, paramMap), substituteParamsExpr(b, paramMap))
+    case Unequal(a, b) => Unequal(substituteParamsExpr(a, paramMap), substituteParamsExpr(b, paramMap))
+    case Greater(a, b) => Greater(substituteParamsArithmetic(a, paramMap), substituteParamsArithmetic(b, paramMap))
+    case Lesser(a, b) => Lesser(substituteParamsArithmetic(a, paramMap), substituteParamsArithmetic(b, paramMap))
+    case Geq(a, b) => Geq(substituteParamsArithmetic(a, paramMap), substituteParamsArithmetic(b, paramMap))
+    case Leq(a, b) => Leq(substituteParamsArithmetic(a, paramMap), substituteParamsArithmetic(b, paramMap))
+    case And(a, b) => And(substituteParamsCondition(a, paramMap), substituteParamsCondition(b, paramMap))
+    case Or(a, b) => Or(substituteParamsCondition(a, paramMap), substituteParamsCondition(b, paramMap))
+    case BooleanFunction(name, parameters) => BooleanFunction(name, parameters.map(p => paramMap.getOrElse(p, p)))
+    case _ => cond
   }
 
   /**

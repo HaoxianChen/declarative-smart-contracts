@@ -361,6 +361,49 @@ object Main extends App {
     println(s"inlined Solidity:\n${inlinedSol}")
   }
 
+  else if (args(0) == "test-inline") {
+    for (p <- allBenchmarks) {
+      println(p)
+      // Read datalog file path from args(1)
+      val filepath = Paths.get(benchmarkDir, p).toString
+
+      // Parse the datalog program
+      val dl = parseProgram(filepath)
+      // No materialized relations for this test
+      val materializedRelations: Set[Relation] = Set()
+      // Translate to imperative
+      val impTranslator = new ImperativeTranslator(
+        dl,
+        materializedRelations,
+        isInstrument = false,
+        monitorViolations = false,
+        arithmeticOptimization = true,
+        enableProjection = true
+      )
+      val imperative = impTranslator.translate()
+      // Translate to Solidity
+      val solidity = SolidityTranslator(
+        imperative,
+        dl.interfaces,
+        dl.violations,
+        materializedRelations,
+        isInstrument = false,
+        monitorViolation = false,
+        enableProjection = true
+      ).translate()
+
+      val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
+      val inlinedSol = inliner.run()
+
+      val outDir = "solidity/inline"
+      createDirectory(outDir)
+      val filename = Misc.getFileNameFromPath(filepath)
+      val outfile = Paths.get(outDir, s"$filename.sol")
+      Misc.writeToFile(inlinedSol.toString, outfile.toString)
+    }
+
+  }
+
   else {
     println(s"Unrecognized command: ${args(0)}")
   }

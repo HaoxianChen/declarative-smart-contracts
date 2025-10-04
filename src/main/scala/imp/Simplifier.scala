@@ -33,6 +33,13 @@ class Simplifier {
         case Match(a, b) => if (a==b) simplify(_statement) else If(condition, simplify(_statement))
         case _ => If(condition, simplify(_statement))
       }
+    case Require(condition, _) => condition match {
+      case True() => Empty()
+      case False() => Revert("False.")
+      case Unequal(a, b) => if (a==b) Revert("False.") else statement
+      case Match(a, b) => if (a==b) Empty() else statement
+      case _ => statement
+    }
     case _on: OnStatement => _on match {
       case OnInsert(literal, updateTarget, _statement, ruleId) =>
         OnInsert(literal, updateTarget, simplify(_statement), ruleId)

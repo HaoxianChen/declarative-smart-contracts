@@ -78,17 +78,20 @@ case class DataStructureHelper(relation: Relation, indices: List[Int], enablePro
     val valueType = increment.valueType
     val deltaType = View.getDeltaType(increment.valueType)
     val keyList = increment.keyParams
-    val keyStr = keyList.map(k => s"[$k]").mkString("")
-    val fieldName = increment.relation.memberNames(increment.valueIndex)
+    // val keyStr = keyList.map(k => s"[$k]").mkString("")
+    val keyStr = keyList.mkString("_")
     val newValue = Variable(valueType, "newValue")
-    val x = Variable(valueType, s"${increment.relation.name}$keyStr.$fieldName")
-    // val delta = Variable(increment.delta._type, "_delta")
+    val fieldName = increment.relation.memberNames(increment.valueIndex)
+    // val x = Variable(valueType, s"${increment.relation.name}$keyStr.$fieldName")
+    val x = Variable(valueType, s"x_${increment.relation.name}_${keyStr}_${fieldName}")
+    val groundVar = GroundVar(x, increment.relation, increment.keyParams, increment.valueIndex, enableProjection)
     val delta = Variable(deltaType, "_delta")
     val convertType = ConvertType(increment.delta, delta)
     val callUpdate = {
       Call(getUpdateName(valueType, deltaType), params = List(x,delta) , Some(newValue))
     }
-    (Statement.makeSeq(convertType, callUpdate), newValue)
+    // (Statement.makeSeq(convertType, callUpdate), newValue)
+    (Statement.makeSeq(convertType, groundVar, callUpdate), newValue)
   }
 
   private def translateIncrement(increment: Increment): Statement = {
