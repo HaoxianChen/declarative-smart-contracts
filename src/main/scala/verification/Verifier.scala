@@ -29,7 +29,93 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val fromStatements = getMaterializedRelations(impAbsProgram, program.interfaces)
     val violationRules = program.rules.filter(r => program.violations.contains(r.head.relation))
     val readByViolationRules = violationRules.flatMap(r => r.body.map(_.relation))
-    (fromStatements++readByViolationRules).filterNot(_.isInstanceOf[ReservedRelation])
+    
+    // Auto-materialize relations referenced in temporal properties
+    val fromTemporalPropertiesRaw = collectRelationsFromTemporalProperties(program.temporalProperties)
+    
+    // Filter out relations that cannot be materialized (SimpleRelations without indices)
+    val fromTemporalProperties = fromTemporalPropertiesRaw.filter { rel =>
+      rel match {
+        case sr: SimpleRelation => indices.contains(sr) && indices(sr).nonEmpty
+        case _: SingletonRelation => true
+        case _: ReservedRelation => false
+        case _ => true
+      }
+    }
+    
+    val skipped = fromTemporalPropertiesRaw -- fromTemporalProperties
+    if (skipped.nonEmpty) {
+      println(s"[Auto-Materialize] Skipping ${skipped.size} relations without indices: ${skipped.map(_.name).mkString(", ")}")
+      println(s"  Note: These relations appear in temporal properties but cannot be materialized")
+      println(s"  They may be transactions/events rather than state relations")
+    }
+    
+    if (fromTemporalProperties.nonEmpty) {
+      println(s"[Auto-Materialize] Adding ${fromTemporalProperties.size} relations from temporal properties: ${fromTemporalProperties.map(_.name).mkString(", ")}")
+    }
+    
+    (fromStatements ++ readByViolationRules ++ fromTemporalProperties).filterNot(_.isInstanceOf[ReservedRelation])
+  }
+  
+  /**
+   * Collect all relations referenced in temporal properties
+   */
+  private def collectRelationsFromTemporalProperties(properties: List[temporal.TemporalProperty]): Set[Relation] = {
+    properties.flatMap { prop =>
+      collectRelationsFromExpr(prop.expr)
+    }.toSet
+  }
+  
+  /**
+   * Recursively collect relations from temporal expressions
+   */
+  private def collectRelationsFromExpr(expr: temporal.TemporalExpr): Set[Relation] = {
+    expr match {
+      case temporal.TemporalExpr.FunctionCall(name, args) =>
+        // Find relation by name
+        val relation = program.relations.find(_.name == name).toSet
+        // Recursively collect from arguments
+        relation ++ args.flatMap(collectRelationsFromExpr)
+      
+      case temporal.TemporalExpr.Not(inner) =>
+        collectRelationsFromExpr(inner)
+      
+      case temporal.TemporalExpr.And(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Or(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Imply(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Eq(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Neq(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Lt(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Le(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Gt(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Ge(left, right) =>
+        collectRelationsFromExpr(left) ++ collectRelationsFromExpr(right)
+      
+      case temporal.TemporalExpr.Once(inner) =>
+        collectRelationsFromExpr(inner)
+      
+      case temporal.TemporalExpr.Always(inner) =>
+        collectRelationsFromExpr(inner)
+      
+      // Literals and identifiers don't reference relations
+      case _ => Set()
+    }
   }
 
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
@@ -74,7 +160,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     case relation: ReservedRelation => List()
   }
 
-  def getTransitionSystem(): TransitionSystem = {
+  def getTransitionSystem(): (TransitionSystem, Map[Relation, (Expr[_], Expr[_])], Expr[_], Set[com.microsoft.z3.BoolExpr]) = {
     val tr = TransitionSystem(program.name, ctx)
 
     /** Variable keeps track of the current transaction name. */
@@ -127,11 +213,18 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       acc
     }
 
+    /** 
+     * State variable mapping for temporal property translation
+     * Maps each materialized relation to its (current, next) state variables
+     */
+    var stateVarMap: Map[Relation, (Expr[_], Expr[_])] = Map()
+
     /** Generate initial constraints. */
     var initConditions: List[BoolExpr] = List()
     for (rel <- materializedRelations) {
       val sort = getSort(ctx, rel, getIndices(rel))
-      val (v_in, _) = tr.newVar(rel.name, sort)
+      val (v_in, v_out) = tr.newVar(rel.name, sort)
+      stateVarMap = stateVarMap.updated(rel, (v_in, v_out))
       val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices, initializationRules.find(_.head.relation==rel))
       initConditions :+= _init
     }
@@ -139,11 +232,11 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
     val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext, txParamVars)
     tr.setTr(fullTransitionCondition, transactionConditions)
-    tr
+    (tr, stateVarMap, transactionThis, transactionConditions)
   }
 
   def traverseExpression(): Unit = {
-    val tr = getTransitionSystem()
+    val (tr, _, _, _) = getTransitionSystem()
     val constraint = tr.getTrs().head
 
     val queue: Queue[Expr[_]] = Queue()
@@ -164,8 +257,30 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
   }
 
+  /**
+   * Format Z3 expression for better readability
+   */
+  private def formatZ3Expr(expr: com.microsoft.z3.BoolExpr, indent: Int = 0): String = {
+    val str = expr.toString
+    val indentStr = " " * indent
+    
+    // Simple formatting: break long expressions into multiple lines
+    if (str.length < 100) {
+      str
+    } else {
+      // Add line breaks after logical operators
+      str.replaceAll("""\(forall """, "\n" + indentStr + "(forall ")
+         .replaceAll("""\(and """, "\n" + indentStr + "  (and ")
+         .replaceAll("""\(or """, "\n" + indentStr + "  (or ")
+         .replaceAll("""\(=> """, "\n" + indentStr + "  (=> ")
+         .replaceAll("""\(not """, "\n" + indentStr + "  (not ")
+    }
+  }
+  
   def check(): Unit = {
-    val tr = getTransitionSystem()
+    val (tr, stateVarMap, transactionThis, transactionConditions) = getTransitionSystem()
+    
+    // Check violation rules (legacy approach)
     for (vr <- program.violationRules) {
       val property = getProperty(ctx, vr)
       println(property)
@@ -189,6 +304,154 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       }
       println(s"Init: $resInit")
       println(s"Tr: $resTr")
+    }
+    
+    // Check temporal properties (new approach)
+    if (program.temporalProperties.nonEmpty) {
+      println(s"\n=== Translating ${program.temporalProperties.size} temporal properties ===")
+      
+      try {
+        // Create translator
+        val translator = new temporal.TemporalPropertyTranslator(
+          ctx, program, tr, stateVarMap, indices, Some(transactionThis)
+        )
+        
+        // Translate all properties first (to collect all ONCE variables)
+        val translatedProperties = scala.collection.mutable.ListBuffer[(temporal.TemporalProperty, com.microsoft.z3.BoolExpr)]()
+        
+        for (tp <- program.temporalProperties) {
+          println(s"\n" + "="*80)
+          println(s"Property (line ${tp.line}): ${tp.rawText}")
+          tp.comment.foreach(c => println(s"  Comment: $c"))
+          println(s"\n  Parsed AST:")
+          println(s"    ${tp.expr}")
+          
+          // Collect free variables
+          val freeVars = translator.collectFreeVariables(tp.expr)
+          if (freeVars.nonEmpty) {
+            println(s"\n  Free variables: ${freeVars.mkString(", ")}")
+          }
+          
+          try {
+            val z3Expr = translator.translate(tp)
+            translatedProperties += ((tp, z3Expr))
+            
+            println(s"\n  ✓ Translation successful!")
+            println(s"\n  Z3 Expression:")
+            println(s"    ${formatZ3Expr(z3Expr, indent = 4)}")
+            
+            // Show variable bindings if quantified
+            if (freeVars.nonEmpty) {
+              println(s"\n  Quantification:")
+              println(s"    ∀ ${freeVars.mkString(", ")} . (...)")
+            }
+            
+          } catch {
+            case e: Exception =>
+              println(s"\n  ✗ Translation error: ${e.getMessage}")
+              throw e  // Re-throw to stop processing
+          }
+        }
+        
+        println(s"\n" + "="*80)
+        
+        // After all translations, add ONCE constraints and verify
+        println(s"\n--- ONCE Variable Analysis ---")
+        
+        val onceInitConstraints = translator.getOnceInitConstraints()
+        var onceConstraintsAdded = false
+        
+        if (!onceInitConstraints.toString.equals("true")) {
+          println(s"\n  ONCE variables created: ${translator.onceVars.size}")
+          translator.onceVars.zipWithIndex.foreach { case ((key, (varIn, varNext, expr)), idx) =>
+            println(s"\n  once_$idx:")
+            println(s"    For expression: $expr")
+            println(s"    Current state: $varIn")
+            println(s"    Next state: $varNext")
+          }
+          
+          println(s"\n  ONCE initialization constraints:")
+          println(s"    ${onceInitConstraints}")
+          
+          // Try to generate update constraints with error handling
+          try {
+            val onceUpdateConstraints = translator.getOnceUpdateConstraints()
+            println(s"\n  ONCE update constraints:")
+            println(s"    ${onceUpdateConstraints}")
+            
+            // Add ONCE constraints to transition system
+            println(s"\n  ⭐ Adding ONCE constraints to transition system...")
+            val oldInit = tr.getInit()
+            val newInit = ctx.mkAnd(oldInit, onceInitConstraints)
+            tr.setInit(newInit)
+            
+            val oldTr = tr.getTr()
+            val newTr = ctx.mkAnd(oldTr, onceUpdateConstraints)
+            tr.setTr(newTr, transactionConditions)
+            
+            onceConstraintsAdded = true
+            println(s"  ✓ ONCE constraints successfully added to transition system")
+          } catch {
+            case e: Exception =>
+              println(s"\n  ✗ Cannot generate ONCE update constraints: ${e.getMessage}")
+              println(s"  Note: Some ONCE expressions reference relations without state variables")
+              println(s"        (e.g., transactions/events like withdraw(), refund())")
+              println(s"  Workaround: ONCE variables will be created but not automatically updated")
+          }
+        } else {
+          println(s"  (No ONCE operators used in properties)")
+        }
+        
+        println(s"\n" + "="*80)
+        println(s"=== Translation Summary ===")
+        println(s"  Total properties translated: ${translatedProperties.size}")
+        println(s"  State relations materialized: ${stateVarMap.size}")
+        println(s"  ONCE variables created: ${translator.onceVars.size}")
+        println(s"  ONCE constraints added: ${if (onceConstraintsAdded) "Yes" else "No"}")
+        println(s"="*80)
+        
+        // Perform verification for each property
+        if (translatedProperties.nonEmpty) {
+          println(s"\n" + "="*80)
+          println(s"=== Verification Results ===\n")
+          
+          translatedProperties.zipWithIndex.foreach { case ((tp, z3Expr), idx) =>
+            println(s"Property ${idx + 1} (line ${tp.line}): ${tp.rawText}")
+            tp.comment.foreach(c => println(s"  Comment: $c"))
+            
+            try {
+              // Perform inductive proof
+              val (resInit, resTr) = inductiveProve(ctx, tr, z3Expr, isTransactionProperty = false)
+              
+              println(s"  Init check: $resInit")
+              println(s"  Transition check: $resTr")
+              
+              // Interpret results
+              if (resInit == com.microsoft.z3.Status.UNSATISFIABLE && resTr == com.microsoft.z3.Status.UNSATISFIABLE) {
+                println(s"  ✓ Property VERIFIED")
+              } else if (resInit == com.microsoft.z3.Status.SATISFIABLE) {
+                println(s"  ✗ Property VIOLATED in initial state")
+              } else if (resTr == com.microsoft.z3.Status.SATISFIABLE) {
+                println(s"  ✗ Property may be VIOLATED in some transition")
+              } else {
+                println(s"  ? Verification UNKNOWN")
+              }
+              
+            } catch {
+              case e: Exception =>
+                println(s"  ✗ Verification error: ${e.getMessage}")
+            }
+            println()
+          }
+          
+          println(s"="*80)
+        }
+        
+      } catch {
+        case e: Exception =>
+          println(s"\n✗ Error during temporal property translation: ${e.getMessage}")
+          e.printStackTrace()
+      }
     }
   }
 
@@ -264,41 +527,11 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       ctx.mkNot(constraints)
     }
   }
-
+  
   /**
-   * Like getProperty but do NOT add an existential quantifier; instead produce the
-   * (negated) constraint where the rule body variables are created as named
-   * (free) constants using the provided variable prefix. This is useful when the
-   * caller wants concrete variable names instead of quantified variables.
-   *
-   * @param ctx Z3 context
-   * @param rule violation rule
-   * @param varPrefix prefix used to name the variables that appear in the rule body
-   * @return a BoolExpr representing the (negated) property with free vars named by varPrefix
+   * Alias for getProperty, for compatibility with BoundedModelChecker.
    */
-  def getViolationCheck(ctx: Context, rule: Rule, varPrefix: String = "kv"): BoolExpr = {
-    val prefix = varPrefix
-    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
-    val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
-
-    // Construct the (named) key constants for clarity (but do not existentially bind them)
-    val keyConsts: Array[Expr[_]] = {
-      var keys: Set[Parameter] = Set()
-      for (lit <- rule.body) {
-        val _indicies = getIndices(lit.relation)
-        keys ++= _indicies.map(i => lit.fields(i)).toSet
-      }
-      keys.map(p => paramToConst(ctx, p, prefix)._1).toArray
-    }
-
-    val constraints = {
-      val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)
-      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
-      renamed
-    }
-    // the query for violation
-    constraints.asInstanceOf[BoolExpr]
-  }
+  def getViolationCheck(ctx: Context, rule: Rule): BoolExpr = getProperty(ctx, rule)
 
   /**
    * Build the combined transition relation.

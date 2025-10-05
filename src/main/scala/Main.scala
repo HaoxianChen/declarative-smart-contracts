@@ -199,8 +199,17 @@ object Main extends App {
 
   else if (args(0) == "verify") {
     val filepath = args(1)
+    val temporalPropFile = if (args.length > 2) Some(args(2)) else None
 
-    val dl = parseProgram(filepath)
+    var dl = parseProgram(filepath)
+    
+    // Load temporal properties if provided
+    temporalPropFile.foreach { propFile =>
+      println(s"Loading temporal properties from: $propFile")
+      dl = dl.withTemporalProperties(propFile)
+      println(s"Loaded ${dl.temporalProperties.size} temporal properties")
+    }
+    
     val materializedRelations: Set[Relation] = Set()
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
       monitorViolations = false, arithmeticOptimization = true)
@@ -359,49 +368,6 @@ object Main extends App {
     val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
     val inlinedSol = inliner.run()
     println(s"inlined Solidity:\n${inlinedSol}")
-  }
-
-  else if (args(0) == "test-inline") {
-    for (p <- allBenchmarks) {
-      println(p)
-      // Read datalog file path from args(1)
-      val filepath = Paths.get(benchmarkDir, p).toString
-
-      // Parse the datalog program
-      val dl = parseProgram(filepath)
-      // No materialized relations for this test
-      val materializedRelations: Set[Relation] = Set()
-      // Translate to imperative
-      val impTranslator = new ImperativeTranslator(
-        dl,
-        materializedRelations,
-        isInstrument = false,
-        monitorViolations = false,
-        arithmeticOptimization = true,
-        enableProjection = true
-      )
-      val imperative = impTranslator.translate()
-      // Translate to Solidity
-      val solidity = SolidityTranslator(
-        imperative,
-        dl.interfaces,
-        dl.violations,
-        materializedRelations,
-        isInstrument = false,
-        monitorViolation = false,
-        enableProjection = true
-      ).translate()
-
-      val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
-      val inlinedSol = inliner.run()
-
-      val outDir = "solidity/inline"
-      createDirectory(outDir)
-      val filename = Misc.getFileNameFromPath(filepath)
-      val outfile = Paths.get(outDir, s"$filename.sol")
-      Misc.writeToFile(inlinedSol.toString, outfile.toString)
-    }
-
   }
 
   else {

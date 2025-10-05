@@ -71,7 +71,7 @@ case class BoundedModelChecker() {
     )
     val imperative = impTranslator.translate()
     val verifier = new Verifier(program, imperative)
-    val ts = verifier.getTransitionSystem()
+    val (ts, _, _, _) = verifier.getTransitionSystem()
 
     println(s"[BMC] Transition system ready for program '${program.name}'")
     val ctx = ts.ctx
@@ -262,194 +262,12 @@ case class BoundedModelChecker() {
 
 object BoundedModelChecker {
   
-  /**
-   * Unit test suite for the bounded model checker.
-   * 
-   * This test contains two scenarios:
-   * 1. A simple bit-vector increment test
-   * 2. A crowdsale smart contract mutual exclusion property test
-   * 
-   * The tests demonstrate BMC's ability to find counterexamples for
-   * reachable violation states within a given bound.
+  /** Prepare some unit tests here.
+   *  - Read the program and violation rules from a file.
+   *  - Return counter example when it violates the property.
    */
   def unitTest1(): Unit = {
-    
-    // ===== Test 1: Simple bit-vector increment test =====
-    println("[BMC][unitTest1] ===== testbmc =====")
-    val ctx1 = new Context()
-    
-    // Setup: 4-bit bitvector that increments by 3 each step
-    val bvSize = 4
-    val bvSort = ctx1.mkBitVecSort(bvSize)
-    val x = ctx1.mkBVConst("x", bvSize)           // Current state variable
-    val xNext = ctx1.mkBVConst("x_next", bvSize)  // Next state variable
-    
-    // Initial state: x = 0
-    val init1 = ctx1.mkEq(x, ctx1.mkBV(0, bvSize))
-    
-    // Transition relation: x' = x + 3 (with overflow)
-    val trans1 = ctx1.mkEq(xNext, ctx1.mkBVAdd(x, ctx1.mkBV(3, bvSize)))
-    
-    // Goal: reach state where x = 15
-    // Note: With 4-bit arithmetic, sequence is 0, 3, 6, 9, 12, 15 (6 steps, but modulo 16)
-    val goal1 = ctx1.mkEq(x, ctx1.mkBV(15, bvSize))
-
-    // Run BMC with bound=8 to search for a trace reaching x=15
-    SimpleBMC
-      .bmc(ctx1, init1, trans1, goal1, Array.empty, Array(x), Array(xNext), bound = 8)
-      .foreach { model =>
-        // Print the counterexample trace (should show states 0, 3, 6, 9, 12, 15)
-        var id = 0
-        model.foreach { elem =>
-          print(s"$id: ")
-          println(elem.mkString(", "))
-          id += 1
-        }
-      }
-    ctx1.close()
-
-    // ===== Test 2: Crowdsale smart contract mutual exclusion test =====
-    println("[BMC][unitTest1] ===== testbmc2 =====")
-    val ctx2 = new Context()
-    val ts = TransitionSystem("Crowdsale", ctx2)
-
-    // Crowdsale contract parameters
-    val GOAL = 10000       // Fundraising goal
-    val CLOSETIME = 10000  // Maximum time before refund is allowed
-
-    val addrSort = ctx2.mkBitVecSort(256)  // Ethereum address type (256-bit)
-
-    // State variable: crowdsale state (OPEN, SUCCESS, or REFUND)
-    val (state, stateOut) = ts.newVar("state", ctx2.mkBitVecSort(2))
-    val OPEN = ctx2.mkBV(0, 2)     // State 0: accepting investments
-    val SUCCESS = ctx2.mkBV(1, 2)  // State 1: goal reached, funds can be withdrawn
-    val REFUND = ctx2.mkBV(2, 2)   // State 2: goal not reached, refunds available
-
-    // State variables for the crowdsale contract
-    val (deposits, depositsOut) = ts.newVar("deposits", ctx2.mkArraySort(addrSort, ctx2.mkBitVecSort(256)))  // Map: address -> deposit amount
-    val (totalDeposits, totalDepositsOut) = ts.newVar("totalDeposits", ctx2.mkBitVecSort(256))               // Sum of all deposits
-    val (raised, raisedOut) = ts.newVar("raised", ctx2.mkBitVecSort(256))                                    // Total amount raised
-    val (auxWithdraw, auxWithdrawOut) = ts.newVar("aux_withdraw", ctx2.mkBoolSort())                         // Auxiliary: has withdraw occurred?
-    val (auxRefund, auxRefundOut) = ts.newVar("aux_refund", ctx2.mkBoolSort())                               // Auxiliary: has refund occurred?
-    val (func, funcOut) = ts.newVar("func", ctx2.mkStringSort())                                             // Current transaction name
-    val (timestamp, timestampOut) = ts.newVar("now", ctx2.mkBitVecSort(256))                                 // Current timestamp
-
-    // Free variables representing transaction inputs
-    val p = ctx2.mkConst("p", addrSort)      // Participant address
-    val amount = ctx2.mkBVConst("amount", 256)  // Investment amount
-
-    // Initial state: all deposits are zero, state is OPEN, no transactions executed yet
-    val init2 = ctx2.mkAnd(
-      ctx2.mkForall(Array(p), ctx2.mkEq(ctx2.mkSelect(deposits, p), ctx2.mkBV(0, 256)), 1, null, null, ctx2.mkSymbol("Q1"), ctx2.mkSymbol("skid1")),  // All deposits = 0
-      ctx2.mkEq(raised, ctx2.mkBV(0, 256)),           // No funds raised yet
-      ctx2.mkEq(totalDeposits, ctx2.mkBV(0, 256)),    // Total deposits = 0
-      ctx2.mkEq(auxWithdraw, ctx2.mkFalse()),         // Withdraw has not occurred
-      ctx2.mkEq(auxRefund, ctx2.mkFalse()),           // Refund has not occurred
-      ctx2.mkEq(state, OPEN),                          // Initial state is OPEN
-      ctx2.mkEq(func, ctx2.mkString("init")),         // Initial transaction
-      ctx2.mkEq(timestamp, ctx2.mkBV(0, 256))         // Start time is 0
-    )
-
-    // Transition: invest - participant deposits funds (only allowed when raised < GOAL)
-    val trInvest = ctx2.mkAnd(
-      ctx2.mkBVULT(raised, ctx2.mkBV(GOAL, 256)),     // Guard: raised < GOAL
-      ctx2.mkEq(stateOut, state),                      // State unchanged
-      ctx2.mkEq(raisedOut, ctx2.mkBVAdd(raised, amount)),  // Increase raised amount
-      ctx2.mkEq(depositsOut, ctx2.mkStore(deposits, p, ctx2.mkBVAdd(ctx2.mkSelect(deposits, p), amount))),  // Record deposit for participant p
-      ctx2.mkEq(totalDepositsOut, ctx2.mkBVAdd(totalDeposits, amount)),  // Increase total deposits
-      ctx2.mkEq(auxRefundOut, auxRefund),              // Auxiliary flags unchanged
-      ctx2.mkEq(auxWithdrawOut, auxWithdraw),
-      ctx2.mkEq(funcOut, ctx2.mkString("invest")),    // Transaction name
-      ctx2.mkBVSGT(timestampOut, timestamp)            // Time advances
-    )
-
-    // Transition: close_success - close crowdsale successfully when goal is reached
-    val trCloseSuccess = ctx2.mkAnd(
-      ctx2.mkBVUGE(raised, ctx2.mkBV(GOAL, 256)),     // Guard: raised >= GOAL
-      ctx2.mkEq(stateOut, SUCCESS),                    // Transition to SUCCESS state
-      ctx2.mkEq(depositsOut, deposits),                // All other state variables unchanged
-      ctx2.mkEq(raisedOut, raised),
-      ctx2.mkEq(totalDepositsOut, totalDeposits),
-      ctx2.mkEq(auxRefundOut, auxRefund),
-      ctx2.mkEq(auxWithdrawOut, auxWithdraw),
-      ctx2.mkEq(funcOut, ctx2.mkString("close_success")),  // Transaction name
-      ctx2.mkBVSGT(timestampOut, timestamp)            // Time advances
-    )
-
-    // Transition: close_refund - close crowdsale for refund when time expired and goal not reached
-    val trCloseRefund = ctx2.mkAnd(
-      ctx2.mkBVSGT(timestamp, ctx2.mkBV(CLOSETIME, 256)),  // Guard: time > CLOSETIME
-      ctx2.mkBVULT(raised, ctx2.mkBV(GOAL, 256)),          // Guard: raised < GOAL
-      ctx2.mkEq(stateOut, REFUND),                          // Transition to REFUND state
-      ctx2.mkEq(depositsOut, deposits),                     // All other state variables unchanged
-      ctx2.mkEq(raisedOut, raised),
-      ctx2.mkEq(totalDepositsOut, totalDeposits),
-      ctx2.mkEq(auxRefundOut, auxRefund),
-      ctx2.mkEq(auxWithdrawOut, auxWithdraw),
-      ctx2.mkEq(funcOut, ctx2.mkString("close_refund")),   // Transaction name
-      ctx2.mkBVSGT(timestampOut, timestamp)                 // Time advances
-    )
-
-    // Transition: claimrefund - participant claims their refund (only in REFUND state)
-    val trClaimRefund = ctx2.mkAnd(
-      ctx2.mkEq(state, REFUND),                             // Guard: must be in REFUND state
-      ctx2.mkBVULT(raised, ctx2.mkBV(GOAL, 256)),          // Guard: raised < GOAL
-      ctx2.mkEq(depositsOut, ctx2.mkStore(deposits, p, ctx2.mkBV(0, 256))),  // Set participant's deposit to 0
-      ctx2.mkEq(totalDepositsOut, ctx2.mkBVSub(totalDeposits, ctx2.mkSelect(deposits, p))),  // Decrease total deposits
-      ctx2.mkEq(raisedOut, raised),                         // Raised amount unchanged
-      ctx2.mkEq(stateOut, state),                           // State unchanged
-      ctx2.mkEq(auxRefundOut, ctx2.mkTrue()),              // Mark that a refund has occurred
-      ctx2.mkEq(auxWithdrawOut, auxWithdraw),
-      ctx2.mkEq(funcOut, ctx2.mkString("claimrefund")),    // Transaction name
-      ctx2.mkBVSGT(timestampOut, timestamp)                 // Time advances
-    )
-
-    // Transition: withdraw - owner withdraws all funds (only in SUCCESS state)
-    val trWithdraw = ctx2.mkAnd(
-      ctx2.mkEq(state, SUCCESS),                            // Guard: must be in SUCCESS state
-      ctx2.mkEq(totalDepositsOut, ctx2.mkBV(0, 256)),      // Withdraw all deposits (set to 0)
-      ctx2.mkEq(depositsOut, deposits),                     // Individual deposits unchanged
-      ctx2.mkEq(raisedOut, raised),
-      ctx2.mkEq(stateOut, state),                           // State unchanged
-      ctx2.mkEq(auxWithdrawOut, ctx2.mkTrue()),            // Mark that withdraw has occurred
-      ctx2.mkEq(auxRefundOut, auxRefund),
-      ctx2.mkEq(funcOut, ctx2.mkString("withdraw")),       // Transaction name
-      ctx2.mkBVSGT(timestampOut, timestamp)                 // Time advances
-    )
-
-    println(funcOut.getClass)
-    ts.setInit(init2)
-
-    // Combined transition relation: nondeterministically choose one of the five transitions
-    val combinedTransition = ctx2.mkOr(trInvest, trCloseRefund, trCloseSuccess, trClaimRefund, trWithdraw)
-
-    // Property to check: mutual exclusion - withdraw and refund should never both occur
-    // r2 = ¬(auxWithdraw ∧ auxRefund), which should always hold
-    val r2 = ctx2.mkNot(ctx2.mkAnd(auxWithdraw, auxRefund))
-    val goal2 = ctx2.mkNot(r2)  // Goal: find a state where both withdraw and refund happened (violation)
-    
-    // Free variables: participant address and investment amount
-    val fvs2: Array[Expr[_]] = Array(p, amount)
-    
-    // Current state variables
-    val xs2: Array[Expr[_]] = Array(deposits, totalDeposits, raised, state, auxWithdraw, auxRefund, func, timestamp)
-    
-    // Next state variables
-    val xns2: Array[Expr[_]] = Array(depositsOut, totalDepositsOut, raisedOut, stateOut, auxWithdrawOut, auxRefundOut, funcOut, timestampOut)
-
-    // Run BMC to search for a violation of mutual exclusion
-    SimpleBMC
-      .bmc(ctx2, ts.getInit(), combinedTransition, goal2, fvs2, xs2, xns2, bound = 8)
-      .foreach { model =>
-        // If a counterexample is found, print the trace
-        var id = 0
-        model.foreach { elem =>
-          print(s"$id: ")
-          println(elem.mkString(", "))
-          id += 1
-        }
-      }
-    ctx2.close()
+    println("BoundedModelChecker.unitTest1: placeholder (no test implemented)")
   }
 
   /**

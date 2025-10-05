@@ -1,6 +1,7 @@
 package datalog
 
 import imp.SolidityTranslator.transactionRelationPrefix
+import temporal.{TemporalProperty, TemporalPropertyParser}
 
 sealed abstract class Parameter {
   def _type: Type
@@ -135,6 +136,7 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, List[Int]],
                    functions: Set[Relation],
                    violations: Set[Relation],
+                   temporalProperties: List[TemporalProperty] = List(),
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
   val violationRules: Set[Rule] = rules.filter(r => violations.contains(r.head.relation))
@@ -152,4 +154,12 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
                                          _.relation.name.startsWith(transactionRelationPrefix)))
 
   def addRules(newRules: Set[Rule]): Program = this.copy(rules = this.rules++newRules)
+  
+  /**
+   * Load temporal properties from external file.
+   */
+  def withTemporalProperties(filepath: String): Program = {
+    val properties = TemporalPropertyParser.parseFileOrThrow(filepath)
+    this.copy(temporalProperties = properties)
+  }
 }
