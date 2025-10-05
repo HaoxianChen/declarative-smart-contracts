@@ -294,6 +294,14 @@ case class BoundedModelChecker() {
     (relation, lit)
   }
 
+  /**
+   * Unified helper to get the BMC model variable for a given name, sort, and step.
+   * Optionally uses an encoding map for lookup, otherwise constructs the per-step variable.
+   */
+  private def stepVar(name: String, sort: Sort, step: Int, ctx: Context, encMap: Map[String, Expr[_]] = Map.empty): Expr[_] = {
+    encMap.getOrElse(name, ctx.mkConst(otherConstName(name, step), sort))
+  }
+
   private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
                                     stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[Trace] = {
      import scala.collection.mutable.ArrayBuffer
@@ -309,7 +317,9 @@ case class BoundedModelChecker() {
          val tpe = p._type
          val sort = Z3Helper.typeToSort(ctx, tpe)
          val prefix = "i0_"
-         val cExpr: Expr[_] = encMap.getOrElse(field, ctx.mkConst(otherConstName(s"$prefix$field", stepIdx), sort))
+         val fieldName = s"$prefix$field"
+         // val cExpr: Expr[_] = encMap.getOrElse(field, ctx.mkConst(otherConstName(s"$prefix$field", stepIdx), sort))
+         val cExpr = stepVar(fieldName, sort, stepIdx, ctx, encMap)
          val value: String = evalModelExpr(model, cExpr).getOrElse("").replaceAll("\"", "")
          datalog.Constant(tpe, value)
        }
@@ -317,8 +327,8 @@ case class BoundedModelChecker() {
        val parameters: List[datalog.Constant] = triggerLiteral.fields.map(evalFieldConst)
 
        def evalIntConst(name: String): Int = {
-         val cExpr: Expr[_] = encMap.getOrElse(name, ctx.mkConst(otherConstName(name, stepIdx), ctx.getIntSort))
-         evalModelInt(model, cExpr).get
+         val cExpr: Expr[_] = stepVar(name, ctx.getIntSort, stepIdx, ctx, encMap)
+         evalModelInt(model, cExpr).getOrElse(0)
        }
 
        val msgSenderVal = evalIntConst("msgSender")
