@@ -1,12 +1,35 @@
 package synthesis
 
-import datalog.{Program, Rule}
+import datalog.{Constant, Literal, Parameter, Program, Relation, Rule}
 import imp.ImperativeTranslator
-import verification.Verifier
+import verification.{Verifier, Z3Helper}
 import com.microsoft.z3._
-import verification.Prove
+import Verifier.indicatorConstForTransactionTriggerRelation
+import imp.SolidityTranslator.transactionRelationPrefix
 
 case class BoundedModelChecker() {
+  // cache for per-step substitution arrays and name->Expr map
+  private val stepSubstCache = scala.collection.mutable.Map.empty[Int, (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]])]
+
+  // get or compute the per-step subst (fromArr, toArr, map) and cache it
+  private def getStepSubst(step: Int, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context): (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]]) = {
+    stepSubstCache.getOrElseUpdate(step, buildStepSubst(step, stateVars, otherConsts, ctx))
+  }
+
+  private def triggerIndicator(ctx: Context, program: Program): Map[Relation, Set[(IntExpr, Literal)]] = {
+    import verification.Verifier.indicatorConstForTransactionTriggerRelation
+    val txInterfaces = program.interfaces.filter(i => i.relation.name.startsWith(transactionRelationPrefix))
+    txInterfaces.map { t =>
+      val triggeredRules = program.rules.filter(r => r.body.exists(lit => lit.relation == t.relation))
+      val indicators = triggeredRules.zipWithIndex.map { case (triggeredRule, i) =>
+        val const: IntExpr = indicatorConstForTransactionTriggerRelation(ctx, t.relation, i)
+        val trigLit: Literal = triggeredRule.body.filter(_.relation.name.startsWith(transactionRelationPrefix)).head
+        (const, trigLit)
+      }.toSet
+      t.relation -> indicators
+    }.toMap
+  }
+
   /** Input:
    *    - A datalog program
    *    - A set of rules that are query violation instance
@@ -14,30 +37,34 @@ case class BoundedModelChecker() {
    *    - Result: Boolean
    *    - Counter example if result is false. */
   def check(program: Program, violationRules: Set[Rule], bound: Int): (Boolean, Option[Trace]) = {
-    // 1) Setup verifier + transition system + properties
-    val (verifier, ts, ctx, properties) = setupVerifier(program)
+     // 1) Setup verifier + transition system + properties
+     val (verifier, ts, ctx, properties) = setupVerifier(program)
 
-    // 2) Collect renamable symbols (state vars + other top-level consts)
-    val (stateVars, otherConsts) = collectRenamables(ts, properties, ctx)
+     // 2) Collect renamable symbols (state vars + other top-level consts)
+     val (stateVars, otherConsts) = collectRenamables(ts, properties, ctx)
 
-    // 3) Unroll and check bounds (start at k=1 to require at least one transition)
-    for (k <- 0 to bound) {
-      println(s"[BMC] Checking bound = $k")
-      val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
-      // check each property at this bound
-      for ((rule, prop) <- properties) {
-        // val violation = ctx.mkNot(prop)
-        val violation = prop
-        val violationAtK = renameForStep(violation, k, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
-        checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx) match {
-          case Some(trace) => return (false, Some(trace))
-          case None => // continue
-        }
-      }
-    }
+    // Clear any previously cached per-step substitutions (important if same BMC instance is reused)
+    stepSubstCache.clear()
+    // NOTE: per-step substitutions are computed lazily by `getStepSubst` when needed.
 
-    (true, None)
-  }
+     // 3) Unroll and check bounds (start at k=1 to require at least one transition)
+     for (k <- 0 to bound) {
+       println(s"[BMC] Checking bound = $k")
+       val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
+       // check each property at this bound
+       for ((rule, prop) <- properties) {
+         // val violation = ctx.mkNot(prop)
+         val violation = prop
+         val violationAtK = renameForStep(violation, k, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
+         checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx) match {
+           case Some(trace) => return (false, Some(trace))
+           case None => // continue
+         }
+       }
+     }
+
+     (true, None)
+   }
 
   // --- helpers ---
   private def setupVerifier(program: Program): (Verifier, verification.TransitionSystem, Context, Seq[(Rule, BoolExpr)]) = {
@@ -108,29 +135,45 @@ case class BoundedModelChecker() {
     acc.toSet
   }
 
-  private def versionedName(base: String, v: Int): String = if (v == 0) base else s"${base}_v${v}"
   private def otherConstName(orig: String, step: Int): String = s"${orig}_s${step}"
 
   private def renameForStep(e: Expr[_], step: Int, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context): Expr[_] = {
+    val (fromArr, toArr, _) = getStepSubst(step, stateVars, otherConsts, ctx)
+    e.substitute(fromArr, toArr)
+  }
+
+  // Build the substitution arrays and a name->Expr map for a given step.
+  // Returns (fromArr, toArr, map) where fromArr/toArr are Arrays used for substitute,
+  // and map contains mappings from original symbol name to per-step Expr
+  private def buildStepSubst(step: Int, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context): (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]]) = {
     var from = List.empty[Expr[_]]
     var to = List.empty[Expr[_]]
+    val m = scala.collection.mutable.Map.empty[String, Expr[_]]
     for ((v_in, v_out) <- stateVars) {
-      val base = v_in.getSExpr
-      // Use the same per-step naming convention as otherConstName (e.g., base_s0, base_s1)
-      val inName = otherConstName(base, step)
-      val outName = otherConstName(base, step + 1)
-      val inVar = ctx.mkConst(inName, v_in.getSort.asInstanceOf[com.microsoft.z3.Sort])
-      val outVar = ctx.mkConst(outName, v_out.getSort.asInstanceOf[com.microsoft.z3.Sort])
-      from ::= v_in; to ::= inVar; from ::= v_out; to ::= outVar
+      try {
+        val base = v_in.getSExpr
+        val inName = otherConstName(base, step)
+        val outName = otherConstName(base, step + 1)
+        val inVar = ctx.mkConst(inName, v_in.getSort.asInstanceOf[Sort])
+        val outVar = ctx.mkConst(outName, v_out.getSort.asInstanceOf[Sort])
+        from ::= v_in; to ::= inVar; from ::= v_out; to ::= outVar
+        m += (v_in.getSExpr -> inVar)
+        m += (v_out.getSExpr -> outVar)
+      } catch { case _: Throwable => () }
     }
     for (c <- otherConsts) {
-      val orig = c.getSExpr
-      if (orig != "true" && orig != "false") {
-        try { val newConst = ctx.mkConst(otherConstName(orig, step), c.getSort.asInstanceOf[com.microsoft.z3.Sort]); from ::= c; to ::= newConst } catch { case _: Throwable => () }
-      }
+      try {
+        val orig = c.getSExpr
+        if (orig != "true" && orig != "false") {
+          val newConst = ctx.mkConst(otherConstName(orig, step), c.getSort.asInstanceOf[Sort])
+          from ::= c; to ::= newConst
+          m += (orig -> newConst)
+        }
+      } catch { case _: Throwable => () }
     }
-    val fromArr = from.reverse.toArray; val toArr = to.reverse.toArray
-    e.substitute(fromArr, toArr)
+    val fromArr = from.reverse.toArray
+    val toArr = to.reverse.toArray
+    (fromArr, toArr, m.toMap)
   }
 
   private def buildPathConstraint(ts: verification.TransitionSystem, k: Int,
@@ -198,46 +241,92 @@ case class BoundedModelChecker() {
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
       println(model)
-      extractTraceFromModel(model, k, ctx, program)
+      val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
+      println(trace)
+      trace match {
+        case Some(t) => trace
+        case None => throw new Exception("No counter example found")
+      }
     } else None
   }
 
-  // extract trace helper (keeps previous heuristic behavior)
-  private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program): Option[Trace] = {
-    try {
-      import scala.collection.mutable.ArrayBuffer
-      val steps = ArrayBuffer.empty[synthesis.Transaction]
-      for (stepIdx <- 0 until k) {
-        // Try per-step transaction naming first (transaction_s{step}), fall back to versionedName if not found
-        val trNameConstStep = ctx.mkConst(otherConstName("transaction", stepIdx + 1), ctx.mkStringSort())
-        val trValExprStep = try { model.eval(trNameConstStep, true) } catch { case _: Throwable => null }
-        val trNameStep: String = if (trValExprStep != null) trValExprStep.toString.replaceAll("\"", "") else ""
-        val trName = if (trNameStep.nonEmpty) trNameStep else {
-          val trNameConstV = ctx.mkConst(versionedName("transaction", stepIdx + 1), ctx.mkStringSort())
-          val trValExprV = try { model.eval(trNameConstV, true) } catch { case _: Throwable => null }
-          if (trValExprV == null) "" else trValExprV.toString.replaceAll("\"", "")
-        }
-        val relOpt = program.relations.find(_.name == trName)
-        def evalIntConst(name: String): Int = {
-          try {
-            val c = ctx.mkConst(s"${name}_s${stepIdx}", ctx.getIntSort)
-            val v = model.eval(c, true)
-            if (v == null) 0 else {
-              val s = v.toString
-              try { s.toInt } catch { case _: Throwable => 0 }
-            }
-          } catch { case _: Throwable => 0 }
-        }
-        val msgSenderVal = evalIntConst("msgSender")
-        val msgValueVal = evalIntConst("msgValue")
-        val implicitParams = synthesis.ImplicitParameters(msgSenderVal, msgValueVal)
-        val txRel = relOpt.getOrElse(program.interfaces.headOption.map(_.relation).getOrElse(program.relations.head))
-        val tx = synthesis.Transaction(txRel, List(), implicitParams)
-        steps += tx
-      }
-      Some(synthesis.Trace(steps.toSeq))
-    } catch { case _: Throwable => None }
+  /**
+   * Extract Trace Helper
+   */
+  // Prefer the per-step encoding map (encMap) when extracting the transaction relation name
+  private def extractTransactionRelation(model: Model,
+                                         ctx: Context,
+                                         stepIdx: Int,
+                                         encMap: Map[String, Expr[_]],
+                                         program: Program
+                                        ): (Relation, Literal) = {
+    val indicators: Map[Relation, Set[(IntExpr, Literal)]] = triggerIndicator(ctx, program)
+    // Find the relation whose indicator constant evaluates to 1 in the model
+    val activeRelations: Seq[(Relation, Literal)] = indicators.toSeq.flatMap { case (rel, indicatorSet) =>
+      indicatorSet.collect {
+        case (indicatorConst, lit) =>
+          val constExpr = encMap.getOrElse(indicatorConst.getSExpr, indicatorConst)
+          val evalResult = Option(model.eval(constExpr, true)).map(_.toString)
+          if (evalResult.contains("1")) (rel, lit) else null
+      }.filter(_ != null)
+    }
+
+    if (activeRelations.size != 1)
+      throw new Exception(s"Expected exactly one active transaction relation at step $stepIdx, found: ${activeRelations}")
+
+    // Remove the prefix to get the base relation name
+    val (rel, lit) = activeRelations.head
+    val baseName = rel.name.stripPrefix(transactionRelationPrefix)
+    // Find the corresponding relation in program.relations
+    val relation = program.relations.find(_.name == baseName).getOrElse(
+      throw new Exception(s"Relation '$baseName' not found in program.relations")
+    )
+    (relation, lit)
   }
+
+
+  private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
+                                    stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[Trace] = {
+     import scala.collection.mutable.ArrayBuffer
+     val steps = ArrayBuffer.empty[synthesis.Transaction]
+     for (stepIdx <- 0 until k) {
+       // get the per-step substitution + map produced by the same helper used in renameForStep
+       val (_, _, encMap) = getStepSubst(stepIdx, stateVars, otherConsts, ctx)
+       // extract transaction relation using the encoding map (with ctx as fallback)
+       val (txRel,triggerLiteral) = extractTransactionRelation(model, ctx, stepIdx, encMap, program)
+
+       def evalFieldConst(p: Parameter): Constant = {
+         val field = p.name
+         val tpe = p._type
+         val sort = Z3Helper.typeToSort(ctx, tpe)
+         val prefix = "i0_"
+         val cExpr: Expr[_] = encMap.getOrElse(field, ctx.mkConst(otherConstName(s"$prefix$field", stepIdx), sort))
+         val v = try model.eval(cExpr, true) catch { case _: Throwable => null }
+         val value: String = if (v == null) "" else v.toString.replaceAll("\"", "")
+         datalog.Constant(tpe, value)
+       }
+
+       val parameters: List[datalog.Constant] = triggerLiteral.fields.map(evalFieldConst)
+
+       def evalIntConst(name: String): Int = {
+         try {
+           val cExpr: Expr[_] = encMap.getOrElse(name, ctx.mkConst(otherConstName(name, stepIdx), ctx.getIntSort))
+           val v = model.eval(cExpr, true)
+           if (v == null) 0 else {
+             val s = v.toString
+             try { s.toInt } catch { case _: Throwable => 0 }
+           }
+         } catch { case _: Throwable => 0 }
+       }
+
+       val msgSenderVal = evalIntConst("msgSender")
+       val msgValueVal = evalIntConst("msgValue")
+       val implicitParams = synthesis.ImplicitParameters(msgSenderVal, msgValueVal)
+       val tx = synthesis.Transaction(txRel, parameters, implicitParams)
+       steps += tx
+     }
+     Some(synthesis.Trace(steps.toSeq))
+   }
 
 }
 

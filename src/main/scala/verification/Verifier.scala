@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, Status, TupleSort}
 import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
@@ -9,7 +9,7 @@ import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, simplifyByRenamingConst}
+import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, indicatorConstForTransactionTriggerRelation, simplifyByRenamingConst}
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
@@ -273,8 +273,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
         /** Add the "unchanged" constraints */
         val unchangedConstraints: List[BoolExpr] = getUnchangedConstraints(ruleConstraint)
 
-        /** A boolean value indicating which transaction branch gets evaluate to true */
-        val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        /** An Int const indicating which transaction branch gets evaluate to true */
+        // val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        val trConst = indicatorConstForTransactionTriggerRelation(ctx, t.relation, i)
         i += 1
 
         /** Indicator for transaction name. */
@@ -613,5 +614,11 @@ object Verifier {
   def addBuiltInRules(p: Program): Program = {
      val builtInRules = parseProgramFromRawString(BuiltInRules.ruleStr).rules
      p.addRules(builtInRules)
+  }
+
+  def indicatorConstForTransactionTriggerRelation(ctx: Context, relation: Relation, ruleId: Int): IntExpr = {
+    // Expect those recv_ relations
+    require(relation.name.startsWith(transactionRelationPrefix))
+    ctx.mkIntConst(s"${relation.name}$ruleId")
   }
 }
