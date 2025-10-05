@@ -237,7 +237,8 @@ object Main extends App {
     /** Synthesize by adding validation condition */
     val synthesizer = InductiveSynthesis(candidates, interpreterContext)
     val testTrace = EvaluatedTrace.testTrace1(program)
-    synthesizer.synthesize(testTrace)
+    val synthesisOutput = synthesizer.synthesize(program, testTrace)
+    // println(synthesisOutput)
   }
 
   else if (args(0) == "test-interpreter") {

@@ -1,7 +1,7 @@
 package synthesis
 
-import com.microsoft.z3.{BoolExpr, Context, Model, Solver}
-import datalog.{Relation, Rule}
+import com.microsoft.z3.{BoolExpr, Context, Model}
+import datalog.{Program, Relation, Rule}
 import synthesis.EvaluatedTrace.shiftTrace
 
 /** Given an EvaluatedTrace object, a set of predicates, return
@@ -97,22 +97,88 @@ case class InductiveSynthesis(
   }
 
   /** Perform the synthesis given an EvaluatedTrace and predicates. */
-  def synthesize(evaluatedTrace: EvaluatedTrace): Map[Relation, List[Boolean]] = {
+  def synthesize(sketch:Program, evaluatedTrace: EvaluatedTrace): Program = {
     val evalResults = evaluatePredicates(evaluatedTrace)
     val constraint = makeConstraints(evalResults)
     val solver = z3ctx.mkSolver()
     solver.add(constraint)
     val status = solver.check()
-    if (status == com.microsoft.z3.Status.SATISFIABLE) {
+    val selection: Map[Relation, List[Boolean]] = if (status == com.microsoft.z3.Status.SATISFIABLE) {
       val model = solver.getModel
-      interpretModel(model)
+      val selection = interpretModel(model)
+      // Return the predicate assignments discovered by the solver
+      selection
     } else {
       Map.empty
     }
+    makeProgram(sketch, selection)
+  }
+
+  private def makeProgram(sketch: Program, predicateSelection: Map[Relation, List[Boolean]]): Program = {
+    // For each rule in the sketch, if it is a transaction rule, replace it with a rule
+    // that includes the selected predicates' binding literals in the body and predicate functors
+    // in the rule's functors set. Non-transaction rules are kept as-is.
+
+    val newRules: Set[Rule] = sketch.rules.map { r =>
+      // Check if this rule is a transaction rule by finding its transaction literal (if any)
+      val txLiteralOpt = try {
+        Some(PredicateEnumerator.extractTxLiteral(r))
+      } catch { case _: Throwable => None }
+
+      txLiteralOpt match {
+        case Some(txLit) => {
+          // Find selected predicates for the transaction relation
+          val rel = txLit.relation
+          val selection: List[Boolean] = predicateSelection.getOrElse(rel, List.empty)
+          val candidates: List[Predicate] = predicates.getOrElse(rel, Set.empty).toList
+
+          // Pair candidates with selection booleans; if selection shorter than candidates, treat missing as false
+          val selectedPreds: Set[Predicate] = candidates.zipAll(selection, null, false)
+            .collect { case (p: Predicate, true) => p }.toSet
+
+          val newRule = makeRule(r, selectedPreds)
+          println(s"[makeProgram] selected predicates: $selectedPreds")
+          println(s"[makeProgram] new rule: $newRule")
+          newRule
+        }
+        case None => r
+      }
+    }
+
+    // Reuse program metadata from sketch
+    datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
+  }
+
+  private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {
+    // Collect all binding literals from selected predicates' contexts
+    val bindingLits: Set[datalog.Literal] = predicates.flatMap(p => p.context.bindingLiterals)
+
+    // Collect all predicate functors
+    val predicateFunctors: Set[datalog.Functor] = predicates.map(_.functor)
+
+    // New body: original body plus binding literals (avoid duplicates)
+    val newBody: Set[datalog.Literal] = sketchRule.body ++ bindingLits
+
+    // New functors: original functors plus selected predicate functors
+    val newFunctors: Set[datalog.Functor] = sketchRule.functors ++ predicateFunctors
+
+    // if predicate refer to variable in the context literals,
+    // add those literal to the rule as well.
+    val addMsgSender: Set[datalog.Literal] = if (predicates.exists(_.referredMsgSender())) Set(synthesis.Context.msgSender) else Set.empty
+    val addMsgValue: Set[datalog.Literal] = if (predicates.exists(_.referredMsgValue())) Set(synthesis.Context.msgValue) else Set.empty
+
+    // Combine bodies: original body + binding literals + possible implicit context literals
+    val finalBody: Set[datalog.Literal] = newBody ++ addMsgSender ++ addMsgValue
+
+    // Keep aggregators unchanged
+    val newAggregators = sketchRule.aggregators
+
+    Rule(sketchRule.head, finalBody, newFunctors, newAggregators)
   }
 
   /** Validate the synthesis results. */
   def validate(): Boolean = {
-    ???
+    // Not implemented: placeholder returns false
+    false
   }
 }

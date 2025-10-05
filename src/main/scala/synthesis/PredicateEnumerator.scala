@@ -4,6 +4,7 @@ import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
+import PredicateEnumerator.functorParams
 
 import scala.collection.mutable
 
@@ -18,10 +19,24 @@ case class Context(tx: Literal, bindingLiterals: Set[Literal]) {
 object Context {
   val msgSender: Literal = Literal(MsgSender(), List(Variable(datalog.Type.addressType, "msgSender")))
   val msgValue: Literal = Literal(MsgValue(), List(Variable(datalog.Type.uintType, "msgValue")))
+
+  val getContextParams: Set[Parameter] = {
+    (msgValue.fields ++ msgValue.fields).toSet
+  }
 }
 case class Predicate(context: Context, functor: Functor) {
   override def toString: String = {
     s"Predicate(context: $context, functor: $functor)"
+  }
+
+  def referredMsgValue(): Boolean = {
+    val params = functorParams(functor)
+    Context.msgValue.fields.intersect(params).nonEmpty
+  }
+
+  def referredMsgSender(): Boolean = {
+    val params = functorParams(functor)
+    Context.msgSender.fields.intersect(params).nonEmpty
   }
 }
 
@@ -86,15 +101,6 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     val context = Context(txLiteral, Set.empty)
     val functors: Set[Functor] = singleAtomCandidates(txLiteral)
     functors.map(f => Predicate(context, f))
-  }
-
-  // Helper to extract all parameters from a Functor
-  private def functorParams(f: Functor): Seq[Parameter] = f match {
-    case operator: ArithOperator =>
-      extractParameters(operator.a) ++ extractParameters(operator.b)
-    case Equal(lhs, rhs) => extractParameters(lhs) ++ extractParameters(rhs)
-    case Unequal(lhs, rhs) => extractParameters(lhs) ++ extractParameters(rhs)
-    case Assign(a, b) => throw new UnsupportedOperationException("Assign functor is not supported")
   }
 
   /** For each relation in bindingRels, lookup its index;
@@ -246,5 +252,15 @@ object PredicateEnumerator {
         throw new IllegalArgumentException(s"Multiple transaction literals found in rule: $txRule")
     }
   }
+
+  // Helper to extract all parameters from a Functor
+  def functorParams(f: Functor): Seq[Parameter] = f match {
+    case operator: ArithOperator =>
+      extractParameters(operator.a) ++ extractParameters(operator.b)
+    case Equal(lhs, rhs) => extractParameters(lhs) ++ extractParameters(rhs)
+    case Unequal(lhs, rhs) => extractParameters(lhs) ++ extractParameters(rhs)
+    case Assign(a, b) => throw new UnsupportedOperationException("Assign functor is not supported")
+  }
+
 
 }
