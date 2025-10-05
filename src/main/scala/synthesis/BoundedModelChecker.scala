@@ -254,6 +254,8 @@ case class BoundedModelChecker() {
       println(model)
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       println(trace)
+      // val evalutedTrace = extractEvaluatedTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
+      // println(evalutedTrace)
       trace match {
         case Some(t) => trace
         case None => throw new Exception("No counter example found")
@@ -339,6 +341,105 @@ case class BoundedModelChecker() {
      }
      Some(synthesis.Trace(steps.toSeq))
    }
+
+  /**
+   * Helper to extract a State object from the model at a given step.
+   * Uses stateVars, ctx, and encMap for lookup.
+   */
+  private def extractStateFromModel(model: Model, stepIdx: Int, stateVars: Seq[(Expr[_], Expr[_])], ctx: Context, encMap: Map[String, Expr[_]]): State = {
+    import synthesis.State
+    // Create an empty State
+    val state = State()
+
+    // Helpers to evaluate model expressions (use Z3 Expr fully-qualified to avoid clash)
+    def evalStrOpt(e: com.microsoft.z3.Expr[_]): Option[String] = evalModelExpr(model, e, true).map(_.replaceAll("\"", ""))
+    def evalIntOpt(e: com.microsoft.z3.Expr[_]): Option[Int] = evalModelInt(model, e, true)
+
+    // Populate scalar variables from stateVars (use the v_in name as canonical)
+    for ((v_in, _) <- stateVars) {
+        val name = v_in.getSExpr
+        val sort: Sort = v_in.getSort.asInstanceOf[Sort]
+        val expr: com.microsoft.z3.Expr[_] = encMap.getOrElse(name, ctx.mkConst(otherConstName(name, stepIdx), sort)).asInstanceOf[com.microsoft.z3.Expr[_]]
+
+        // Match common sorts: Int, Bool, and fallback (symbol/string)
+        if (sort == ctx.getIntSort) {
+          evalIntOpt(expr).foreach { v =>
+            state.update(datalog.Variable(datalog.Type.integerType, name),
+              datalog.Constant(datalog.Type.integerType, v.toString))
+          }
+        } else if (sort == ctx.getBoolSort) {
+          evalStrOpt(expr).foreach { s =>
+            val b = if (s == "true" || s == "1") "1" else "0"
+            state.update(datalog.Variable(datalog.BooleanType(), name),
+              datalog.Constant(datalog.BooleanType(), b))
+          }
+        } else if (sort == ctx.getBoolSort) {
+          evalStrOpt(expr).foreach { s =>
+            val _type = datalog.SymbolType(name)
+            state.update(datalog.Variable(_type, name), datalog.Constant(_type, s))
+          }
+        }
+        else {
+          ???
+        }
+    }
+
+    // Attempt to populate relation maps (materialized relations) from model constants.
+    // We use heuristics: keys in encMap refer to per-step renamed constants; maps are harder to reconstruct precisely here.
+    // We'll look for encMap entries that correspond to map accesses by scanning encMap keys for relation-like patterns
+    try {
+      // No-op: reconstruction of maps requires encoder details available elsewhere. Keep as placeholder for now.
+    } catch { case _: Throwable => () }
+
+    state
+  }
+
+  /**
+   * Extracts the evaluated trace: for each step, returns the transaction and the state variable values before execution.
+   */
+  def extractEvaluatedTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
+                                     stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[synthesis.EvaluatedTrace] = {
+    import scala.collection.mutable.ArrayBuffer
+    import synthesis.State
+    val steps = ArrayBuffer.empty[(Transaction, State)]
+
+    // Extract initial state (before any transaction)
+    val (_, _, encMap0) = getStepSubst(0, stateVars, otherConsts, ctx)
+    val initialState = extractStateFromModel(model, 0, stateVars, ctx, encMap0)
+
+    for (stepIdx <- 0 until k) {
+      val (_, _, encMap) = getStepSubst(stepIdx, stateVars, otherConsts, ctx)
+      val (txRel, triggerLiteral) = extractTransactionRelation(model, ctx, stepIdx, encMap, program)
+
+      def evalFieldConst(p: Parameter): Constant = {
+        val field = p.name
+        val tpe = p._type
+        val sort = Z3Helper.typeToSort(ctx, tpe)
+        val prefix = "i0_"
+        val fieldName = s"$prefix$field"
+        val cExpr = stepVar(fieldName, sort, stepIdx, ctx, encMap)
+        val value: String = evalModelExpr(model, cExpr).getOrElse("").replaceAll("\"", "")
+        datalog.Constant(tpe, value)
+      }
+      val parameters: List[datalog.Constant] = triggerLiteral.fields.map(evalFieldConst)
+
+      def evalIntConst(name: String): Int = {
+        val cExpr: Expr[_] = stepVar(name, ctx.getIntSort, stepIdx, ctx, encMap)
+        evalModelInt(model, cExpr).getOrElse(0)
+      }
+      val msgSenderVal = evalIntConst("msgSender")
+      val msgValueVal = evalIntConst("msgValue")
+      val implicitParams = synthesis.ImplicitParameters(msgSenderVal, msgValueVal)
+      val tx = synthesis.Transaction(txRel, parameters, implicitParams)
+
+      // Extract state after transaction execution (at stepIdx+1)
+      val (_, _, encMapNext) = getStepSubst(stepIdx + 1, stateVars, otherConsts, ctx)
+      val stateAfter = extractStateFromModel(model, stepIdx + 1, stateVars, ctx, encMapNext)
+
+      steps += ((tx, stateAfter))
+    }
+    Some(synthesis.EvaluatedTrace(initialState, steps.toSeq))
+  }
 
 }
 
