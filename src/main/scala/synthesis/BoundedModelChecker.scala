@@ -16,6 +16,17 @@ case class BoundedModelChecker() {
     stepSubstCache.getOrElseUpdate(step, buildStepSubst(step, stateVars, otherConsts, ctx))
   }
 
+  /**
+   * Unified helper for evaluating Z3 expressions in the model.
+   * Returns Option[String] for general use, or Option[Int] for integer conversion.
+   */
+  private def evalModelExpr(model: Model, expr: Expr[_], modelCompletion: Boolean = true): Option[String] = {
+    try Option(model.eval(expr, modelCompletion)).map(_.toString) catch { case _: Throwable => None }
+  }
+  private def evalModelInt(model: Model, expr: Expr[_], modelCompletion: Boolean = true): Option[Int] = {
+    evalModelExpr(model, expr, modelCompletion).flatMap(s => try Some(s.toInt) catch { case _: Throwable => None })
+  }
+
   private def triggerIndicator(ctx: Context, program: Program): Map[Relation, Set[(IntExpr, Literal)]] = {
     import verification.Verifier.indicatorConstForTransactionTriggerRelation
     val txInterfaces = program.interfaces.filter(i => i.relation.name.startsWith(transactionRelationPrefix))
@@ -266,8 +277,7 @@ case class BoundedModelChecker() {
       indicatorSet.collect {
         case (indicatorConst, lit) =>
           val constExpr = encMap.getOrElse(indicatorConst.getSExpr, indicatorConst)
-          val evalResult = Option(model.eval(constExpr, true)).map(_.toString)
-          if (evalResult.contains("1")) (rel, lit) else null
+          if (evalModelExpr(model, constExpr).contains("1")) (rel, lit) else null
       }.filter(_ != null)
     }
 
@@ -283,7 +293,6 @@ case class BoundedModelChecker() {
     )
     (relation, lit)
   }
-
 
   private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
                                     stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[Trace] = {
@@ -301,22 +310,15 @@ case class BoundedModelChecker() {
          val sort = Z3Helper.typeToSort(ctx, tpe)
          val prefix = "i0_"
          val cExpr: Expr[_] = encMap.getOrElse(field, ctx.mkConst(otherConstName(s"$prefix$field", stepIdx), sort))
-         val v = try model.eval(cExpr, true) catch { case _: Throwable => null }
-         val value: String = if (v == null) "" else v.toString.replaceAll("\"", "")
+         val value: String = evalModelExpr(model, cExpr).getOrElse("").replaceAll("\"", "")
          datalog.Constant(tpe, value)
        }
 
        val parameters: List[datalog.Constant] = triggerLiteral.fields.map(evalFieldConst)
 
        def evalIntConst(name: String): Int = {
-         try {
-           val cExpr: Expr[_] = encMap.getOrElse(name, ctx.mkConst(otherConstName(name, stepIdx), ctx.getIntSort))
-           val v = model.eval(cExpr, true)
-           if (v == null) 0 else {
-             val s = v.toString
-             try { s.toInt } catch { case _: Throwable => 0 }
-           }
-         } catch { case _: Throwable => 0 }
+         val cExpr: Expr[_] = encMap.getOrElse(name, ctx.mkConst(otherConstName(name, stepIdx), ctx.getIntSort))
+         evalModelInt(model, cExpr).get
        }
 
        val msgSenderVal = evalIntConst("msgSender")
