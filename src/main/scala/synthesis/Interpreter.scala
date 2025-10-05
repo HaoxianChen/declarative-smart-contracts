@@ -6,13 +6,13 @@ import synthesis.PredicateEnumerator.extractTxLiteral
 import scala.collection.mutable
 
 case class State() {
-  val state: mutable.Map[Variable, Int] = mutable.Map()
+  val state: mutable.Map[String, Int] = mutable.Map()
   // Refactored: mapping key is now SimpleRelation
-  val maps: mutable.Map[SimpleRelation, mutable.Map[Vector[Int], Int]] = mutable.Map()
+  val maps: mutable.Map[String, mutable.Map[Vector[Int], Int]] = mutable.Map()
 
 
-  def lookup(variable: Variable): Int = {
-    state(variable)
+  def lookup(variableName: String): Int = {
+    state(variableName)
   }
 
   // Backward-compatible single-key lookup
@@ -21,14 +21,27 @@ case class State() {
 
   // Multi-key lookup: defaults to 0 if missing
   def lookup(relation: SimpleRelation, keys: Seq[Int]): Int =
-    maps.get(relation).flatMap(_.get(keys.toVector)).getOrElse(0)
+    lookup(relation.name, keys)
 
-  def update(variable: Variable, value: Constant): Unit = variable._type match {
-    case _: NumberType => state(variable) = value.name.toInt
-    case _: BooleanType => state(variable) = if (value.name == "1") 1 else 0
-    case _: SymbolType => state(variable) = value.name.toInt
-    case _ => throw new IllegalArgumentException(s"Unsupported variable type: ${variable._type}")
+  // Multi-key lookup: defaults to 0 if missing
+  def lookup(relationName: String, keys: Seq[Int]): Int =
+    maps.get(relationName).flatMap(_.get(keys.toVector)).getOrElse(0)
+
+  def update(variable: Variable, value: Constant): Unit = {
+    val variableName = variable.name
+    variable._type match {
+      case _: NumberType => state(variableName) = value.name.toInt
+      case _: BooleanType => state(variableName) = if (value.name == "1") 1 else 0
+      case _: SymbolType => state(variableName) = value.name.toInt
+      case _ => throw new IllegalArgumentException(s"Unsupported variable type: ${variable._type}")
+    }
   }
+
+  def updateInt(varName: String, value: Int): Unit = state(varName) = value
+  def updateBoolean(varName: String, value: Boolean): Unit = {
+    state(varName) = if (value) 1 else 0
+  }
+  def updateSymbol(varName: String, value: String): Unit = state(varName) = value.toInt
 
   // Backward-compatible single-key update
   def update(relation: SimpleRelation, key: Int, value: Constant): Unit =
@@ -36,8 +49,14 @@ case class State() {
 
   // Multi-key update
   def update(relation: SimpleRelation, keys: Seq[Int], value: Constant): Unit = {
-    val m = maps.getOrElseUpdate(relation, mutable.Map())
+    val m = maps.getOrElseUpdate(relation.name, mutable.Map())
     m(keys.toVector) = constantToInt(value)
+  }
+
+  // Multi-key update
+  def update(relationName: String, keys: Seq[Int], value: Int): Unit = {
+    val m = maps.getOrElseUpdate(relationName, mutable.Map())
+    m(keys.toVector) = value
   }
 
   /** Apply bindings for the duration of `thunk`, then restore previous state. */
@@ -46,13 +65,13 @@ case class State() {
     val savedScalars: Seq[(Variable, Option[Int])] =
       bindings.collect { case State.Binding.Scalar(v, _) => v }
         .distinct
-        .map(v => (v, state.get(v)))
+        .map(v => (v, state.get(v.name)))
 
     // Save map elements (composite keys)
     val mapElemSaves: Seq[(SimpleRelation, Vector[Int], Option[Int])] = bindings.collect {
       case State.Binding.MapElem(rel, keys, _) =>
         val keyVec = resolveParamsToInts(keys)
-        val old = maps.get(rel).flatMap(_.get(keyVec))
+        val old = maps.get(rel.name).flatMap(_.get(keyVec))
         (rel, keyVec, old)
     }
 
@@ -72,18 +91,18 @@ case class State() {
     } finally {
       // Restore scalars
       savedScalars.foreach {
-        case (v, Some(value)) => state(v) = value
-        case (v, None)        => state.remove(v)
+        case (v, Some(value)) => state(v.name) = value
+        case (v, None)        => state.remove(v.name)
       }
       // Restore map elements
       mapElemSaves.foreach {
         case (rel, keyVec, Some(value)) =>
-          val m = maps.getOrElseUpdate(rel, mutable.Map())
+          val m = maps.getOrElseUpdate(rel.name, mutable.Map())
           m(keyVec) = value
         case (rel, keyVec, None) =>
-          maps.get(rel).foreach { m =>
+          maps.get(rel.name).foreach { m =>
             m.remove(keyVec)
-            if (m.isEmpty) maps.remove(rel)
+            if (m.isEmpty) maps.remove(rel.name)
           }
       }
     }
@@ -98,7 +117,7 @@ case class State() {
 
   private def resolveParamToInt(p: Parameter): Int = p match {
     case Constant(_, name)   => name.toInt
-    case v: Variable         => lookup(v)
+    case v: Variable         => lookup(v.name)
   }
 
   private def resolveParamsToInts(ps: Seq[Parameter]): Vector[Int] =
@@ -166,7 +185,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
         val keyInts = keyParams.map {
           case c: Constant => c.name.toInt
           case v: Variable =>
-            scalarBindingMap.get(v).map(_.name.toInt).getOrElse(state.lookup(v))
+            scalarBindingMap.get(v).map(_.name.toInt).getOrElse(state.lookup(v.name))
         }
         // Find the value variable (the field not in keyIndices)
         val valueIndices = literal.fields.indices.diff(keyIndices)
@@ -220,7 +239,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
 
   private def evalParam(state: State, p: Parameter): Int = p match {
     case Constant(_type, name) => name.toInt
-    case Variable(_type, name) => state.lookup(Variable(_type, name))
+    case Variable(_type, name) => state.lookup(name)
   }
 
 
