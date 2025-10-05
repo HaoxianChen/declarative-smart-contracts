@@ -7,64 +7,64 @@ import verification.{TransitionSystem, Z3Helper}
 import scala.collection.mutable
 
 /**
- * 将时态属性 AST 翻译为 Z3 约束表达式。
+ * Translates temporal property AST to Z3 constraint expressions.
  * 
- * 支持的时态运算符：
- * - ONCE φ: φ 在过去某个时刻（包括现在）成立过 (∃j≤i. T[j]⊨φ)
- * - ALWAYS φ: φ 在所有过去时刻（包括现在）都成立 (∀j≤i. T[j]⊨φ)
+ * Supported temporal operators:
+ * - ONCE φ: φ held at some point in the past (including now) (∃j≤i. T[j]⊨φ)
+ * - ALWAYS φ: φ has always held in the past (including now) (∀j≤i. T[j]⊨φ)
  * 
- * 实现策略：
- * 1. ONCE: 使用辅助布尔状态变量 once_φ，初始为 false，当 φ 成立时设为 true 并保持
- * 2. ALWAYS: 使用归纳证明，只需在当前状态验证 φ 成立
+ * Implementation strategy:
+ * 1. ONCE: Use auxiliary boolean state variable once_φ, initially false, set to true when φ holds and keep it true
+ * 2. ALWAYS: Use inductive proof, only need to verify φ holds in current state
  */
 class TemporalPropertyTranslator(
   val ctx: Context,
   val program: Program,
   val transitionSystem: TransitionSystem,
-  val stateVarMap: Map[Relation, (Expr[_], Expr[_])], // 关系 -> (当前状态变量, 下一状态变量)
-  val indices: Map[SimpleRelation, List[Int]], // 关系的索引
-  val transactionVar: Option[Expr[_]] = None // 可选：transaction 变量（用于检查事务）
+  val stateVarMap: Map[Relation, (Expr[_], Expr[_])], // Relation -> (current state variable, next state variable)
+  val indices: Map[SimpleRelation, List[Int]], // Indices of relations
+  val transactionVar: Option[Expr[_]] = None // Optional: transaction variable (for checking transactions)
 ) {
   
   /**
-   * 存储 ONCE 运算符对应的辅助状态变量
-   * Key: ONCE 表达式的字符串表示（用于去重）
-   * Value: (当前状态变量, 下一状态变量, 原始表达式)
+   * Store auxiliary state variables for ONCE operators
+   * Key: String representation of ONCE expression (for deduplication)
+   * Value: (current state variable, next state variable, original expression)
    */
   val onceVars: mutable.Map[String, (Expr[_], Expr[_], TemporalExpr)] = mutable.Map()
   
   /**
-   * 翻译时态属性为 Z3 约束
-   * @param property 时态属性
-   * @return 翻译后的 Z3 布尔表达式，带有适当的量化
+   * Translate temporal property to Z3 constraint
+   * @param property Temporal property
+   * @return Translated Z3 boolean expression with appropriate quantification
    */
   def translate(property: TemporalProperty): BoolExpr = {
-    // 收集自由变量
+    // Collect free variables
     val freeVars = collectFreeVariables(property.expr)
     
     if (freeVars.isEmpty) {
-      // 没有自由变量，直接翻译
+      // No free variables, translate directly
       translateExpr(property.expr, Map())
     } else {
-      // 有自由变量，需要量化
-      // 创建变量上下文，从表达式中推断类型
+      // Has free variables, need quantification
+      // Create variable context, infer types from expression
       val varContext = freeVars.map { varName =>
-        // 从表达式中推断变量类型
+        // Infer variable type from expression
         val inferredType = inferVariableType(varName, property.expr)
         val sort = Z3Helper.typeToSort(ctx, inferredType)
         val z3Var = ctx.mkConst(varName, sort)
         varName -> z3Var
       }.toMap
       
-      // 翻译表达式
+      // Translate expression
       val constraint = translateExpr(property.expr, varContext)
       
-      // 根据表达式的最外层结构决定量化方式
-      // 对于 ALWAYS，使用全称量化
-      // 对于其他情况，也默认使用全称量化（安全属性）
+      // Decide quantification based on outermost expression structure
+      // For ALWAYS, use universal quantification
+      // For other cases, also use universal quantification by default (safety properties)
       property.expr match {
         case TemporalExpr.Always(_) =>
-          // ALWAYS 已经在 translateExpr 中处理，这里只需要对内部的自由变量量化
+          // ALWAYS is already handled in translateExpr, here we only need to quantify internal free variables
           if (varContext.nonEmpty) {
             ctx.mkForall(
               varContext.values.toArray,
@@ -78,7 +78,7 @@ class TemporalPropertyTranslator(
           }
         
         case _ =>
-          // 其他情况：默认全称量化
+          // Other cases: universal quantification by default
           if (varContext.nonEmpty) {
             ctx.mkForall(
               varContext.values.toArray,
@@ -95,18 +95,18 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 翻译时态表达式
-   * @param expr 时态表达式 AST
-   * @param variableContext 当前变量上下文（变量名 -> Z3 Expr）
-   * @return 翻译后的 Z3 布尔表达式
+   * Translate temporal expression
+   * @param expr Temporal expression AST
+   * @param variableContext Current variable context (variable name -> Z3 Expr)
+   * @return Translated Z3 boolean expression
    */
   private def translateExpr(expr: TemporalExpr, variableContext: Map[String, Expr[_]]): BoolExpr = {
     expr match {
-      // 布尔字面量
+      // Boolean literal
       case TemporalExpr.BoolLiteral(value) => 
         ctx.mkBool(value)
       
-      // 标识符（变量）
+      // Identifier (variable)
       case TemporalExpr.Identifier(name) => 
         variableContext.get(name) match {
           case Some(v: Expr[_]) if v.getSort.toString == "Bool" => 
@@ -117,15 +117,15 @@ class TemporalPropertyTranslator(
             throw new IllegalArgumentException(s"Unbound variable: $name")
         }
       
-      // 数字字面量（不应直接作为布尔表达式）
+      // Numeric literal (should not be used directly as boolean expression)
       case TemporalExpr.NumericLiteral(_) =>
         throw new IllegalArgumentException("Numeric literal cannot be used as boolean expression")
       
-      // 函数调用（关系调用）
+      // Function call (relation call)
       case fc @ TemporalExpr.FunctionCall(name, args) =>
         translateFunctionCall(name, args, variableContext)
       
-      // 逻辑运算符
+      // Logical operators
       case TemporalExpr.Not(inner) =>
         ctx.mkNot(translateExpr(inner, variableContext))
       
@@ -147,9 +147,9 @@ class TemporalPropertyTranslator(
           translateExpr(right, variableContext)
         )
       
-      // 比较运算符
+      // Comparison operators
       case TemporalExpr.Eq(left, right) =>
-        // 尝试智能翻译：如果是布尔类型，使用布尔翻译
+        // Try smart translation: if boolean type, use boolean translation
         val leftExpr = translateGeneralExpr(left, variableContext)
         val rightExpr = translateGeneralExpr(right, variableContext)
         ctx.mkEq(leftExpr, rightExpr)
@@ -183,22 +183,22 @@ class TemporalPropertyTranslator(
           translateArithExpr(right, variableContext)
         )
       
-      // 时态运算符
+      // Temporal operators
       case TemporalExpr.Once(inner) =>
         translateOnce(inner, variableContext)
       
       case TemporalExpr.Always(inner) =>
-        // ALWAYS φ: 使用归纳证明，只需在当前状态验证 φ
-        // 归纳基础：初始状态满足 φ
-        // 归纳步骤：如果当前状态满足 φ，则下一状态也满足 φ
-        // 因此这里直接翻译 φ
+        // ALWAYS φ: Use inductive proof, only need to verify φ holds in current state
+        // Induction base: φ holds in initial state
+        // Induction step: if φ holds in current state, it also holds in next state
+        // Therefore, we directly translate φ here
         translateExpr(inner, variableContext)
     }
   }
   
   /**
-   * 翻译通用表达式（自动识别类型）
-   * 用于比较运算符，可以处理布尔或算术表达式
+   * Translate general expression (auto-detect type)
+   * Used for comparison operators, can handle boolean or arithmetic expressions
    */
   private def translateGeneralExpr(expr: TemporalExpr, variableContext: Map[String, Expr[_]]): Expr[_] = {
     expr match {
@@ -215,14 +215,14 @@ class TemporalPropertyTranslator(
         }
       
       case _ =>
-        // 默认尝试作为算术表达式
+        // Default: try as arithmetic expression
         translateArithExpr(expr, variableContext)
     }
   }
   
   /**
-   * 翻译算术表达式
-   * 注意：布尔字面量会被转换为整数（true -> 1, false -> 0）
+   * Translate arithmetic expression
+   * Note: Boolean literals are converted to integers (true -> 1, false -> 0)
    */
   private def translateArithExpr(expr: TemporalExpr, variableContext: Map[String, Expr[_]]): Expr[ArithSort] = {
     expr match {
@@ -230,7 +230,7 @@ class TemporalPropertyTranslator(
         ctx.mkInt(value.toLong).asInstanceOf[Expr[ArithSort]]
       
       case TemporalExpr.BoolLiteral(value) =>
-        // 将布尔字面量转换为整数：true -> 1, false -> 0
+        // Convert boolean literal to integer: true -> 1, false -> 0
         ctx.mkInt(if (value) 1 else 0).asInstanceOf[Expr[ArithSort]]
       
       case TemporalExpr.Identifier(name) =>
@@ -244,8 +244,8 @@ class TemporalPropertyTranslator(
         }
       
       case TemporalExpr.FunctionCall(name, args) =>
-        // 尝试作为返回数值的关系调用
-        // 这需要更复杂的类型推断，暂时抛出异常
+        // Try as relation call that returns numeric value
+        // This requires more complex type inference, throw exception for now
         throw new IllegalArgumentException(s"Function call in arithmetic context not yet supported: $name")
       
       case _ =>
@@ -254,53 +254,53 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 翻译函数调用（关系调用）
+   * Translate function call (relation call)
    * 
-   * 两种情况：
-   * 1. 有参数：例如 raised(r) 表示 "关系 raised 的当前值为 r"
-   * 2. 无参数：例如 withdraw() 表示 "关系 withdraw 非空"（∃ vars. withdraw(vars)）
+   * Two cases:
+   * 1. With arguments: e.g., raised(r) means "the current value of relation raised is r"
+   * 2. Without arguments: e.g., withdraw() means "relation withdraw is non-empty" (∃ vars. withdraw(vars))
    */
   private def translateFunctionCall(
     name: String, 
     args: List[TemporalExpr], 
     variableContext: Map[String, Expr[_]]
   ): BoolExpr = {
-    // 查找对应的关系
+    // Find corresponding relation
     val relation = findRelation(name)
     
     if (args.isEmpty) {
-      // 无参数调用：表示关系非空，即 ∃ vars. relation(vars)
+      // No arguments: relation is non-empty, i.e., ∃ vars. relation(vars)
       translateRelationNonEmpty(relation, variableContext)
     } else {
-      // 有参数调用：表示关系在当前状态的值
+      // With arguments: value of relation in current state
       translateRelationAccess(relation, args, variableContext)
     }
   }
   
   /**
-   * 翻译关系非空检查
-   * 例如：withdraw() 翻译为 ∃p,n. withdraw(p,n)
+   * Translate relation non-empty check
+   * Example: withdraw() translates to ∃p,n. withdraw(p,n)
    * 
-   * 特殊处理：
-   * - 如果是事务/接口关系且提供了 transactionVar，则检查 transaction == "recv_XXX"
-   * - 否则尝试标准的状态变量检查
+   * Special handling:
+   * - If it's a transaction/interface relation and transactionVar is provided, check transaction == "recv_XXX"
+   * - Otherwise try standard state variable check
    */
   private def translateRelationNonEmpty(
     relation: Relation,
     variableContext: Map[String, Expr[_]]
   ): BoolExpr = {
     
-    // ⭐ 检查是否是事务/接口关系
+    // Check if it's a transaction/interface relation
     val isInterface = program.interfaces.exists(_.relation.name == relation.name)
     val hasRecvInterface = program.interfaces.exists(_.relation.name == s"recv_${relation.name}")
     
     if ((isInterface || hasRecvInterface) && transactionVar.isDefined) {
-      // 使用事务变量检查
+      // Use transaction variable check
       val txName = if (isInterface) relation.name else s"recv_${relation.name}"
       val txNameExpr = ctx.mkString(txName)
       ctx.mkEq(transactionVar.get, txNameExpr)
     } else if (!stateVarMap.contains(relation)) {
-      // 没有状态变量且不是事务关系
+      // No state variable and not a transaction relation
       throw new IllegalArgumentException(
         s"No state variable found for relation ${relation.name}. " +
         s"To use this relation in temporal properties, it must be either:\n" +
@@ -308,19 +308,19 @@ class TemporalPropertyTranslator(
         s"  2. An interface/transaction (provide transactionVar to translator)"
       )
     } else {
-      // 标准处理：对于状态关系，创建存在量化
+      // Standard handling: create existential quantification for state relations
       val quantVars = relation.sig.zipWithIndex.map { case (typ, idx) =>
         val sort = Z3Helper.typeToSort(ctx, typ)
         ctx.mkConst(s"${relation.name}_q${idx}", sort)
       }
       
-      // 创建临时变量上下文
+      // Create temporary variable context
       val tempContext = variableContext ++ 
         relation.memberNames.zip(quantVars).toMap
       
-      // 构造关系访问约束
+      // Construct relation access constraint
       val tempArgs = quantVars.map { v =>
-        // 为每个量化变量创建对应的 Identifier 表达式
+        // Create corresponding Identifier expression for each quantified variable
         relation.memberNames.find(name => tempContext.get(name).contains(v)) match {
           case Some(name) => TemporalExpr.Identifier(name)
           case None => TemporalExpr.Identifier(v.toString)
@@ -329,7 +329,7 @@ class TemporalPropertyTranslator(
       
       val constraint = translateRelationAccess(relation, tempArgs, tempContext)
       
-      // 存在量化
+      // Existential quantification
       if (quantVars.nonEmpty) {
         ctx.mkExists(
           quantVars.toArray,
@@ -345,22 +345,22 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 翻译关系访问
-   * 例如：raised(r) 翻译为 raised_state == r
+   * Translate relation access
+   * Example: raised(r) translates to raised_state == r
    */
   private def translateRelationAccess(
     relation: Relation,
     args: List[TemporalExpr],
     variableContext: Map[String, Expr[_]]
   ): BoolExpr = {
-    // 检查参数数量
+    // Check argument count
     if (args.length != relation.arity) {
       throw new IllegalArgumentException(
         s"Relation ${relation.name} expects ${relation.arity} arguments, got ${args.length}"
       )
     }
     
-    // 获取状态变量
+    // Get state variable
     val (stateVar, _) = stateVarMap.getOrElse(
       relation,
       throw new IllegalArgumentException(s"No state variable found for relation ${relation.name}")
@@ -368,36 +368,36 @@ class TemporalPropertyTranslator(
     
     relation match {
       case _: SingletonRelation =>
-        // 单例关系：直接比较值
+        // Singleton relation: directly compare values
         if (args.length == 1) {
           val argExpr = translateValueExpr(args.head, variableContext, stateVar.getSort)
           ctx.mkEq(stateVar, argExpr)
         } else {
-          // 多字段单例关系：需要访问 tuple 的各个字段
+          // Multi-field singleton relation: need to access tuple fields
           val constraints = args.zipWithIndex.map { case (arg, idx) =>
-            // TODO: 实现 tuple 字段访问
+            // TODO: implement tuple field access
             throw new IllegalArgumentException("Multi-field singleton relations not yet supported")
           }
           ctx.mkAnd(constraints: _*)
         }
       
       case sr: SimpleRelation =>
-        // 简单关系（数组表示）
+        // Simple relation (array representation)
         val relIndices = indices.getOrElse(sr, List())
         
         if (relIndices.isEmpty) {
           throw new IllegalArgumentException(s"No indices defined for relation ${sr.name}")
         }
         
-        // 分离键和值
+        // Separate keys and values
         val keyArgs = relIndices.map(i => args(i))
         val valueIndices = args.indices.filterNot(relIndices.contains).toList
         val valueArgs = valueIndices.map(i => args(i))
         
-        // 翻译键
+        // Translate keys
         val keyExprs = keyArgs.map(arg => translateArithExpr(arg, variableContext)).toArray
         
-        // 数组选择：array[key1, key2, ...]
+        // Array select: array[key1, key2, ...]
         val selectedValue = if (keyExprs.length == 1) {
           ctx.mkSelect(
             stateVar.asInstanceOf[Expr[com.microsoft.z3.ArraySort[com.microsoft.z3.Sort, com.microsoft.z3.Sort]]],
@@ -410,17 +410,17 @@ class TemporalPropertyTranslator(
           )
         }
         
-        // 翻译值（需要根据数组元素类型）
+        // Translate values (based on array element type)
         if (valueArgs.length == 1) {
           val valueExpr = translateValueExpr(valueArgs.head, variableContext, selectedValue.getSort)
           ctx.mkEq(selectedValue, valueExpr)
         } else {
-          // 多值：需要访问 tuple
+          // Multiple values: need to access tuple
           throw new IllegalArgumentException("Multi-value relations not yet supported")
         }
       
       case _: ReservedRelation =>
-        // 保留关系（如 msgSender, msgValue）
+        // Reserved relation (e.g., msgSender, msgValue)
         if (args.length == 1) {
           val argExpr = translateValueExpr(args.head, variableContext, stateVar.getSort)
           ctx.mkEq(stateVar, argExpr)
@@ -431,22 +431,22 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 翻译值表达式（可以是算术或布尔）
-   * 根据目标类型自动选择正确的翻译方式
+   * Translate value expression (can be arithmetic or boolean)
+   * Automatically select correct translation based on target type
    */
   private def translateValueExpr(expr: TemporalExpr, variableContext: Map[String, Expr[_]], targetSort: com.microsoft.z3.Sort): Expr[_] = {
     val sortStr = targetSort.toString
     
     if (sortStr == "Bool") {
-      // 布尔类型
+      // Boolean type
       expr match {
         case TemporalExpr.BoolLiteral(value) =>
           if (value) ctx.mkTrue() else ctx.mkFalse()
         case TemporalExpr.NumericLiteral(value) =>
-          // 数字转布尔：0 -> false, 非0 -> true
+          // Convert number to boolean: 0 -> false, non-zero -> true
           if (value == 0) ctx.mkFalse() else ctx.mkTrue()
         case TemporalExpr.Identifier(name) =>
-          // 从变量上下文获取布尔变量
+          // Get boolean variable from variable context
           variableContext.get(name) match {
             case Some(v: Expr[_]) if v.getSort.toString == "Bool" =>
               v.asInstanceOf[com.microsoft.z3.BoolExpr]
@@ -459,38 +459,38 @@ class TemporalPropertyTranslator(
           throw new IllegalArgumentException(s"Cannot translate $expr as boolean value")
       }
     } else {
-      // 算术类型（Int）
+      // Arithmetic type (Int)
       translateArithExpr(expr, variableContext)
     }
   }
   
   /**
-   * 翻译 ONCE 运算符
+   * Translate ONCE operator
    * 
-   * ONCE φ 的语义：∃j≤i. T[j]⊨φ
+   * Semantics of ONCE φ: ∃j≤i. T[j]⊨φ
    * 
-   * 实现：使用辅助布尔状态变量 once_φ
-   * - 初始状态：once_φ = false
-   * - 转换关系：once_φ' = once_φ ∨ φ
-   * - 属性：once_φ
+   * Implementation: Use auxiliary boolean state variable once_φ
+   * - Initial state: once_φ = false
+   * - Transition relation: once_φ' = once_φ ∨ φ
+   * - Property: once_φ
    */
   private def translateOnce(expr: TemporalExpr, variableContext: Map[String, Expr[_]]): BoolExpr = {
-    val exprKey = expr.toString // 使用表达式的字符串表示作为唯一键
+    val exprKey = expr.toString // Use string representation of expression as unique key
     
-    // 获取或创建 ONCE 辅助变量
+    // Get or create ONCE auxiliary variable
     val (onceVar, onceVarNext, _) = onceVars.getOrElseUpdate(exprKey, {
-      val varName = s"once_${onceVars.size}" // 生成唯一的变量名
+      val varName = s"once_${onceVars.size}" // Generate unique variable name
       val (v_in, v_out) = transitionSystem.newVar(varName, ctx.mkBoolSort())
-      (v_in, v_out, expr) // 存储原始表达式
+      (v_in, v_out, expr) // Store original expression
     })
     
-    // 返回辅助变量（表示"曾经成立过"）
+    // Return auxiliary variable (represents "has held at some point")
     onceVar.asInstanceOf[BoolExpr]
   }
   
   /**
-   * 获取 ONCE 辅助变量的初始化约束
-   * 所有 ONCE 变量初始为 false
+   * Get initialization constraints for ONCE auxiliary variables
+   * All ONCE variables are initially false
    */
   def getOnceInitConstraints(): BoolExpr = {
     if (onceVars.isEmpty) {
@@ -504,10 +504,10 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 获取 ONCE 辅助变量的更新约束
+   * Get update constraints for ONCE auxiliary variables
    * once_φ' = once_φ ∨ φ
    * 
-   * 这个方法需要在转换关系中调用，以确保 ONCE 变量正确更新。
+   * This method needs to be called in the transition relation to ensure ONCE variables are correctly updated.
    */
   def getOnceUpdateConstraints(): BoolExpr = {
     if (onceVars.isEmpty) {
@@ -515,7 +515,7 @@ class TemporalPropertyTranslator(
     } else {
       val constraints = onceVars.map { case (exprKey, (onceVar, onceVarNext, expr)) =>
         // once_φ' = once_φ ∨ φ
-        // 翻译 φ（在当前状态）
+        // Translate φ (in current state)
         val phiConstraint = translateExpr(expr, Map())
         ctx.mkEq(
           onceVarNext,
@@ -527,7 +527,7 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 在 Program 中查找关系
+   * Find relation in Program
    */
   private def findRelation(name: String): Relation = {
     program.relations.find(_.name == name).getOrElse(
@@ -536,7 +536,7 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 收集表达式中的自由变量（用于量化）
+   * Collect free variables in expression (for quantification)
    */
   def collectFreeVariables(expr: TemporalExpr): Set[String] = {
     expr match {
@@ -573,16 +573,16 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 创建变量上下文（将变量名映射到 Z3 常量）
-   * @param varNames 变量名集合
-   * @param expr 用于推断类型的表达式
+   * Create variable context (map variable names to Z3 constants)
+   * @param varNames Set of variable names
+   * @param expr Expression used for type inference
    */
   def createVariableContext(
     varNames: Set[String],
     expr: TemporalExpr
   ): Map[String, Expr[_]] = {
     varNames.map { name =>
-      // 从表达式中推断变量类型
+      // Infer variable type from expression
       val varType = inferVariableType(name, expr)
       val sort = Z3Helper.typeToSort(ctx, varType)
       val z3Var = ctx.mkConst(name, sort)
@@ -591,35 +591,35 @@ class TemporalPropertyTranslator(
   }
   
   /**
-   * 推断变量类型
-   * 从表达式中的函数调用推断变量类型
+   * Infer variable type
+   * Infer variable type from function calls in expression
    */
   private def inferVariableType(varName: String, expr: TemporalExpr): Type = {
-    // 在表达式中查找使用该变量的函数调用
-    findVariableTypeInExpr(varName, expr).getOrElse(Type.uintType) // 默认为 uint
+    // Find function calls that use this variable in the expression
+    findVariableTypeInExpr(varName, expr).getOrElse(Type.uintType) // Default to uint
   }
   
   /**
-   * 在表达式中递归查找变量的类型
-   * 通过查找 FunctionCall(name, args) 中 Identifier(varName) 的位置来推断类型
+   * Recursively find variable type in expression
+   * Infer type by finding position of Identifier(varName) in FunctionCall(name, args)
    */
   private def findVariableTypeInExpr(varName: String, expr: TemporalExpr): Option[Type] = {
     expr match {
       case TemporalExpr.FunctionCall(name, args) =>
-        // 找到这个函数对应的关系
+        // Find the relation corresponding to this function
         program.relations.find(_.name == name) match {
           case Some(relation) =>
-            // 在参数列表中查找变量的位置
+            // Find variable position in argument list
             args.zipWithIndex.collectFirst {
               case (TemporalExpr.Identifier(vName), idx) if vName == varName =>
-                // 返回对应位置的类型
+                // Return the type at the corresponding position
                 if (idx < relation.sig.length) relation.sig(idx) else Type.uintType
             }.orElse {
-              // 递归查找嵌套表达式
+              // Recursively search nested expressions
               args.flatMap(arg => findVariableTypeInExpr(varName, arg)).headOption
             }
           case None =>
-            // 关系未找到，递归查找参数
+            // Relation not found, recursively search arguments
             args.flatMap(arg => findVariableTypeInExpr(varName, arg)).headOption
         }
       
@@ -667,7 +667,7 @@ class TemporalPropertyTranslator(
 
 object TemporalPropertyTranslator {
   /**
-   * 工厂方法：创建翻译器实例
+   * Factory method: create translator instance
    */
   def apply(
     ctx: Context,
