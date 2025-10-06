@@ -1,13 +1,15 @@
 package synthesis
 
-import datalog.{Program, Relation}
-import imp.{SolidityStatement}
+import datalog.{Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation}
+import imp.SolidityStatement
 import imp.{ImperativeTranslator, Inliner}
 import imp.SolidityTranslator.transactionRelationPrefix
 
 case class Cegis(sketch: Program) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
+  val interpreter = SolidityInterpreter()
+  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter)
 
   /**  This is a composed object that :
    *
@@ -16,7 +18,7 @@ case class Cegis(sketch: Program) {
    *  - Run the inductive synthesizer that generate new program that blocks such EvaluatedTrace
    *  - iterate until no counter example is found by the BMC.
   *  */
-  def run(maxBound: Int = 4, maxIters: Int = 10): Program = {
+  def run(maxBound: Int = 4, maxIters: Int = 10, maxSolutionsPerStep: Int = 10): Program = {
     // Assumptions made:
     // 1) We try to use the SolidityInterpreter whenever possible. We construct a
     //    minimal `ReadValueFromMap` statement that performs a read using constant
@@ -30,7 +32,6 @@ case class Cegis(sketch: Program) {
     var program: Program = sketch
     var traces: Set[EvaluatedTrace] = Set()
     val bmc = BoundedModelChecker()
-    val interpreter = SolidityInterpreter()
 
     var iter = 0
     while (iter < maxIters) {
@@ -60,8 +61,7 @@ case class Cegis(sketch: Program) {
 
       traces += evaluatedTrace
       println("[CEGIS] Running inductive synthesis to block the counterexample...")
-      // todo: need to extend synthesize to take multiple traces
-      val newProgram = synthesizer.synthesize(sketch, traces)
+      val newProgram = synthesizer.synthesize(sketch, traces, maxSolutionsPerStep, disambiguationTraces)
 
       if (newProgram == program) {
         println("[CEGIS] Synthesizer produced no change. Stopping.")
@@ -120,5 +120,37 @@ case class Cegis(sketch: Program) {
     }
 
     mappings.toMap
+  }
+
+  private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter, numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+    import scala.util.Random
+    val interfaceRelations = sketch.interfaces.map(_.relation).
+      filter(_.name.startsWith(transactionRelationPrefix)).toList
+    val txRelations = interfaceRelations.map {
+      case sr: SimpleRelation => sr.copy(name=sr.name.stripPrefix(transactionRelationPrefix))
+      case SingletonRelation(name, sig, memberNames) => ???
+      case relation: ReservedRelation => ???
+    }
+
+    // Helper to generate a random transaction for a relation
+    def randomTransaction(rel: datalog.Relation): Transaction = {
+      val params = rel.sig.zipWithIndex.map { case (t, i) =>
+        // Use random integer as string for each parameter
+        datalog.Constant(t, Random.nextInt(100).toString)
+      }
+      Transaction(rel, params, ImplicitParameters())
+    }
+
+    // Generate random traces
+    val randomTraces: Set[Trace] = (1 to numTraces).map { _ =>
+      val txs = (1 to txsPerTrace).map { _ =>
+        val rel = txRelations(Random.nextInt(interfaceRelations.size))
+        randomTransaction(rel)
+      }
+      Trace(txs.toList)
+    }.toSet
+
+    // Convert traces to EvaluatedTrace
+    randomTraces.map(t => solInterpreter.interpret(txDefs, t))
   }
 }

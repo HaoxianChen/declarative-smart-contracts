@@ -13,6 +13,11 @@ case class InductiveSynthesis(
   predicatesPerRule: Map[Rule,Set[Predicate]],
   interpreterContext: InterpreterContext
 ) {
+
+  case class Representation(map: Map[Relation, Set[Predicate]]) {
+    def getPredicates(rel: Relation): Set[Predicate] = map(rel)
+  }
+
   val interpreter: Interpreter = Interpreter(interpreterContext)
 
   /** Reorganize and make the predicate lookup by relation efficient. */
@@ -77,12 +82,12 @@ case class InductiveSynthesis(
   }
 
   /**
-    * Given a Z3 model, extract for each relation the list of predicate assignments
-    * (true if the predicate variable is true in the model, false otherwise).
-    * Also print the selected predicates for each relation.
-    */
-  private def interpretModel(model: Model): Map[Relation, List[Boolean]] = {
-    encodings.map { case (rel, boolVars) =>
+   * Given a Z3 model, extract for each relation the list of predicate assignments
+   * (true if the predicate variable is true in the model, false otherwise).
+   * Also print the selected predicates for each relation.
+   */
+  private def interpretModel(model: Model): Representation = {
+    val mapping = encodings.map { case (rel, boolVars) =>
       val preds = predicates(rel).toList
       val assignments = boolVars.map { v =>
         val value = model.eval(v, true)
@@ -91,13 +96,15 @@ case class InductiveSynthesis(
       val selectedPreds = preds.zip(assignments).collect {
         case (p, true) => p
       }
-      println(s"Relation: ${rel.name}")
-      selectedPreds.foreach(p => println(s"  Selected: ${p}"))
-      rel -> assignments
+      // println(s"Relation: ${rel.name}")
+      // selectedPreds.foreach(p => println(s"  Selected: ${p}"))
+      //rel -> assignments
+      rel -> selectedPreds.toSet
     }
+    Representation(mapping)
   }
 
-  /** Rename relatio in trace with the recv_ prefix */
+  /** Rename relation in trace with the recv_ prefix */
   private def renameTxRelationInTrace(old: EvaluatedTrace): EvaluatedTrace = {
 
     def toTxTriggerRelation(relation: Relation): Relation = {
@@ -117,8 +124,39 @@ case class InductiveSynthesis(
     old.copy(steps=newSteps)
   }
 
-  /** Perform the synthesis given an EvaluatedTrace and predicates. */
-  def synthesize(sketch:Program, evaluatedTraces: Set[EvaluatedTrace]): Program = {
+  def synthesize(sketch: Program,
+                 evaluatedTraces: Set[EvaluatedTrace],
+                 maxSolutions: Int,
+                 disambiguationTraces: Set[EvaluatedTrace]): Program = {
+    val candidates = synthesizeMultiSolution(evaluatedTraces, maxSolutions)
+    val selection = disambiguate(disambiguationTraces, candidates.toSet)
+    makeProgram(sketch, selection)
+  }
+
+  private def disambiguate(disambiguationTraces: Set[EvaluatedTrace],
+                           candidates: Set[Representation]): Representation = {
+
+    def accept(trace: EvaluatedTrace, repr: Representation): Boolean = {
+      trace.iterateTxAndStateBefore.forall{
+        case (state, tx) =>
+          val predicates = repr.getPredicates(tx.relation)
+          predicates.forall(p => interpreter.evaluate(state, tx, p))
+      }
+    }
+
+    def permissiveness(traces: Set[EvaluatedTrace], repr: Representation): Int =
+      traces.count(t => accept(t, repr))
+
+    val renamedTrace = disambiguationTraces.map(renameTxRelationInTrace)
+
+    val permissivenessScores: Map[Representation, Int] = {
+      candidates.map( c => c -> permissiveness(renamedTrace, c) ).toMap
+    }
+    candidates.maxBy(permissivenessScores)
+  }
+
+  /** Perform the synthesis given EvaluatedTraces and predicates, returning up to maxSolutions programs. */
+  def synthesizeMultiSolution(evaluatedTraces: Set[EvaluatedTrace], maxSolutions: Int = 1): List[Representation] = {
     // rename relations in Evaluated Trace to ones with recv_ prefix
     val renamedTraces = evaluatedTraces.map(renameTxRelationInTrace)
     val traceConstraints = renamedTraces.map(t => {
@@ -128,19 +166,26 @@ case class InductiveSynthesis(
     val constraint = z3ctx.mkAnd(traceConstraints.toSeq:_*)
     val solver = z3ctx.mkSolver()
     solver.add(constraint)
-    val status = solver.check()
-    val selection: Map[Relation, List[Boolean]] = if (status == com.microsoft.z3.Status.SATISFIABLE) {
+    var solutions = List.empty[Representation]
+    var found = 0
+    while (found < maxSolutions && solver.check() == com.microsoft.z3.Status.SATISFIABLE) {
       val model = solver.getModel
       val selection = interpretModel(model)
-      // Return the predicate assignments discovered by the solver
-      selection
-    } else {
-      Map.empty
+      solutions = solutions :+ selection
+      // Add blocking clause to prevent finding the same model again
+      val block = encodings.flatMap { case (_, boolVars) =>
+        boolVars.map { v =>
+          val value = model.eval(v, true)
+          if (value.isTrue) z3ctx.mkNot(v) else v
+        }
+      }.toSeq
+      solver.add(z3ctx.mkOr(block:_*))
+      found += 1
     }
-    makeProgram(sketch, selection)
+    solutions
   }
 
-  private def makeProgram(sketch: Program, predicateSelection: Map[Relation, List[Boolean]]): Program = {
+  private def makeProgram(sketch: Program, repr: Representation): Program = {
     // For each rule in the sketch, if it is a transaction rule, replace it with a rule
     // that includes the selected predicates' binding literals in the body and predicate functors
     // in the rule's functors set. Non-transaction rules are kept as-is.
@@ -153,15 +198,15 @@ case class InductiveSynthesis(
 
       txLiteralOpt match {
         case Some(txLit) => {
-          // Find selected predicates for the transaction relation
-          val rel = txLit.relation
-          val selection: List[Boolean] = predicateSelection.getOrElse(rel, List.empty)
-          val candidates: List[Predicate] = predicates.getOrElse(rel, Set.empty).toList
+          // // Find selected predicates for the transaction relation
+          // val rel = txLit.relation
+          // val selection: List[Boolean] = predicateSelection.getOrElse(rel, List.empty)
+          // val candidates: List[Predicate] = predicates.getOrElse(rel, Set.empty).toList
 
-          // Pair candidates with selection booleans; if selection shorter than candidates, treat missing as false
-          val selectedPreds: Set[Predicate] = candidates.zipAll(selection, null, false)
-            .collect { case (p: Predicate, true) => p }.toSet
-
+          // // Pair candidates with selection booleans; if selection shorter than candidates, treat missing as false
+          // val selectedPreds: Set[Predicate] = candidates.zipAll(selection, null, false)
+          //   .collect { case (p: Predicate, true) => p }.toSet
+          val selectedPreds = repr.getPredicates(txLit.relation)
           val newRule = makeRule(r, selectedPreds)
           println(s"[makeProgram] selected predicates: $selectedPreds")
           println(s"[makeProgram] new rule: $newRule")

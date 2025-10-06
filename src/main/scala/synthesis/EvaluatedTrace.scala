@@ -16,6 +16,12 @@ case class EvaluatedTrace(
 
   override def toString: String =
     s"EvaluatedTrace(${steps.map(_.toString()).mkString("\n")})"
+
+  def iterateTxAndStateBefore: Iterator[(State, Transaction)] = {
+    val states = initialState +: steps.map(_._2)
+    val txs = steps.map(_._1)
+    states.zip(txs).iterator
+  }
 }
 
 object EvaluatedTrace {
