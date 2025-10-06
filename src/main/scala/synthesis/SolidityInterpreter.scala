@@ -1,7 +1,7 @@
 package synthesis
 
 import com.microsoft.z3.FuncDecl
-import datalog.{Add, AnyType, Arithmetic, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, Mul, Negative, NumberType, One, Param, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, SymbolType, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, Arithmetic, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, Mul, Negative, NumberType, One, Param, Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, SymbolType, UnitType, Variable, Zero}
 import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue}
 
 /**

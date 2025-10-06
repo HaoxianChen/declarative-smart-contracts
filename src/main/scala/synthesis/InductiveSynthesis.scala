@@ -1,8 +1,9 @@
 package synthesis
 
 import com.microsoft.z3.{BoolExpr, Context, Model}
-import datalog.{Program, Relation, Rule}
+import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation}
 import synthesis.EvaluatedTrace.shiftTrace
+import imp.SolidityTranslator.transactionRelationPrefix
 
 /** Given an EvaluatedTrace object, a set of predicates, return
  * a mapping, each transaction type to a bit vector encoding,
@@ -96,9 +97,31 @@ case class InductiveSynthesis(
     }
   }
 
+  /** Rename relatio in trace with the recv_ prefix */
+  private def renameTxRelationInTrace(old: EvaluatedTrace): EvaluatedTrace = {
+
+    def toTxTriggerRelation(relation: Relation): Relation = {
+      require(!relation.name.startsWith(transactionRelationPrefix), "Assuming non tx relation")
+      relation match {
+        case SimpleRelation(name, sig, memberNames) =>
+          SimpleRelation(s"$transactionRelationPrefix$name", sig, memberNames)
+        case SingletonRelation(name, sig, memberNames) => ???
+        case relation: ReservedRelation => ???
+      }
+    }
+
+    val newSteps = old.steps.map{case (tx, state) =>
+      val triggerRelation = toTxTriggerRelation(tx.relation)
+      (tx.updateRelation(triggerRelation), state)
+    }
+    old.copy(steps=newSteps)
+  }
+
   /** Perform the synthesis given an EvaluatedTrace and predicates. */
   def synthesize(sketch:Program, evaluatedTrace: EvaluatedTrace): Program = {
-    val evalResults = evaluatePredicates(evaluatedTrace)
+    // rename relations in Evaluated Trace to ones with recv_ prefix
+    val renamedTrace = renameTxRelationInTrace(evaluatedTrace)
+    val evalResults = evaluatePredicates(renamedTrace)
     val constraint = makeConstraints(evalResults)
     val solver = z3ctx.mkSolver()
     solver.add(constraint)

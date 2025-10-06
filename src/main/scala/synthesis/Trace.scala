@@ -22,6 +22,11 @@ case class Transaction(relation: Relation, parameters: List[Constant],
                        implicitParameters: ImplicitParameters) {
   def arity: Int = relation.arity
   override def toString: String = s"${relation.name}(${parameters.mkString(",")}) [${implicitParameters}]"
+
+  def updateRelation(newRelation: Relation): Transaction = {
+    require(newRelation.sig == relation.sig && newRelation.memberNames == relation.memberNames)
+    this.copy(relation=newRelation)
+  }
 }
 
 

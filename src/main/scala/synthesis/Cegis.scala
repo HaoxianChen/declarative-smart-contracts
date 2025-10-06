@@ -61,7 +61,6 @@ case class Cegis(sketch: Program) {
       traces += evaluatedTrace
       println("[CEGIS] Running inductive synthesis to block the counterexample...")
       // todo: need to extend synthesize to take multiple traces
-      ???
       val newProgram = synthesizer.synthesize(program, evaluatedTrace)
 
       if (newProgram == program) {
