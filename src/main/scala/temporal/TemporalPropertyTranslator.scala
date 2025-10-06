@@ -64,7 +64,6 @@ class TemporalPropertyTranslator(
       // For other cases, also use universal quantification by default (safety properties)
       property.expr match {
         case TemporalExpr.Always(_) =>
-          // ALWAYS is already handled in translateExpr, here we only need to quantify internal free variables
           if (varContext.nonEmpty) {
             ctx.mkForall(
               varContext.values.toArray,

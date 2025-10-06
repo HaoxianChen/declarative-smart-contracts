@@ -13,7 +13,7 @@ object Main extends App {
   val outDirWithInstrumentations = "solidity/dsc-instrument"
   val benchmarkDir = "benchmarks"
   val allBenchmarks = List(
-    "crowFunding.dl",
+    "crowdFunding.dl",
     "erc20.dl",
     "nft.dl",
     "wallet.dl",

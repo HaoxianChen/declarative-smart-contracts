@@ -1,0 +1,5 @@
+// No token purchase after finalization
+NOT (ONCE (finalize()) AND transaction(recv_buyToken))
+
+// Finalization only happens after end time
+ALWAYS (finalize() IMPLY (now(t) AND end(e) AND t > e))

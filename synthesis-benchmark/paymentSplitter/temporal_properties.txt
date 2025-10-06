@@ -1,0 +1,1 @@
+ALWAYS ((totalReceived(r) AND shares(p, m) AND totalShares(s) AND released(p, e) AND s > 0) IMPLY e <= r * m / s)

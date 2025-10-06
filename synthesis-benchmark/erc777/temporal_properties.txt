@@ -1,0 +1,3 @@
+// Default operators should not be explicitly authorized
+NOT (defaultOperator(o, true) AND operators(p, o, true))
+

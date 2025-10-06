@@ -1,0 +1,1 @@
+ALWAYS (totalBalances(s) AND freezeSum(f) AND totalSupply(n) IMPLY s + f <= n)

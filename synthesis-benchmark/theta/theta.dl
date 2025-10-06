@@ -1,4 +1,4 @@
-// adopted from Etherscan: https://etherscan.io/token/0xB8c77482e45F1F44dE1745F52C74426C631bDD52#code.
+// Adopted from: https://etherscan.io/token/0x3883f5e181fccaf8410fa61e12b59bad963fb645#code
 
 // parameters
 .decl *owner(p: address)
@@ -6,17 +6,32 @@
 // views
 .decl *totalSupply(n: uint)
 .decl balanceOf(p: address, n: uint)[0]
-.decl freezeOf(p: address, n: uint)[0]
-.decl constructor(initialSupply: uint)
+.decl constructor(t:uint)
 
 // New views
 .decl allowance(p: address, s: address, n:uint)[0,1]
+
+.decl precirculated(p:address, b:bool)[0]
+.decl canTransfer(p:address,q:address)
+.function canTransfer
+
+.decl *unlockTime(t: uint)
+
+canTransfer(p,q) :- now(t), unlockTime(ut), t >= ut.
+canTransfer(p,q) :- precirculated(p,true), precirculated(q,true).
+
+.decl recv_allowPrecirculation(p:address)
+.decl recv_disallowPrecirculation(p:address)
+precirculated(p,true) :- recv_allowPrecirculation(p), msgSender(s), owner(s).
+precirculated(p,false) :- recv_disallowPrecirculation(p), msgSender(s), owner(s).
+.public recv_allowPrecirculation
+.public recv_disallowPrecirculation
 
 // Transactions
 .decl mint(p: address, amount: uint)
 .decl recv_mint(p: address, amount: uint)
 .decl burn(p: address, amount: uint)
-.decl recv_burn(amount: uint)
+.decl recv_burn(p: address, amount: uint)
 .decl transfer(from: address, to: address, amount: uint)
 .decl recv_transfer(to: address, amount: uint)
 
@@ -26,7 +41,7 @@
 .decl recv_approve(s: address, n:uint)
 
 // Interfaces
-// .public recv_mint
+.public recv_mint
 .public recv_burn
 .public recv_transfer
 .public balanceOf(1)
@@ -37,57 +52,28 @@
 .public recv_transferFrom
 .public allowance(2)
 
-.decl recv_freeze(n: uint)
-.decl recv_unfreeze(n: uint)
-.decl freeze(p: address, n: uint)
-.decl unfreeze(p: address, n: uint)
-freeze(p,n) :- recv_freeze(n), msgSender(p), balanceOf(p,m), n <= m, n > 0.
-unfreeze(p,n) :- recv_unfreeze(n), msgSender(p), freezeOf(p,m), n<=m, n > 0.
+// Rules
+owner(s) :- constructor(_), msgSender(s).
+totalSupply(0) :- constructor(_).
+unlockTime(t) :- constructor(t).
 
-.decl recv_withdrawEther(amount: uint)
-.decl withdrawEther(p:address, amount: uint)
-withdrawEther(p,n) :- recv_withdrawEther(n), msgSender(p), owner(p).
-send(p,n) :- withdrawEther(p,n).
-
-.public recv_freeze
-.public recv_unfreeze
-.public recv_withdrawEther
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+  canTransfer(s,r).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
-.decl totalFreeze(p: address, n: uint)[0]
-.decl totalUnfreeze(p: address, n: uint)[0]
 .decl totalOut(p: address, n: uint)[0]
 .decl totalIn(p: address, n: uint)[0]
-
-.decl *allMint(n: uint)
-.decl *allBurn(n: uint)
-
-// Rules
-owner(s) :- constructor(_), msgSender(s).
-totalSupply(n) :- constructor(n).
-balanceOf(s,n) :- constructor(n), msgSender(s).
-totalIn(s,n) :- constructor(n), msgSender(s).
-totalMint(s,n) :- constructor(n), msgSender(s).
-allMint(n) :- constructor(n).
-
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(n), msgSender(p), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m, n>0, r!=0, n+m>=m.
-
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
 totalBurn(p,s) :- burn(p,_), s = sum n: burn(p,n).
+balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
 
-totalFreeze(p,s) :- freeze(p,_), s = sum n: freeze(p,n).
-totalUnfreeze(p,s) :- unfreeze(p,_), s = sum n: unfreeze(p,n).
-
-freezeOf(p,n) :- totalFreeze(p,f), totalUnfreeze(p,u), n:=f-u.
-
-balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), 
-                freezeOf(p,f), s:=n+i-m-o-f.
-
+.decl *allMint(n: uint)
+.decl *allBurn(n: uint)
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
@@ -97,7 +83,7 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
                     balanceOf(o,m), m>=n,
                     msgSender(s), allowance(o,s,k), k>=n,
-                    n>0, r!=0, n+m>=m.
+                    canTransfer(o,r).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
@@ -111,9 +97,6 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 // Properties
 .decl *totalBalances(m: uint)
-.decl *freezeSum(m: uint)
 
-totalBalances(n) :- constructor(n).
+totalBalances(0) :- constructor(_).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
-freezeSum(s) :- s = sum n: freezeOf(_,n).
-

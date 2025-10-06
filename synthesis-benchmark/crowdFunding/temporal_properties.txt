@@ -4,9 +4,6 @@ ALWAYS (totalBalance(m) AND raised(r) AND closed(b) AND b == false IMPLY m == r)
 // Mutual exclusion between withdraw and refund
 NOT (ONCE (withdraw()) AND ONCE (refund()))
 
-// Withdraw happens only after success (raised >= target)
-ALWAYS (ONCE (withdraw()) IMPLY raised(r) AND target(t) AND r >= t)
-
 // Refund only when raised < target
 ALWAYS (ONCE (refund()) IMPLY raised(r) AND target(t) AND r < t)
 

@@ -1,0 +1,2 @@
+// No tokens should be released before the vesting start time
+ALWAYS (released(e) AND now(t) AND start(a) AND e > 0 IMPLY t >= a)
