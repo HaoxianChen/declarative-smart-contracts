@@ -1,7 +1,7 @@
 package synthesis
 
 import com.microsoft.z3.{BoolExpr, Context, Model}
-import datalog.{Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation}
+import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
 
@@ -169,12 +169,32 @@ case class InductiveSynthesis(
     }
 
     // Reuse program metadata from sketch
-    datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
+    // datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
+    sketch.copy(rules=newRules)
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {
     // Collect all binding literals from selected predicates' contexts
-    val bindingLits: Set[datalog.Literal] = predicates.flatMap(p => p.context.bindingLiterals)
+    var bindingLits: Set[datalog.Literal] = predicates.flatMap(p => p.context.bindingLiterals)
+
+    // rename binding literal values to avoid naming collision
+    // make an id, and then add prefix
+    if (bindingLits.size > 1) {
+      val updatedLits = bindingLits.zipWithIndex.map { case (lit, idx) =>
+        val (_, valueParam) = interpreter.extractKeyValueVar(lit)
+        val newName: String = s"${valueParam.name}_$idx"
+        val newParameter = valueParam match {
+          case _: Constant => throw new Exception(s"Expected variable at bidning literal: $lit")
+          case v: Variable => v.copy(name=newName)
+        }
+        val newFields = lit.fields.map {
+          case p if p == valueParam => newParameter
+          case p => p
+        }
+        lit.copy(fields = newFields)
+      }
+      bindingLits = updatedLits.toSet
+    }
 
     // Collect all predicate functors
     val predicateFunctors: Set[datalog.Functor] = predicates.map(_.functor)

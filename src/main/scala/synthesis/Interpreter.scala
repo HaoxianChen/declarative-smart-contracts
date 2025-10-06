@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Min, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import synthesis.PredicateEnumerator.extractTxLiteral
 
 import scala.collection.mutable
@@ -150,6 +150,24 @@ case class Interpreter(interpreterContext: InterpreterContext) {
     }
   }
 
+  def extractKeyValueVar(literal: Literal): (Seq[Parameter], Parameter) = {
+    val rel = literal.relation match {
+      case r: SimpleRelation => r
+      case _ => throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
+    }
+    val keyIndices = relationIndices.getOrElse(rel,
+      throw new IllegalArgumentException(s"Missing indices for relation: $rel"))
+
+    val keyParams = keyIndices.map(literal.fields(_))
+
+    val valueIndices = literal.fields.indices.diff(keyIndices)
+    if (valueIndices.size != 1)
+      throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
+    val valueIdx = valueIndices.head
+    val valueParam = literal.fields(valueIdx)
+    (keyParams, valueParam)
+  }
+
   private def makeBindings(state: State, context: Context, transaction: Transaction): Seq[State.Binding] = {
     // Step 1: Scalar bindings for tx fields
     val scalarBindings: Seq[State.Binding] =
@@ -178,21 +196,24 @@ case class Interpreter(interpreterContext: InterpreterContext) {
           case r: SimpleRelation => r
           case _ => throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
         }
-        val keyIndices = relationIndices.getOrElse(rel,
-          throw new IllegalArgumentException(s"Missing indices for relation: $rel"))
+        // val keyIndices = relationIndices.getOrElse(rel,
+        //   throw new IllegalArgumentException(s"Missing indices for relation: $rel"))
         // Evaluate key parameters from transaction (may be Constant or Variable)
-        val keyParams = keyIndices.map(literal.fields(_))
+        val (keyParams, valueParam) = extractKeyValueVar(literal)
+
+        // val keyParams = keyIndices.map(literal.fields(_))
         val keyInts = keyParams.map {
           case c: Constant => c.name.toInt
           case v: Variable =>
             scalarBindingMap.get(v).map(_.name.toInt).getOrElse(state.lookup(v.name))
         }
         // Find the value variable (the field not in keyIndices)
-        val valueIndices = literal.fields.indices.diff(keyIndices)
-        if (valueIndices.size != 1)
-          throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
-        val valueIdx = valueIndices.head
-        val valueVar = literal.fields(valueIdx) match {
+        // val valueIndices = literal.fields.indices.diff(keyIndices)
+        // if (valueIndices.size != 1)
+        //   throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
+        // val valueIdx = valueIndices.head
+        // val valueVar = literal.fields(valueIdx) match {
+        val valueVar = valueParam match {
           case v: Variable => v
           case other => throw new IllegalArgumentException(s"Value field must be Variable, got: $other")
         }
