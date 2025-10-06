@@ -1,6 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner, SolidityTranslator, Translator}
-import synthesis.{BoundedModelChecker, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
+import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import verification.{Prove, TransitionSystem, Verifier}
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
@@ -246,7 +246,16 @@ object Main extends App {
     /** Synthesize by adding validation condition */
     val synthesizer = InductiveSynthesis(candidates, interpreterContext)
     val testTrace = EvaluatedTrace.testTrace1(program)
-    synthesizer.synthesize(testTrace)
+    val synthesisOutput = synthesizer.synthesize(program, Set(testTrace),
+      maxSolutions = 1, disambiguationTraces = Set())
+    // println(synthesisOutput)
+  }
+
+  else if (args(0) == "cegis") {
+    val datalog_filepath = args(1)
+    val sketch = parseProgram(datalog_filepath)
+    val cegis = Cegis(sketch)
+    cegis.run()
   }
 
   else if (args(0) == "test-interpreter") {

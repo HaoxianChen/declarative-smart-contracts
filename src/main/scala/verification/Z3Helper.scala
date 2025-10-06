@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort}
+import com.microsoft.z3.{ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Quantifier, Sort, Symbol, TupleSort, DatatypeSort}
 import datalog.{Add, ArithOperator, Arithmetic, Assign, Balance, BinaryOperator, Constant, Div, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, MsgValue, Mul, Negative, Now, One, Param, Parameter, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, This, Transaction, Type, Unequal, Variable, Zero}
 
 object Z3Helper {
@@ -60,6 +60,33 @@ object Z3Helper {
     }
   }
 
+  def mkTupleKey(ctx: Context, domainOrArray: Sort, params: Array[Expr[_ <: Sort]]): Expr[Sort] = {
+    // Accept either an ArraySort (extract its domain) or a domain Sort directly
+    val domain: Sort = domainOrArray match {
+      case as: ArraySort[_, _] => as.asInstanceOf[ArraySort[Sort, Sort]].getDomain
+      case s: Sort             => s
+    }
+    domain match {
+      case ts: TupleSort =>
+        // Explicit tuple sort (created by mkTupleSort)
+        val mk = ts.mkDecl()
+        ctx.mkApp(mk, params.map(_.asInstanceOf[Expr[Sort]]): _*).asInstanceOf[Expr[Sort]]
+
+      case ds: DatatypeSort[_] =>
+        // Domain was created by mkArraySort with multiple keys -> single constructor datatype
+        val ctors = ds.getConstructors
+        require(ctors.length == 1, s"Expected 1 constructor, got ${ctors.length}")
+        // Use ctor.apply(...) to avoid Scala/Java generic invariance issues
+        ctors(0).apply(params.map(_.asInstanceOf[Expr[Sort]]): _*).asInstanceOf[Expr[Sort]]
+
+      case _ =>
+        // Single-key case
+        require(params.length == 1,
+          s"Expected 1 parameter for domain $domain, got ${params.length}")
+        params.head.asInstanceOf[Expr[Sort]]
+    }
+  }
+
   def literalToConst(ctx: Context, lit: Literal, indices: List[Int], prefix: String): BoolExpr = {
     lit.relation match {
       case SimpleRelation(name, sig, memberNames) => {
@@ -72,8 +99,15 @@ object Z3Helper {
           val (valueConst, _) = fieldsToConst(ctx, lit.relation, values, fieldNames, prefix)
           val sort = getSort(ctx, lit.relation, indices)
           val arrayConst = ctx.mkConst(name, sort)
-          val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
-          ctx.mkEq(ctx.mkSelect(arrayConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyConsts), valueConst)
+          // val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
+          // build key expr(s) from the key fields
+          val keyExpr: Expr[_ <: Sort] = {
+            val arrSort = sort.asInstanceOf[ArraySort[Sort, Sort]]
+            val domain  = arrSort.getDomain
+            val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
+            mkTupleKey(ctx, domain, keyConsts)
+          }
+          ctx.mkEq(ctx.mkSelect(arrayConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyExpr.asInstanceOf[Expr[Sort]]), valueConst)
         }
         else {
           ???
@@ -118,7 +152,7 @@ object Z3Helper {
   }
 
 
-  def getArraySort(ctx: Context, relation: Relation, indices: List[Int]): (Sort, Array[Sort], Sort) = {
+  def getArraySort(ctx: Context, relation: Relation, indices: List[Int]): (Sort, Sort, Sort) = {
     require(indices.nonEmpty)
     val keyTypes = indices.map(i => relation.sig(i))
     val valueIndices = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
@@ -132,7 +166,25 @@ object Z3Helper {
     else {
       makeTupleSort(ctx, relation, valueTypes.toArray, fieldNames.toArray)
     }
-    (ctx.mkArraySort(keySorts, valueSort), keySorts, valueSort)
+
+    // --- tuple-key domain for arrays ---
+    val arrayDomain: Sort = if (keySorts.length == 1) {
+        keySorts.head
+      } else {
+        // field names for key tuple (stable + readable)
+        val keyFieldSyms: Array[Symbol] =
+          indices.indices.map(j => ctx.mkSymbol(s"${relation.memberNames(j)}")).toArray // e.g., k1_R, k2_R.toArray
+
+        // TupleSort for the multi-key domain
+        ctx.mkTupleSort(
+          ctx.mkSymbol(s"${relation.name}_keyTuple"),
+          keyFieldSyms,
+          keySorts
+        )
+      }
+
+    // (ctx.mkArraySort(keySorts, valueSort), keySorts, valueSort)
+    (ctx.mkArraySort(arrayDomain, valueSort), arrayDomain, valueSort)
   }
 
 

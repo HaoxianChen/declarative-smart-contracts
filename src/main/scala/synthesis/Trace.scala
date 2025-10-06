@@ -22,6 +22,11 @@ case class Transaction(relation: Relation, parameters: List[Constant],
                        implicitParameters: ImplicitParameters) {
   def arity: Int = relation.arity
   override def toString: String = s"${relation.name}(${parameters.mkString(",")}) [${implicitParameters}]"
+
+  def updateRelation(newRelation: Relation): Transaction = {
+    require(newRelation.sig == relation.sig && newRelation.memberNames == relation.memberNames)
+    this.copy(relation=newRelation)
+  }
 }
 
 
@@ -54,7 +59,7 @@ case class Trace(steps: Seq[Transaction]) {
   }
 
   override def toString: String = {
-    steps.zipWithIndex.map { case (tx, i) => s"[$i] ${tx.relation.name}(${tx.parameters.mkString(",")})" }.mkString("Trace:\n", "\n", "")
+    steps.zipWithIndex.map { case (tx, i) => s"[$i] $tx" }.mkString("Trace:\n", "\n", "")
   }
 }
 

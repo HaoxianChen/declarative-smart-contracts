@@ -15,7 +15,13 @@ case class EvaluatedTrace(
   def length: Int = steps.length
 
   override def toString: String =
-    s"EvaluatedTrace(initialState=$initialState, steps=$length)"
+    s"EvaluatedTrace(${steps.map(_.toString()).mkString("\n")})"
+
+  def iterateTxAndStateBefore: Iterator[(State, Transaction)] = {
+    val states = initialState +: steps.map(_._2)
+    val txs = steps.map(_._1)
+    states.zip(txs).iterator
+  }
 }
 
 object EvaluatedTrace {

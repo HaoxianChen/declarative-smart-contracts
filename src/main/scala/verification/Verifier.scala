@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, Status, TupleSort}
 import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
@@ -9,7 +9,7 @@ import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, simplifyByRenamingConst}
+import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, indicatorConstForTransactionTriggerRelation, simplifyByRenamingConst}
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
@@ -570,8 +570,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
         val excludeParamKeys: Set[(String, Int)] = inputIndicesForRel.map(idx => (relName, idx))
         val unchangedConstraints: List[BoolExpr] = getUnchangedConstraintsWithParams(ruleConstraint, txParamVars, excludeParamKeys)
 
-        /** A boolean value indicating which transaction branch gets evaluate to true */
-        val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        /** An Int const indicating which transaction branch gets evaluate to true */
+        // val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        val trConst = indicatorConstForTransactionTriggerRelation(ctx, t.relation, i)
         i += 1
 
         /** Indicator for transaction name. */
@@ -916,7 +917,7 @@ object Verifier {
                          indices: Map[SimpleRelation, List[Int]],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
     case sr: SimpleRelation => {
-      val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+      val (arraySort, keySort, valueSort) = getArraySort(ctx, sr, indices(sr))
       val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
       val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
       val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
@@ -934,10 +935,8 @@ object Verifier {
       }
 
       val initConstraints = if (isQuantified) {
-        ctx.mkForall(keyConstArray, ctx.mkEq(
-          ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray),
-          initValues),
-          1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+        val constArray =  ctx.mkConstArray(keySort, initValues)
+        ctx.mkEq(const, constArray)
       }
       else {
         ctx.mkEq(ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray), initValues)
@@ -965,5 +964,11 @@ object Verifier {
   def addBuiltInRules(p: Program): Program = {
      val builtInRules = parseProgramFromRawString(BuiltInRules.ruleStr).rules
      p.addRules(builtInRules)
+  }
+
+  def indicatorConstForTransactionTriggerRelation(ctx: Context, relation: Relation, ruleId: Int): IntExpr = {
+    // Expect those recv_ relations
+    require(relation.name.startsWith(transactionRelationPrefix))
+    ctx.mkIntConst(s"${relation.name}$ruleId")
   }
 }
