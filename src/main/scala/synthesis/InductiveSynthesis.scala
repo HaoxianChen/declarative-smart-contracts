@@ -1,6 +1,6 @@
 package synthesis
 
-import com.microsoft.z3.{BoolExpr, Context, Model}
+import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, Model}
 import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
@@ -118,11 +118,14 @@ case class InductiveSynthesis(
   }
 
   /** Perform the synthesis given an EvaluatedTrace and predicates. */
-  def synthesize(sketch:Program, evaluatedTrace: EvaluatedTrace): Program = {
+  def synthesize(sketch:Program, evaluatedTraces: Set[EvaluatedTrace]): Program = {
     // rename relations in Evaluated Trace to ones with recv_ prefix
-    val renamedTrace = renameTxRelationInTrace(evaluatedTrace)
-    val evalResults = evaluatePredicates(renamedTrace)
-    val constraint = makeConstraints(evalResults)
+    val renamedTraces = evaluatedTraces.map(renameTxRelationInTrace)
+    val traceConstraints = renamedTraces.map(t => {
+      val evalResults = evaluatePredicates(t)
+      makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
+    })
+    val constraint = z3ctx.mkAnd(traceConstraints.toSeq:_*)
     val solver = z3ctx.mkSolver()
     solver.add(constraint)
     val status = solver.check()

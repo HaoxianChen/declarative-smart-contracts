@@ -59,7 +59,7 @@ case class Trace(steps: Seq[Transaction]) {
   }
 
   override def toString: String = {
-    steps.zipWithIndex.map { case (tx, i) => s"[$i] ${tx.relation.name}(${tx.parameters.mkString(",")})" }.mkString("Trace:\n", "\n", "")
+    steps.zipWithIndex.map { case (tx, i) => s"[$i] $tx" }.mkString("Trace:\n", "\n", "")
   }
 }
 

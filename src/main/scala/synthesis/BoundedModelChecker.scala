@@ -251,9 +251,8 @@ case class BoundedModelChecker() {
     println(s"[BMC] Solver result for rule ${rule.head.relation.name} at bound $k: $res")
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
-      println(model)
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
-      println(trace)
+      // println(trace)
       // val evalutedTrace = extractEvaluatedTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       // println(evalutedTrace)
       trace match {

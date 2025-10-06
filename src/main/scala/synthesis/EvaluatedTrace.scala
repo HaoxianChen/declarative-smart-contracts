@@ -15,7 +15,7 @@ case class EvaluatedTrace(
   def length: Int = steps.length
 
   override def toString: String =
-    s"EvaluatedTrace(initialState=$initialState, steps=$length)"
+    s"EvaluatedTrace(${steps.map(_.toString()).mkString("\n")})"
 }
 
 object EvaluatedTrace {
