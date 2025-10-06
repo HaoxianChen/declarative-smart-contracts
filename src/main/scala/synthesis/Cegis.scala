@@ -9,7 +9,8 @@ case class Cegis(sketch: Program) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter()
-  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter)
+  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
+    numTraces = 100, txsPerTrace = 3)
 
   /**  This is a composed object that :
    *
