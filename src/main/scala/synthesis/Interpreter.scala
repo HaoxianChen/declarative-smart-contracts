@@ -12,7 +12,7 @@ case class State() {
 
 
   def lookup(variableName: String): Int = {
-    state(variableName)
+    state.get(variableName).getOrElse(0)
   }
 
   // Backward-compatible single-key lookup
