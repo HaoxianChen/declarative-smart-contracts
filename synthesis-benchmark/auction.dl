@@ -1,0 +1,65 @@
+/**
+  Example taken from Solidity documentation: https://docs.soliditylang.org/en/v0.8.7/solidity-by-example.html#simple-open-auction
+ */
+
+// Configs
+.decl *owner(p: address)
+.decl *beneficiary(p: address)
+.decl *endTime(t: uint)
+.decl constructor(beneficiary: address, biddingTime: uint)
+
+// Constructor
+owner(s) :- constructor(_,_), msgSender(s).
+endTime(t2) :- constructor(_,d), now(t), t2 := t+d.
+beneficiary(p) :- constructor(p,_).
+
+// Transactions
+.decl bid(bidder: address, amount: uint)
+.decl recv_bid()
+.decl withdraw(bidder: address, amount: uint)
+.decl recv_withdraw()
+.decl recv_withdrawWinner()
+.decl *end(b: bool)
+.decl recv_endAuction()
+
+// Interface
+.public recv_bid
+.public recv_withdraw
+.public recv_endAuction
+
+// Views
+.decl *highestBid(bidder: address, amount: uint)
+.decl balance(p: address, n:uint)[0]
+.public balance(1)
+
+highestBid(p,m) :- bid(p,m), m = max n: bid(_, n).
+
+.decl withdrawTotal(p: address, n:uint)[0]
+.decl bidTotal(p: address, n:uint)[0]
+withdrawTotal(p,n) :- withdraw(p,_), n = sum m: withdraw(p,m).
+bidTotal(p,n) :- bid(p, _), n = sum m: bid(p, m).
+balance(p,n) :- bidTotal(p,b), withdrawTotal(p,w), n := b-w.
+
+// Transaction conditions
+// bid(p,n) :- recv_bid(), msgSender(p), msgValue(n), highestBid(_,m), n>m,
+//             now(t1), endTime(t2), t1 < t2, end(false).
+bid(p,n) :- recv_bid().
+
+.decl withdrawCount(p:address, c:uint)[0]
+withdrawCount(p,c) :- withdraw(p,_), c = count: withdraw(p,_).
+
+// withdraw(p,s) :- recv_withdraw(), msgSender(p), highestBid(p,m), end(true), balance(p,n), n>m, s:=n-m.
+// withdraw(p,n) :- recv_withdraw(), msgSender(p), highestBid(h,_), p!=h, end(true), balance(p,n), n>0.
+withdraw(p,s) :- recv_withdraw().
+withdraw(p,n) :- recv_withdraw().
+send(p,n) :- withdraw(p,n).
+
+// end(true) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, end(false).
+// send(p,n) :- recv_endAuction(), msgSender(s), owner(s), now(t1), endTime(t2), t1 >= t2, highestBid(_,n), beneficiary(p), end(false).
+end(true) :- recv_endAuction().
+send(p,n) :- recv_endAuction().
+
+// Property
+.decl repeatWithdraw(p:address,c:uint)[0]
+.violation repeatWithdraw
+repeatWithdraw(p,c) :- withdrawCount(p,c), c>1.
