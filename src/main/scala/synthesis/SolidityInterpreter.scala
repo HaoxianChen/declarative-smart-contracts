@@ -2,7 +2,7 @@ package synthesis
 
 import com.microsoft.z3.FuncDecl
 import datalog.{Add, AnyType, Arithmetic, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, Mul, Negative, NumberType, One, Param, Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, SymbolType, UnitType, Variable, Zero}
-import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue}
+import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, GroundVar, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue}
 
 /**
  * A small, modular Solidity interpreter.
@@ -147,6 +147,14 @@ case class SolidityInterpreter() {
           case _ => throw new Exception(s"Unsupported relation type: ${relation}")
         }
       }
+      case GroundVar(p, relation, keys, valueIndex, enableProjection) => {
+        val keyIds = keys.map{
+          case Constant(_type, name) => name.toInt
+          case v: Variable => state.lookup(v.name)
+        }
+        val value = state.lookup(relation.name, keyIds)
+        state.updateInt(p.name,value)
+      }
       case UpdateMap(name, keys, tupleTypeName, params) => ???
       case UpdateMapValue(name, keys, fieldName, p) => {
         val keyIds = keys.map {
@@ -188,8 +196,15 @@ case class SolidityInterpreter() {
         ???
       }
       case Require(condition, msg) => ???
-      case Revert(msg) => ???
-      case SendEther(p, amount) => ???
+      case Revert(msg) => {
+        /** todo: fix this; assuming everything approves for now*/
+        println(s"[SolidityInterpreter] warning: ${statement} not processed.")
+        ()
+      }
+      case SendEther(p, amount) => {
+        println(s"[SolidityInterpreter] warning: ${statement} not processed.")
+        ()
+      }
       case Emit(event, parameters) => ()
     }
     _interpret(statement)
