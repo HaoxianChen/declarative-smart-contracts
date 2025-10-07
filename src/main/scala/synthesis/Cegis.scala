@@ -123,7 +123,8 @@ case class Cegis(sketch: Program) {
     mappings.toMap
   }
 
-  private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter, numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+  private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter,
+                                       numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
     import scala.util.Random
     val interfaceRelations = sketch.interfaces.map(_.relation).
       filter(_.name.startsWith(transactionRelationPrefix)).toList

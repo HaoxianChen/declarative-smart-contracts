@@ -305,6 +305,7 @@ case class BoundedModelChecker() {
 
   private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
                                     stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[Trace] = {
+     import synthesis.Context.{msgValue, msgSender}
      import scala.collection.mutable.ArrayBuffer
      val steps = ArrayBuffer.empty[synthesis.Transaction]
      for (stepIdx <- 0 until k) {
@@ -332,8 +333,14 @@ case class BoundedModelChecker() {
          evalModelInt(model, cExpr).getOrElse(0)
        }
 
-       val msgSenderVal = evalIntConst("msgSender")
-       val msgValueVal = evalIntConst("msgValue")
+       val (msgSenderVal,msgValueVal) = (evalIntConst("msgSender"), evalIntConst("msgValue"))
+       // val (msgSenderVal,msgValueVal) = if (stepIdx== 0) {
+       //   (evalIntConst("msgSender"), evalIntConst("msgValue"))
+       // }
+       // else {
+       //   (evalFieldConst(msgSender.fields.head).name.toInt,
+       //     evalFieldConst(msgValue.fields.head).name.toInt)
+       // }
        val implicitParams = synthesis.ImplicitParameters(msgSenderVal, msgValueVal)
        val tx = synthesis.Transaction(txRel, parameters, implicitParams)
        steps += tx

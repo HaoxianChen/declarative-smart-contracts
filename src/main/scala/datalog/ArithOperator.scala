@@ -234,3 +234,22 @@ case class Assign(a: Param, b: Expr) extends Functor with BinOp {
   }
 }
 
+object Functor {
+  def rename(functor: Functor, mapping: Map[Parameter, Parameter]): Functor = {
+    import Arithmetic.{rename => ra}
+    functor match {
+      case operator: ArithOperator => operator match {
+        case Greater(a, b) => Greater(ra(a, mapping), ra(b, mapping))
+        case Lesser(a, b) => Lesser(ra(a, mapping), ra(b, mapping))
+        case Geq(a, b)    => Geq(ra(a, mapping), ra(b, mapping))
+        case Leq(a, b)    => Leq(ra(a, mapping), ra(b, mapping))
+      }
+      case Unequal(a, b) => Unequal(ra(a, mapping), ra(b, mapping))
+      case Equal(a, b)   => Equal(ra(a, mapping), ra(b, mapping))
+      case Assign(a, b)  => {
+        val p = a.p
+        Assign(Param(mapping.getOrElse(p,p)), ra(b, mapping))
+      }
+    }
+  }
+}
