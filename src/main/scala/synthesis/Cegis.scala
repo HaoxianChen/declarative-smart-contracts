@@ -9,7 +9,8 @@ case class Cegis(sketch: Program) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter()
-  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter)
+  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
+    numTraces = 100, txsPerTrace = 3)
 
   /**  This is a composed object that :
    *
@@ -122,7 +123,8 @@ case class Cegis(sketch: Program) {
     mappings.toMap
   }
 
-  private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter, numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+  private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter,
+                                       numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
     import scala.util.Random
     val interfaceRelations = sketch.interfaces.map(_.relation).
       filter(_.name.startsWith(transactionRelationPrefix)).toList

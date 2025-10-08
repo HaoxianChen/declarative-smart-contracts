@@ -16,6 +16,9 @@ case class InductiveSynthesis(
 
   case class Representation(map: Map[Relation, Set[Predicate]]) {
     def getPredicates(rel: Relation): Set[Predicate] = map(rel)
+
+    override def toString: String =
+      map.map{ case (rel, preds) => s"${rel.name}: ${preds.mkString("\n")}" }.mkString("\n")
   }
 
   val interpreter: Interpreter = Interpreter(interpreterContext)
@@ -140,7 +143,8 @@ case class InductiveSynthesis(
       trace.iterateTxAndStateBefore.forall{
         case (state, tx) =>
           val predicates = repr.getPredicates(tx.relation)
-          predicates.forall(p => interpreter.evaluate(state, tx, p))
+          val accepts = predicates.map(p => p->interpreter.evaluate(state, tx, p)).toMap
+          predicates.forall(accepts)
       }
     }
 
@@ -152,7 +156,13 @@ case class InductiveSynthesis(
     val permissivenessScores: Map[Representation, Int] = {
       candidates.map( c => c -> permissiveness(renamedTrace, c) ).toMap
     }
-    candidates.maxBy(permissivenessScores)
+    val best = candidates.maxBy(permissivenessScores)
+    val bestScore = permissivenessScores(best)
+    if (bestScore == 0) {
+      println(s"[Warning]")
+    }
+    println(s"Selected $best with permissive score: $bestScore / ${disambiguationTraces.size}.")
+    best
   }
 
   /** Perform the synthesis given EvaluatedTraces and predicates, returning up to maxSolutions programs. */
@@ -222,30 +232,36 @@ case class InductiveSynthesis(
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {
-    // Collect all binding literals from selected predicates' contexts
-    var bindingLits: Set[datalog.Literal] = predicates.flatMap(p => p.context.bindingLiterals)
 
-    // rename binding literal values to avoid naming collision
-    // make an id, and then add prefix
-    if (bindingLits.size > 1) {
-      val updatedLits = bindingLits.zipWithIndex.map { case (lit, idx) =>
-        val (_, valueParam) = interpreter.extractKeyValueVar(lit)
-        val newName: String = s"${valueParam.name}_$idx"
-        val newParameter = valueParam match {
-          case _: Constant => throw new Exception(s"Expected variable at bidning literal: $lit")
-          case v: Variable => v.copy(name=newName)
-        }
-        val newFields = lit.fields.map {
-          case p if p == valueParam => newParameter
-          case p => p
-        }
-        lit.copy(fields = newFields)
+    def _resolveCollision(_preds: Set[Predicate]): Set[Predicate] = {
+      val groups = _preds.groupBy(_.context.bindingLiterals)
+      if (groups.size == 1 ) return _preds
+
+      var renamedPredicates = Set[Predicate]()
+      // using one idx per group
+      for ( (group, idx) <- groups.zipWithIndex ) {
+        val (bindingLits, predGroup) = group
+        val renameMapping = bindingLits.map(lit => {
+          val (_, valueParam) = interpreter.extractKeyValueVar(lit)
+          val newName: String = s"${valueParam.name}_$idx"
+          val newParameter = valueParam match {
+            case _: Constant => throw new Exception(s"Expected variable at binding literal: $lit")
+            case v: Variable => v.copy(name = newName)
+          }
+          valueParam -> newParameter
+        }).toMap
+
+        val renamedGroup = predGroup.map(_.rename(renameMapping))
+        renamedPredicates ++= renamedGroup
       }
-      bindingLits = updatedLits.toSet
+      renamedPredicates
     }
 
+    val renamedPredicates = _resolveCollision(predicates)
+    val bindingLits = renamedPredicates.flatMap(p => p.context.bindingLiterals)
+
     // Collect all predicate functors
-    val predicateFunctors: Set[datalog.Functor] = predicates.map(_.functor)
+    val predicateFunctors: Set[datalog.Functor] = renamedPredicates.map(_.functor)
 
     // New body: original body plus binding literals (avoid duplicates)
     val newBody: Set[datalog.Literal] = sketchRule.body ++ bindingLits
@@ -255,8 +271,8 @@ case class InductiveSynthesis(
 
     // if predicate refer to variable in the context literals,
     // add those literal to the rule as well.
-    val addMsgSender: Set[datalog.Literal] = if (predicates.exists(_.referredMsgSender())) Set(synthesis.Context.msgSender) else Set.empty
-    val addMsgValue: Set[datalog.Literal] = if (predicates.exists(_.referredMsgValue())) Set(synthesis.Context.msgValue) else Set.empty
+    val addMsgSender: Set[datalog.Literal] = if (renamedPredicates.exists(_.referredMsgSender())) Set(synthesis.Context.msgSender) else Set.empty
+    val addMsgValue: Set[datalog.Literal] = if (renamedPredicates.exists(_.referredMsgValue())) Set(synthesis.Context.msgValue) else Set.empty
 
     // Combine bodies: original body + binding literals + possible implicit context literals
     val finalBody: Set[datalog.Literal] = newBody ++ addMsgSender ++ addMsgValue

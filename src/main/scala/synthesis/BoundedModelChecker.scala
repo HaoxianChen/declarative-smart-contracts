@@ -62,6 +62,7 @@ case class BoundedModelChecker() {
      for (k <- 0 to bound) {
        println(s"[BMC] Checking bound = $k")
        val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
+       // println(s"Path constraint:\n $pathConstraint")
        // check each property at this bound
        for ((rule, prop) <- properties) {
          // val violation = ctx.mkNot(prop)
@@ -251,6 +252,7 @@ case class BoundedModelChecker() {
     println(s"[BMC] Solver result for rule ${rule.head.relation.name} at bound $k: $res")
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
+      // println(s"Model:$model")
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       // println(trace)
       // val evalutedTrace = extractEvaluatedTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
@@ -305,6 +307,7 @@ case class BoundedModelChecker() {
 
   private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,
                                     stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]]): Option[Trace] = {
+     import synthesis.Context.{msgValue, msgSender}
      import scala.collection.mutable.ArrayBuffer
      val steps = ArrayBuffer.empty[synthesis.Transaction]
      for (stepIdx <- 0 until k) {
@@ -332,8 +335,14 @@ case class BoundedModelChecker() {
          evalModelInt(model, cExpr).getOrElse(0)
        }
 
-       val msgSenderVal = evalIntConst("msgSender")
-       val msgValueVal = evalIntConst("msgValue")
+       val (msgSenderVal,msgValueVal) = (evalIntConst("msgSender"), evalIntConst("msgValue"))
+       // val (msgSenderVal,msgValueVal) = if (stepIdx== 0) {
+       //   (evalIntConst("msgSender"), evalIntConst("msgValue"))
+       // }
+       // else {
+       //   (evalFieldConst(msgSender.fields.head).name.toInt,
+       //     evalFieldConst(msgValue.fields.head).name.toInt)
+       // }
        val implicitParams = synthesis.ImplicitParameters(msgSenderVal, msgValueVal)
        val tx = synthesis.Transaction(txRel, parameters, implicitParams)
        steps += tx

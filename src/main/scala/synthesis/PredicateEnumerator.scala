@@ -15,6 +15,12 @@ case class Context(tx: Literal, bindingLiterals: Set[Literal]) {
     val bindingsStr = bindingLiterals.map(_.toString).mkString(", ")
     s"tx: $txStr, bindings: [$bindingsStr]"
   }
+
+  def rename(mapping: Map[Parameter, Parameter]): Context = {
+    val newTx = tx.rename(mapping)
+    val newBindings = bindingLiterals.map(_.rename(mapping))
+    this.copy(tx = newTx, bindingLiterals=newBindings)
+  }
 }
 object Context {
   val msgSender: Literal = Literal(MsgSender(), List(Variable(datalog.Type.addressType, "msgSender")))
@@ -30,13 +36,19 @@ case class Predicate(context: Context, functor: Functor) {
   }
 
   def referredMsgValue(): Boolean = {
-    val params = functorParams(functor)
+    val params = functorParams(functor) ++ context.bindingLiterals.flatMap(_.fields)
     Context.msgValue.fields.intersect(params).nonEmpty
   }
 
   def referredMsgSender(): Boolean = {
-    val params = functorParams(functor)
+    val params = functorParams(functor) ++ context.bindingLiterals.flatMap(_.fields)
     Context.msgSender.fields.intersect(params).nonEmpty
+  }
+
+  def rename(mapping: Map[Parameter, Parameter]): Predicate = {
+    val newContext = context.rename(mapping)
+    val newFunctor = Functor.rename(this.functor,mapping)
+    this.copy(context=newContext, functor = newFunctor)
   }
 }
 
@@ -187,7 +199,11 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
           case datalog.NumberType(_) =>
             Set(
               Equal(Constant(v._type, "0"), v),
-              Unequal(Constant(v._type, "0"), v)
+              Unequal(Constant(v._type, "0"), v),
+              Greater(Param(v), Param(Constant(v._type, "0"))),
+              Geq(Param(v), Param(Constant(v._type, "0"))),
+              Lesser(Param(v), Param(Constant(v._type, "0"))),
+              Leq(Param(v), Param(Constant(v._type, "0")))
             )
           case _ => Set.empty[Functor]
         }

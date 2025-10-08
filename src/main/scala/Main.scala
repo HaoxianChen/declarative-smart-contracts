@@ -255,7 +255,18 @@ object Main extends App {
     val datalog_filepath = args(1)
     val sketch = parseProgram(datalog_filepath)
     val cegis = Cegis(sketch)
-    cegis.run()
+    val program = cegis.run()
+    println(s"Synthesis output:\n${program}")
+  }
+
+  else if (args(0) == "synthesis-all") {
+    val synthesisBecnhmarkDir = "synthesis-benchmark"
+    for (p <- allBenchmarks) {
+      val datalog_filepath = Paths.get(synthesisBecnhmarkDir, p).toString
+      val sketch = parseProgram(datalog_filepath)
+      val cegis = Cegis(sketch)
+      cegis.run()
+    }
   }
 
   else if (args(0) == "test-interpreter") {
