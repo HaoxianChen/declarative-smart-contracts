@@ -10,12 +10,13 @@
 
 .public recv_release
 
-release(p,n) :- recv_release(p),
-                totalReceived(r), shares(p,m), totalShares(s),
-                released(p,e), n := (r * m / s ) - e,
-                // m < s,
-                // r > 0, m > 0, s>0,
-                r * m / s > e.
+// release(p,n) :- recv_release(p),
+//                 totalReceived(r), shares(p,m), totalShares(s),
+//                 released(p,e), n := (r * m / s ) - e,
+//                 // m < s,
+//                 // r > 0, m > 0, s>0,
+//                 r * m / s > e.
+release(p,n) :- recv_release(p).
 
 totalShares(s) :- s = sum n: shares(_,n).
 send(p,n) :- release(p,n).

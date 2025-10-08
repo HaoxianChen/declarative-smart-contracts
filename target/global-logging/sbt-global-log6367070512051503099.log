@@ -1,0 +1,89 @@
+[debug] > Exec(early(addDefaultCommands), None, None)
+[debug] > Exec(addDefaultCommands, None, None)
+[debug] > Exec(early(initialize), None, None)
+[debug] > Exec(initialize, None, None)
+[debug] > Exec(boot, None, None)
+[debug] > Exec(writeSbtVersion, None, None)
+[debug] > Exec(reload, None, None)
+[debug] > Exec(sbtStashOnFailure, None, None)
+[debug] > Exec(onFailure loadFailed, None, None)
+[debug] > Exec(loadp, None, None)
+[info] welcome to sbt 1.9.7 (Ubuntu Java 11.0.28)
+[debug] Load.defaultLoad until apply took 72.613515ms
+[debug]           Load.loadUnit: plugins took 68.129304ms
+[debug]           Load.loadUnit: defsScala took 0.279068ms
+[debug] [Loading] Scanning directory /home/youch/tolin/Smart-Contract-Synthesis/project
+[debug] [Loading] Found non-root projects 
+[debug] [Loading] Done in /home/youch/tolin/Smart-Contract-Synthesis/project, returning: ()
+[debug] deducing auto plugins based on known facts Set(Atom(sbt.plugins.CorePlugin)) and clauses Clauses(Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.ScriptedPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.SbtPlugin),Set(Atom(sbt.ScriptedPlugin)))
+[debug] Clause(Atom(sbt.plugins.SemanticdbPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JUnitXmlReportPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.MiniDependencyTreePlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.plugins.IvyPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.SemanticdbPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.JUnitXmlReportPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.Giter8TemplatePlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.MiniDependencyTreePlugin))))
+[debug]   :: deduced result: Matched(sbt.plugins.CorePlugin,sbt.plugins.Giter8TemplatePlugin,sbt.plugins.IvyPlugin,sbt.plugins.JvmPlugin,sbt.plugins.MiniDependencyTreePlugin,sbt.plugins.JUnitXmlReportPlugin,sbt.plugins.SemanticdbPlugin)
+[debug] Plugins.deducer#function took 13.776441 ms
+[debug]               Load.resolveProject(smart-contract-synthesis-build) took 43.55795ms
+[debug]             Load.loadTransitive: finalizeProject(Project(id smart-contract-synthesis-build, base: /home/youch/tolin/Smart-Contract-Synthesis/project, plugins: List(<none>))) took 78.856636ms
+[debug] [Loading] Done in /home/youch/tolin/Smart-Contract-Synthesis/project, returning: (smart-contract-synthesis-build)
+[debug]           Load.loadUnit: loadedProjectsRaw took 95.264601ms
+[debug]           Load.loadUnit: cleanEvalClasses took 0.251751ms
+[debug]         Load.loadUnit(file:/home/youch/tolin/Smart-Contract-Synthesis/project/, ...) took 168.563771ms
+[debug]       Load.apply: load took 293.733994ms
+[debug]       Load.apply: resolveProjects took 7.350636ms
+[debug]       Load.apply: finalTransforms took 54.613581ms
+[debug]       Load.apply: config.delegates took 6.263799ms
+[debug]       Load.apply: Def.make(settings)... took 354.59498ms
+[debug]       Load.apply: structureIndex took 63.010882ms
+[debug]       Load.apply: mkStreams took 1.355122ms
+[info] loading project definition from /home/youch/tolin/Smart-Contract-Synthesis/project
+[debug] Running task... Cancel: Signal, check cycles: false, forcegc: true
+[debug]     Load.loadUnit: plugins took 1347.967743ms
+[debug]     Load.loadUnit: defsScala took 0.003124ms
+[debug] [Loading] Scanning directory /home/youch/tolin/Smart-Contract-Synthesis
+[debug]       Load.loadUnit: mkEval took 5.087834ms
+[debug] [Loading] Found root project root w/ remaining 
+[debug] deducing auto plugins based on known facts Set(Atom(sbt.plugins.CorePlugin)) and clauses Clauses(Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.ScriptedPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.SbtPlugin),Set(Atom(sbt.ScriptedPlugin)))
+[debug] Clause(Atom(sbt.plugins.SemanticdbPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JUnitXmlReportPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.MiniDependencyTreePlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.IvyPlugin)))
+[debug] Clause(Atom(sbt.plugins.IvyPlugin),Set(Atom(sbt.plugins.JvmPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.SemanticdbPlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.JUnitXmlReportPlugin)))
+[debug] Clause(Atom(sbt.plugins.CorePlugin),Set(Atom(sbt.plugins.Giter8TemplatePlugin)))
+[debug] Clause(Atom(sbt.plugins.JvmPlugin),Set(Atom(sbt.plugins.MiniDependencyTreePlugin))))
+[debug]   :: deduced result: Matched(sbt.plugins.CorePlugin,sbt.plugins.Giter8TemplatePlugin,sbt.plugins.IvyPlugin,sbt.plugins.JvmPlugin,sbt.plugins.MiniDependencyTreePlugin,sbt.plugins.JUnitXmlReportPlugin,sbt.plugins.SemanticdbPlugin)
+[debug] Plugins.deducer#function took 4.158703 ms
+[info] loading settings for project root from build.sbt ...
+[debug]         Load.resolveProject(root) took 4.143819ms
+[debug]       Load.loadTransitive: finalizeProject(Project(id root, base: /home/youch/tolin/Smart-Contract-Synthesis, plugins: List(<none>))) took 10.288407ms
+[debug] [Loading] Done in /home/youch/tolin/Smart-Contract-Synthesis, returning: (root)
+[debug]     Load.loadUnit: loadedProjectsRaw took 142.947211ms
+[debug]     Load.loadUnit: cleanEvalClasses took 5.328142ms
+[debug]   Load.loadUnit(file:/home/youch/tolin/Smart-Contract-Synthesis/, ...) took 1497.541998ms
+[debug] Load.apply: load took 1511.159356ms
+[debug] Load.apply: resolveProjects took 0.304054ms
+[debug] Load.apply: finalTransforms took 20.693873ms
+[debug] Load.apply: config.delegates took 0.710688ms
+[debug] Load.apply: Def.make(settings)... took 100.000266ms
+[debug] Load.apply: structureIndex took 30.239719ms
+[debug] Load.apply: mkStreams took 0.004175ms
+[info] set current project to declarative-smart-contract (in build file:/home/youch/tolin/Smart-Contract-Synthesis/)
+[debug] > Exec(sbtPopOnFailure, None, None)
+[debug] > Exec(resumeFromFailure, None, None)
+[debug] > Exec(notifyUsersAboutShell, None, None)
+[debug] > Exec(iflast shell, None, None)
+[debug] > Exec(shell, None, None)
+[info] sbt server started at local:///home/youch/.sbt/1.0/server/5adb89cdbe13ad5b6c6a/sock
+[debug] Writing bsp connection file
+[info] started sbt server
+[info] shutting down sbt server

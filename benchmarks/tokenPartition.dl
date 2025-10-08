@@ -28,11 +28,14 @@
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
-issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n), msgSender(s), owner(s), p!=0.
-redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n), msgSender(s), owner(s), 
-                          p!=0 ,balanceOfByPartition(p,q,m), n<=m.
-transferByPartition(s,r,q,n) :- recv_transferByPartition(r,q,n), 
-                                msgSender(s), balanceOfByPartition(s,q,m), n<=m.
+// issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n), msgSender(s), owner(s), p!=0.
+// redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n), msgSender(s), owner(s), 
+//                           p!=0 ,balanceOfByPartition(p,q,m), n<=m.
+// transferByPartition(s,r,q,n) :- recv_transferByPartition(r,q,n), 
+//                                 msgSender(s), balanceOfByPartition(s,q,m), n<=m.
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n).
+redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n).
+transferByPartition(s,r,q,n) :- recv_transferByPartition(r,q,n).
 
 .decl totalMint(p: address, q:uint, n: uint)[0,1]
 .decl totalBurn(p: address, q:uint, n: uint)[0,1]

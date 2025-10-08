@@ -1,0 +1,2 @@
+// Each bidder can withdraw at most once
+ALWAYS (withdrawCount(p, c) IMPLY c <= 1)

@@ -1,0 +1,17 @@
+# Scala / sbt specific
+target/
+project/target/
+*.class
+*.log
+
+# IDE specific
+.idea/
+.vscode/
+*.iml
+.bsp/
+
+# OS specific
+.DS_Store
+*.swp
+*.swo
+*~

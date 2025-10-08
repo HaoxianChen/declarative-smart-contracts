@@ -1,0 +1,2 @@
+// All account balances must be non-negative
+ALWAYS ((balanceOf(p, n) AND p != 0) IMPLY n >= 0)

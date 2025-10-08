@@ -57,10 +57,13 @@ balanceOf(p,n) :- constructor(n), msgSender(p).
 totalIn(s,n) :- constructor(n), msgSender(s).
 totalMint(s,n) :- constructor(n), msgSender(s).
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
-                    validRecipient(r).
+// mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+// burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+// transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+//                     validRecipient(r).
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(r,n).
 
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
@@ -76,16 +79,20 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n,
-                    validRecipient(r).
+// transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n,
+//                     validRecipient(r).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m),
-                            d:=n-m, validRecipient(s).
-increaseAllowance(o,s,n) :- recv_increaseApproval(s,n), msgSender(o), validRecipient(s).
-decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n), msgSender(o), validRecipient(s), allowance(o,s,m), m>=n.
+// increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m),
+//                             d:=n-m, validRecipient(s).
+// increaseAllowance(o,s,n) :- recv_increaseApproval(s,n), msgSender(o), validRecipient(s).
+// decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n), msgSender(o), validRecipient(s), allowance(o,s,m), m>=n.
+increaseAllowance(o,s,d) :- recv_approve(s,n).
+increaseAllowance(o,s,n) :- recv_increaseApproval(s,n).
+decreaseAllowance(o,s,n) :- recv_decreaseApproval(s,n).
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl decreaseAllowanceTotal(o:address, s:address, m:uint)[0,1]

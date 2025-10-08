@@ -19,7 +19,8 @@
 
 .decl *quorumSize(q: uint)
 
-vote(v,p) :- recv_vote(p), msgSender(v), hasWinner(false), voted(v, false), isVoter(v, true).
+// vote(v,p) :- recv_vote(p), msgSender(v), hasWinner(false), voted(v, false), isVoter(v, true).
+vote(v,p) :- recv_vote(p).
 
 votes(p,c) :- vote(_,p), c = count: vote(_,p).
 

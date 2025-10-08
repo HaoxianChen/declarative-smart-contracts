@@ -30,7 +30,7 @@ burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0, balanceOf(p,m), n<=m.
 *  otherwise could lead to negative balance at r.
  transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n.
 */
-transfer(s,r,n) :- recv_transfer(s,r,n), balanceOf(s,m), m>=n, n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
 
 .decl totalOut(p: address, n: int)[0]
 .decl totalIn(p: address, n: int)[0]
@@ -45,15 +45,6 @@ balanceOf(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
-
-// Properties
-// .decl *totalBalances(m: int)
-// .decl *unequalBalance(s: int, n: int)
-//
-// .violation unequalBalance
-//
-// totalBalances(s) :- s = sum n: balanceOf(_,n).
-// unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance

@@ -1,0 +1,5 @@
+// Finalization only when time expired or cap reached
+ALWAYS (finalize() IMPLY (now(t) AND end(e) AND t >= e) OR (raised(r) AND cap(c) AND r >= c))
+
+// No token purchase after finalization
+NOT (ONCE (finalize()) AND transaction(recv_buyToken))

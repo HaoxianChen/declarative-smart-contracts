@@ -1,0 +1,11 @@
+// Contract must remain paused when dead
+ALWAYS (dead(true) IMPLY paused(true))
+
+// No token distribution after sale finalization
+NOT (ONCE (finalizeTokenSale()) AND transaction(recv_distributeTokens))
+
+// Transfer only allowed after unpause
+ALWAYS (transaction(recv_transfer) IMPLY ONCE (unpause()))
+
+// Evacuate only allowed after upgrade
+ALWAYS (transaction(recv_evacuate) IMPLY ONCE (upgrade()))

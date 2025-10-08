@@ -39,8 +39,9 @@
 .decl *lastDistributeTime(time: uint)
 .decl *minInterval(time:uint)
 
-distributeInterests(n, t) :- recv_distributeInterests(n), now(t),
-                             minInterval(i), lastDistributeTime(t1), t1 - t > i.
+// distributeInterests(n, t) :- recv_distributeInterests(n), now(t),
+//                              minInterval(i), lastDistributeTime(t1), t1 - t > i.
+distributeInterests(n, t) :- recv_distributeInterests(n).
 lastDistributeTime(m) :- m = max t: distributeInterests(_,t).
 distributeTotal(s) :- s = sum n: distributeInterests(n,_).
 
@@ -61,10 +62,13 @@ distributeTotal(s) :- s = sum n: distributeInterests(n,_).
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
-                   canSend(s), canRecv(r).
+// mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+// burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+// transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+//                    canSend(s), canRecv(r).
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(r,n).
 
 canSend(s) :- permission(s, true, _, expire), now(t), t<expire.
 canSend(s) :- permission(s, true, _, 0).
@@ -89,14 +93,16 @@ totalSupply(n) :- allMint(m), allBurn(b), distributeTotal(d), n := m - b - d.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n,
-                    canSend(s), canRecv(r).
+// transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n,
+//                     canSend(s), canRecv(r).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n).
 
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+// increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+increaseAllowance(o,s,d) :- recv_approve(s,n).
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]

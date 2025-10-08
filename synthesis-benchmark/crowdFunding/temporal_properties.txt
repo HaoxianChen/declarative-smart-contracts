@@ -1,0 +1,9 @@
+// Total balance equals raised before closure
+ALWAYS (totalBalance(m) AND raised(r) AND closed(b) AND b == false IMPLY m == r)
+
+// Mutual exclusion between withdraw and refund
+NOT (ONCE (withdraw()) AND ONCE (refund()))
+
+// Refund only when raised < target
+ALWAYS (ONCE (refund()) IMPLY raised(r) AND target(t) AND r < t)
+
