@@ -62,6 +62,7 @@ case class BoundedModelChecker() {
      for (k <- 0 to bound) {
        println(s"[BMC] Checking bound = $k")
        val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
+       // println(s"Path constraint:\n $pathConstraint")
        // check each property at this bound
        for ((rule, prop) <- properties) {
          // val violation = ctx.mkNot(prop)
@@ -251,6 +252,7 @@ case class BoundedModelChecker() {
     println(s"[BMC] Solver result for rule ${rule.head.relation.name} at bound $k: $res")
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
+      // println(s"Model:$model")
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       // println(trace)
       // val evalutedTrace = extractEvaluatedTraceFromModel(model, k, ctx, program, stateVars, otherConsts)

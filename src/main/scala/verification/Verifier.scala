@@ -530,7 +530,10 @@ object Verifier {
     def _isTempVar(e: Expr[_]): Boolean = {
       if (e.isApp) {
         if (e.getArgs.length == 0) {
-          e.getSExpr.startsWith("i")
+          // e.getSExpr.startsWith("i")
+          // all the temp variable with prefix "i[n]_" except "i0_"
+          val prefixPattern = "^i[1-9]\\d*_".r
+          prefixPattern.findPrefixOf(e.getSExpr).isDefined
         }
         else false
       }
