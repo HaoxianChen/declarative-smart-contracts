@@ -38,9 +38,12 @@
 owner(s) :- constructor(), msgSender(s).
 // totalSupply(0) :- constructor().
 
-mint(t,p,n) :- recv_mint(t,p,n), msgSender(s), owner(s), p!=0.
-burn(t,p,n) :- recv_burn(t,p,n), msgSender(s), owner(s), p!=0 ,balanceOf(t,p,m), n<=m.
-transfer(t,s,r,n) :- recv_transfer(t,r,n), msgSender(s), balanceOf(t,s,m), n<=m.
+// mint(t,p,n) :- recv_mint(t,p,n), msgSender(s), owner(s), p!=0.
+// burn(t,p,n) :- recv_burn(t,p,n), msgSender(s), owner(s), p!=0 ,balanceOf(t,p,m), n<=m.
+// transfer(t,s,r,n) :- recv_transfer(t,r,n), msgSender(s), balanceOf(t,s,m), n<=m.
+mint(t,p,n) :- recv_mint(t,p,n).
+burn(t,p,n) :- recv_burn(t,p,n).
+transfer(t,s,r,n) :- recv_transfer(t,r,n).
 
 .decl totalMint(tokenId: uint, p: address, n: uint)[0,1]
 .decl totalBurn(tokenId: uint, p: address, n: uint)[0,1]
@@ -60,12 +63,14 @@ totalSupply(t,n) :- allMint(t,m), allBurn(t,b), n := m - b.
 
 // New rules
 .decl transferFrom(tokenId: uint,from: address, to: address, spender: address, amount: uint)
-transferFrom(t,o,r,s,n) :- recv_transferFrom(t,o,r,n),
-                    balanceOf(t,o,m), m>=n,
-                    msgSender(s), allowance(t,o,s,k), k>=n.
+// transferFrom(t,o,r,s,n) :- recv_transferFrom(t,o,r,n),
+//                     balanceOf(t,o,m), m>=n,
+//                     msgSender(s), allowance(t,o,s,k), k>=n.
+transferFrom(t,o,r,s,n) :- recv_transferFrom(t,o,r,n).
 transfer(t,o,r,n) :- transferFrom(t,o,r,_,n).
 
-increaseAllowance(t,o,s,d) :- recv_approve(t,s,n), msgSender(o), allowance(t,o,s,m), d:=n-m.
+// increaseAllowance(t,o,s,d) :- recv_approve(t,s,n), msgSender(o), allowance(t,o,s,m), d:=n-m.
+increaseAllowance(t,o,s,d) :- recv_approve(t,s,n).
 
 .decl allowanceTotal(tokenId: uint, o:address, s:address, m:uint)[0,1,2]
 .decl spentTotal(tokenId: uint, o:address, s:address, m:uint)[0,1,2]

@@ -38,9 +38,12 @@
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+// mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+// burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+// transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(r,n).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
@@ -60,12 +63,14 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n.
+// transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+// increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+increaseAllowance(o,s,d) :- recv_approve(s,n).
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
@@ -88,15 +93,17 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 .decl buyToken(p:address, amount: uint)
 .public recv_buyToken
 
-buyToken(p,n) :- recv_buyToken(p,m), finalized(false), p!=0, m!=0, now(t), start(s), end(e), t>s, t<e, rate(r), n:=m*r.
+// buyToken(p,n) :- recv_buyToken(p,m), finalized(false), p!=0, m!=0, now(t), start(s), end(e), t>s, t<e, rate(r), n:=m*r.
+buyToken(p,n) :- recv_buyToken(p,m).
 mint(p,n) :- buyToken(p,n).
 
 .decl *raised(n: uint)
 raised(s) :- s = sum n: buyToken(_,n).
 .decl *cap(n: uint)
 
-finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), now(t), end(e), t>e.
-finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), raised(m), cap(c), m>=c.
+// finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), now(t), end(e), t>e.
+// finalize() :- recv_finalize(), msgSender(s), owner(s), finalized(false), raised(m), cap(c), m>=c.
+finalize() :- recv_finalize().
 finalized(true) :- finalize().
 
 

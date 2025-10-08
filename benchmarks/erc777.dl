@@ -38,9 +38,12 @@
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
-burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
-transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+// mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+// burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+// transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m.
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(r,n).
 
 .decl totalMint(p: address, n: uint)[0]
 .decl totalBurn(p: address, n: uint)[0]
@@ -60,12 +63,14 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: uint)
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
-                    balanceOf(o,m), m>=n,
-                    msgSender(s), allowance(o,s,k), k>=n.
+// transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+// increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+increaseAllowance(o,s,d) :- recv_approve(s,n).
 
 .decl allowanceTotal(o:address, s:address, m:uint)[0,1]
 .decl spentTotal(o:address, s:address, m:uint)[0,1]
@@ -88,33 +93,40 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 .public revokedDefaultOperator(2)
 .public defaultOperator(1)
 
-operators(p,o,true) :- recv_approveOperator(o), msgSender(p), defaultOperator(o, false), p!=o.
-revokedDefaultOperator(o,p,false) :- recv_approveOperator(o), msgSender(p), defaultOperator(o,true), p!=o.
+// operators(p,o,true) :- recv_approveOperator(o), msgSender(p), defaultOperator(o, false), p!=o.
+// revokedDefaultOperator(o,p,false) :- recv_approveOperator(o), msgSender(p), defaultOperator(o,true), p!=o.
+operators(p,o,true) :- recv_approveOperator(o).
+revokedDefaultOperator(o,p,false) :- recv_approveOperator(o).
 
-revokedDefaultOperator(p,o,true) :- recv_revokeDefaultOperator(o), msgSender(p), defaultOperator(o,true), p!=o.
-operators(p,o,false) :- recv_revokeDefaultOperator(o), msgSender(p), defaultOperator(o,false), p!=o.
+// revokedDefaultOperator(p,o,true) :- recv_revokeDefaultOperator(o), msgSender(p), defaultOperator(o,true), p!=o.
+// operators(p,o,false) :- recv_revokeDefaultOperator(o), msgSender(p), defaultOperator(o,false), p!=o.
+revokedDefaultOperator(p,o,true) :- recv_revokeDefaultOperator(o).
+operators(p,o,false) :- recv_revokeDefaultOperator(o), msgSender(p).
 
 .decl recv_operatorSend(o:address,r:address,n:uint,data:uint,operatorData:uint)
 .decl recv_operatorBurn(p:address,n:uint,data:uint,operatorData:uint)
 .decl operatorSend(o:address,r:address,s:address,n:uint,data:uint,operatorData:uint)
 .decl operatorBurn(p:address,s:address,n:uint,data:uint,operatorData:uint)
 
-operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(s), operators(o,s,true),
-                                           balanceOf(o,m), m >= n, r!=0, n>0.
-operatorSend(o,r,o,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(o),
-                                            balanceOf(o,m), m >= n, r!=0, n>0.
-operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(s),
-                                             defaultOperator(s,true), revokedDefaultOperator(o,s,false),
-                                             balanceOf(o,m), m >= n, r!=0, n>0.
+// operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(s), operators(o,s,true),
+//                                            balanceOf(o,m), m >= n, r!=0, n>0.
+// operatorSend(o,r,o,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(o),
+//                                             balanceOf(o,m), m >= n, r!=0, n>0.
+// operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData), msgSender(s),
+//                                              defaultOperator(s,true), revokedDefaultOperator(o,s,false),
+//                                              balanceOf(o,m), m >= n, r!=0, n>0.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData).
+operatorSend(o,r,o,n,data,operatorData) :- recv_operatorSend(o,r,n,data,operatorData).
 transfer(o,r,n) :- operatorSend(o,r,_,n,_,_).
 
-operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(s), operators(p,s,true),
-                                         balanceOf(p,m), m >= n, p!=0 , n>0.
-operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(p),
-                                         balanceOf(p,m), m >= n, p!=0, n>0.
-operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(s),
-                                         defaultOperator(s,true), revokedDefaultOperator(p,s,false),
-                                         balanceOf(p,m), m >= n, p!=0, n>0.
+// operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(s), operators(p,s,true),
+//                                          balanceOf(p,m), m >= n, p!=0 , n>0.
+// operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(p),
+//                                          balanceOf(p,m), m >= n, p!=0, n>0.
+// operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData), msgSender(s),
+//                                          defaultOperator(s,true), revokedDefaultOperator(p,s,false),
+//                                          balanceOf(p,m), m >= n, p!=0, n>0.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,n,data,operatorData).
 burn(p,n) :- operatorBurn(p,_,n,_,_).
 
 // Properties
