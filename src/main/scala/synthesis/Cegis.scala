@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation}
+import datalog.{AnyType, BooleanType, CompoundType, NumberType, Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation, SymbolType, UnitType}
 import imp.SolidityStatement
 import imp.{ImperativeTranslator, Inliner}
 import imp.SolidityTranslator.transactionRelationPrefix
@@ -9,8 +9,15 @@ case class Cegis(sketch: Program) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter()
-  val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
-    numTraces = 100, txsPerTrace = 3)
+  // val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
+  //   numTraces = 1000, txsPerTrace = 5)
+//   val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTracesHeuristic(sketch, interpreter,
+//     numTraces = 1000, txsPerTrace = 5)
+
+  val disambiguationTraces: Set[EvaluatedTrace] = {
+    val disambiguator = Disambiguator(sketch, interpreter, txDefs)
+    disambiguator.makeTracesHeuristic(1000)
+  }
 
   /**  This is a composed object that :
    *
@@ -19,7 +26,7 @@ case class Cegis(sketch: Program) {
    *  - Run the inductive synthesizer that generate new program that blocks such EvaluatedTrace
    *  - iterate until no counter example is found by the BMC.
   *  */
-  def run(maxBound: Int = 4, maxIters: Int = 10, maxSolutionsPerStep: Int = 10): Program = {
+  def run(maxBound: Int = 4, maxIters: Int = 10, maxSolutionsPerStep: Int = 20): Program = {
     // Assumptions made:
     // 1) We try to use the SolidityInterpreter whenever possible. We construct a
     //    minimal `ReadValueFromMap` statement that performs a read using constant
@@ -123,6 +130,92 @@ case class Cegis(sketch: Program) {
     mappings.toMap
   }
 
+  private def makeDisambiguationTracesHeuristic(sketch: Program, solInterpreter: SolidityInterpreter,
+                                       numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+    import scala.util.Random
+
+    val interfaceRelations = sketch.interfaces.map(_.relation).
+      filter(_.name.startsWith(transactionRelationPrefix)).toList
+    val txRelations = interfaceRelations.map {
+      case sr: SimpleRelation => sr.copy(name=sr.name.stripPrefix(transactionRelationPrefix))
+      case SingletonRelation(name, sig, memberNames) => ???
+      case relation: ReservedRelation => ???
+    }
+
+    // small address universe as strings
+    val addresses = List("1", "2", "3")
+
+    // helper to build a random Transaction for a given relation
+    def randomTransaction(rel: datalog.Relation): Transaction = {
+      val params = rel.sig.zipWithIndex.map { case (t, idx) =>
+        t match {
+          case SymbolType(_) =>
+            // pick an address from the small universe
+            datalog.Constant(t, addresses(Random.nextInt(addresses.length)))
+          case _:NumberType =>
+            // small numeric values
+            datalog.Constant(t, (Random.nextInt(10) + 1).toString)
+          case _ =>
+            // fallback: small domain values as strings
+            datalog.Constant(t, Random.nextInt(3).toString)
+        }
+      }
+      // also make Implicit parameters here.
+      Transaction(rel, params, ImplicitParameters())
+    }
+
+    // For each trace: add per-address setup (mint-like) transactions when possible,
+    // then append random transactions up to txsPerTrace.
+    val traces: Set[Trace] = (1 to numTraces).map { _ =>
+      val setupTxs: List[Transaction] = txRelations.flatMap { rel =>
+        // Heuristic: if relation name contains "mint" (case-insensitive), produce per-address setup
+        if (rel.name.toLowerCase.contains("mint")) {
+          addresses.map { addr =>
+            val params = rel.sig.zipWithIndex.map { case (t, idx) =>
+              t match {
+                case SymbolType(_) =>
+                  // first param assumed to be address
+                  datalog.Constant(t, addr)
+                case _:NumberType  =>
+                  datalog.Constant(t, (Random.nextInt(10) + 1).toString)
+                case _ =>
+                  datalog.Constant(t, Random.nextInt(3).toString)
+              }
+            }
+            Transaction(rel, params, ImplicitParameters())
+          }
+        } else Nil
+      }
+
+      // fill remaining transactions with random transactions
+      val remaining = math.max(0, txsPerTrace - setupTxs.length)
+      val randomTxs = (1 to remaining).map { _ =>
+        val rel = txRelations(Random.nextInt(txRelations.length))
+        randomTransaction(rel)
+      }
+
+      Trace((setupTxs ++ randomTxs).toList)
+    }.toSet
+
+    // interpret traces into EvaluatedTrace using the solidity interpreter
+    traces.map(t => solInterpreter.interpret(txDefs, t))
+  }
+  // private def makeDisambiguationTracesHeuristic(sketch: Program, solInterpreter: SolidityInterpreter,
+  //                                      numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+  //   /** 1. make a small address universe, say 1,2,3. */
+
+  //   /** 2. set up the state by having mint(p,n) where p each adress in the universe,
+  //    *   n is random number between 1-10.
+  //    *  */
+
+  //   /** 3. Randomly generate rest of [txPerTrace], enumerating each parameter combination for each
+  //    *   transaction, each parameter in 1,2,3.
+  //    *   */
+  //  ???
+  //
+
+  // }
+
   private def makeDisambiguationTraces(sketch: Program, solInterpreter: SolidityInterpreter,
                                        numTraces: Int = 20, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
     import scala.util.Random
@@ -138,7 +231,11 @@ case class Cegis(sketch: Program) {
     def randomTransaction(rel: datalog.Relation): Transaction = {
       val params = rel.sig.zipWithIndex.map { case (t, i) =>
         // Use random integer as string for each parameter
-        datalog.Constant(t, Random.nextInt(100).toString)
+        val bound = t match {
+          case SymbolType(_) => 3
+          case _ => 3
+        }
+        datalog.Constant(t, Random.nextInt(bound).toString)
       }
       Transaction(rel, params, ImplicitParameters())
     }
