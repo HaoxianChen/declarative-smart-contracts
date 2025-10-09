@@ -1,2 +1,2 @@
 // Total balances per partition must equal total supply per partition
-ALWAYS (totalBalancesByPartition(q, s) AND totalSupplyByPartition(q, n) IMPLY s = n)
+ALWAYS (totalBalancesByPartition(q, s) AND totalSupplyByPartition(q, n) IMPLY s == n)

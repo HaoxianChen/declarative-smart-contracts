@@ -342,8 +342,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
             
             // Show variable bindings if quantified
             if (freeVars.nonEmpty) {
-              println(s"\n  Quantification:")
-              println(s"    ∀ ${freeVars.mkString(", ")} . (...)")
+              println(s"\n  Quantification (via ∀x.φ ≡ ¬∃x.¬φ):")
+              println(s"    Original: ∀ ${freeVars.mkString(", ")} . (...)")
+              println(s"    Actual:   ¬∃ ${freeVars.mkString(", ")} . ¬(...)")
             }
             
           } catch {
@@ -420,8 +421,15 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
             tp.comment.foreach(c => println(s"  Comment: $c"))
             
             try {
-              // Perform inductive proof
-              val (resInit, resTr) = inductiveProve(ctx, tr, z3Expr, isTransactionProperty = false)
+              // Perform inductive proof with model extraction
+              val (resInit, modelInit) = {
+                val f = ctx.mkImplies(tr.getInit(), z3Expr)
+                Prove.prove(ctx, f)
+              }
+              val (resTr, modelTr) = {
+                val f2 = ctx.mkImplies(ctx.mkAnd(z3Expr, tr.getTr()), tr.toPost(z3Expr))
+                Prove.prove(ctx, f2)
+              }
               
               println(s"  Init check: $resInit")
               println(s"  Transition check: $resTr")
@@ -431,8 +439,23 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
                 println(s"  ✓ Property VERIFIED")
               } else if (resInit == com.microsoft.z3.Status.SATISFIABLE) {
                 println(s"  ✗ Property VIOLATED in initial state")
+                modelInit.foreach { model =>
+                  println(s"  Counterexample (initial state):")
+                  println(s"    ${model}")
+                }
               } else if (resTr == com.microsoft.z3.Status.SATISFIABLE) {
                 println(s"  ✗ Property may be VIOLATED in some transition")
+                println(s"  Note: This may indicate a real bug, or the property needs a strengthening invariant")
+                modelTr.foreach { model =>
+                  println(s"  Counterexample (transition):")
+                  val modelStr = model.toString
+                  if (modelStr.length > 500) {
+                    println(s"    ${modelStr.take(500)}...")
+                    println(s"    (Model too large, truncated)")
+                  } else {
+                    println(s"    ${modelStr}")
+                  }
+                }
               } else {
                 println(s"  ? Verification UNKNOWN")
               }

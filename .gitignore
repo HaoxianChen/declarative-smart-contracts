@@ -15,3 +15,7 @@ project/target/
 *.swp
 *.swo
 *~
+
+# Test results and temporary files
+temporal_verification_results_*.txt
+monitor_test.sh

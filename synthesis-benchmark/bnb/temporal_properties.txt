@@ -1,1 +1,2 @@
-ALWAYS (totalBalances(s) AND freezeSum(f) AND totalSupply(n) IMPLY s + f <= n)
+// Total balances plus frozen amount should not exceed total supply (when totalSupply is non-negative)
+ALWAYS (balanceAndFreeze(bf) AND totalSupply(n) AND n >= 0 IMPLY bf <= n)

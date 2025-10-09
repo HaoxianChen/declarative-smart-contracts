@@ -91,7 +91,7 @@ case class BoundedModelChecker() {
     )
     val imperative = impTranslator.translate()
     val verifier = new Verifier(program, imperative)
-    val ts = verifier.getTransitionSystem()
+    val (ts, stateVarMap, transactionThis, transactionConditions) = verifier.getTransitionSystem()
 
     println(s"[BMC] Transition system ready for program '${program.name}'")
     val ctx = ts.ctx

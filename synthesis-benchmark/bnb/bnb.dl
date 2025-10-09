@@ -112,8 +112,10 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 // Properties
 .decl *totalBalances(m: uint)
 .decl *freezeSum(m: uint)
+.decl *balanceAndFreeze(m: uint)
 
 totalBalances(n) :- constructor(n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 freezeSum(s) :- s = sum n: freezeOf(_,n).
+balanceAndFreeze(n) :- totalBalances(s), freezeSum(f), n := s + f.
 

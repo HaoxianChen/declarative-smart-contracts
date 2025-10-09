@@ -34,9 +34,37 @@ class TemporalPropertyTranslator(
   val onceVars: mutable.Map[String, (Expr[_], Expr[_], TemporalExpr)] = mutable.Map()
   
   /**
+   * Quantifier ID counter for consistent naming with TransitionSystem
+   */
+  private var quantifierIdCounter = 0
+  
+  /**
+   * Get next quantifier ID (consistent with TransitionSystem naming: Q1, Q2, Q3, ...)
+   */
+  private def nextQuantId(): Int = {
+    quantifierIdCounter += 1
+    quantifierIdCounter
+  }
+  
+  /**
+   * Get quantifier variable name (consistent with TransitionSystem naming: p, q, r, s, ...)
+   * @param idx Index of the quantified variable
+   * @return Variable name: p for 0, q for 1, r for 2, etc.
+   */
+  private def getQuantVarName(idx: Int): String = {
+    if (idx < 26) {
+      ('p' + idx).toChar.toString
+    } else {
+      // After 26 letters, use q26, q27, ...
+      s"q${idx - 26}"
+    }
+  }
+  
+  /**
    * Translate temporal property to Z3 constraint
    * @param property Temporal property
    * @return Translated Z3 boolean expression with appropriate quantification
+   *         Universal quantifiers are converted to existential quantifiers via formula transformation: ∀x.φ ≡ ¬∃x.¬φ
    */
   def translate(property: TemporalProperty): BoolExpr = {
     // Collect free variables
@@ -59,36 +87,22 @@ class TemporalPropertyTranslator(
       // Translate expression
       val constraint = translateExpr(property.expr, varContext)
       
-      // Decide quantification based on outermost expression structure
-      // For ALWAYS, use universal quantification
-      // For other cases, also use universal quantification by default (safety properties)
-      property.expr match {
-        case TemporalExpr.Always(_) =>
-          if (varContext.nonEmpty) {
-            ctx.mkForall(
-              varContext.values.toArray,
-              constraint,
-              1, null, null,
-              ctx.mkSymbol("Q_prop"),
-              ctx.mkSymbol("sk_prop")
-            ).asInstanceOf[BoolExpr]
-          } else {
-            constraint
-          }
-        
-        case _ =>
-          // Other cases: universal quantification by default
-          if (varContext.nonEmpty) {
-            ctx.mkForall(
-              varContext.values.toArray,
-              constraint,
-              1, null, null,
-              ctx.mkSymbol("Q_prop"),
-              ctx.mkSymbol("sk_prop")
-            ).asInstanceOf[BoolExpr]
-          } else {
-            constraint
-          }
+      // Convert universal quantification to existential quantification
+      // Formula transformation: ∀x.φ ≡ ¬∃x.¬φ
+      // This applies to all temporal properties for algorithm optimization
+      if (varContext.nonEmpty) {
+        val qid = nextQuantId()
+        ctx.mkNot(
+          ctx.mkExists(
+            varContext.values.toArray,
+            ctx.mkNot(constraint),
+            1, null, null,
+            ctx.mkSymbol(s"Q$qid"),
+            ctx.mkSymbol(s"skid$qid")
+          )
+        ).asInstanceOf[BoolExpr]
+      } else {
+        constraint
       }
     }
   }
@@ -308,9 +322,10 @@ class TemporalPropertyTranslator(
       )
     } else {
       // Standard handling: create existential quantification for state relations
+      // Use consistent naming with TransitionSystem: p, q, r, ...
       val quantVars = relation.sig.zipWithIndex.map { case (typ, idx) =>
         val sort = Z3Helper.typeToSort(ctx, typ)
-        ctx.mkConst(s"${relation.name}_q${idx}", sort)
+        ctx.mkConst(getQuantVarName(idx), sort)
       }
       
       // Create temporary variable context
@@ -329,13 +344,15 @@ class TemporalPropertyTranslator(
       val constraint = translateRelationAccess(relation, tempArgs, tempContext)
       
       // Existential quantification
+      // Use consistent quantifier ID naming with TransitionSystem: Q1, Q2, ...
       if (quantVars.nonEmpty) {
+        val qid = nextQuantId()
         ctx.mkExists(
           quantVars.toArray,
           constraint,
           1, null, null, 
-          ctx.mkSymbol(s"Q_${relation.name}"), 
-          ctx.mkSymbol(s"sk_${relation.name}")
+          ctx.mkSymbol(s"Q$qid"), 
+          ctx.mkSymbol(s"skid$qid")
         ).asInstanceOf[BoolExpr]
       } else {
         constraint
@@ -478,13 +495,47 @@ class TemporalPropertyTranslator(
     
     // Get or create ONCE auxiliary variable
     val (onceVar, onceVarNext, _) = onceVars.getOrElseUpdate(exprKey, {
-      val varName = s"once_${onceVars.size}" // Generate unique variable name
+      // Generate a descriptive variable name based on the expression
+      val descriptiveName = generateOnceName(expr)
+      val varName = s"once_${descriptiveName}"
       val (v_in, v_out) = transitionSystem.newVar(varName, ctx.mkBoolSort())
       (v_in, v_out, expr) // Store original expression
     })
     
     // Return auxiliary variable (represents "has held at some point")
     onceVar.asInstanceOf[BoolExpr]
+  }
+  
+  /**
+   * Generate a descriptive name for an ONCE variable based on the expression.
+   * Examples:
+   *   withdraw() -> "withdraw"
+   *   transfer(from, to, n) -> "transfer"
+   *   x > 0 -> "x_gt_0"
+   *   complex expression -> "expr_N" (fallback to number)
+   */
+  private def generateOnceName(expr: TemporalExpr): String = {
+    expr match {
+      // Function call: use the function name
+      case TemporalExpr.FunctionCall(name, _) => name
+      
+      // Simple identifier
+      case TemporalExpr.Identifier(name) => name
+      
+      // Comparison with identifier on left
+      case TemporalExpr.Eq(TemporalExpr.Identifier(name), _) => s"${name}_eq"
+      case TemporalExpr.Neq(TemporalExpr.Identifier(name), _) => s"${name}_neq"
+      case TemporalExpr.Lt(TemporalExpr.Identifier(name), _) => s"${name}_lt"
+      case TemporalExpr.Le(TemporalExpr.Identifier(name), _) => s"${name}_le"
+      case TemporalExpr.Gt(TemporalExpr.Identifier(name), _) => s"${name}_gt"
+      case TemporalExpr.Ge(TemporalExpr.Identifier(name), _) => s"${name}_ge"
+      
+      // Boolean literal
+      case TemporalExpr.BoolLiteral(value) => if (value) "true" else "false"
+      
+      // Complex expressions: fallback to numbered naming
+      case _ => s"expr_${onceVars.size}"
+    }
   }
   
   /**

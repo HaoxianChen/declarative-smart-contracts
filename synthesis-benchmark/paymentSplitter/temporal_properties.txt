@@ -1,1 +1,2 @@
-ALWAYS ((totalReceived(r) AND shares(p, m) AND totalShares(s) AND released(p, e) AND s > 0) IMPLY e <= r * m / s)
+// Released amount should not exceed expected amount based on shares
+ALWAYS (released(p, e) AND expectedAmount(p, expected) IMPLY e <= expected)

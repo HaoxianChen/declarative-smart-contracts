@@ -1,2 +1,2 @@
 // Total balances must equal total supply
-ALWAYS (totalBalances(s) AND totalSupply(n) IMPLY s = n)
+ALWAYS (totalBalances(s) AND totalSupply(n) IMPLY s == n)

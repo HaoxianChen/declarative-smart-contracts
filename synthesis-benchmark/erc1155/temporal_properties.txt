@@ -1,2 +1,2 @@
 // For each token, total balances must equal total supply
-ALWAYS (totalBalances(tokenId, s) AND totalSupply(tokenId, n) IMPLY s = n)
+ALWAYS (totalBalances(tokenId, s) AND totalSupply(tokenId, n) IMPLY s == n)

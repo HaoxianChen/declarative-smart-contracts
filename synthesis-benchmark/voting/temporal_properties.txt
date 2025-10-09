@@ -1,1 +1,1 @@
-ALWAYS ((wins(p1, true) AND wins(p2, true)) IMPLY p1 = p2)
+ALWAYS ((wins(p1, true) AND wins(p2, true)) IMPLY p1 == p2)
