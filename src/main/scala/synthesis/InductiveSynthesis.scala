@@ -1,6 +1,6 @@
 package synthesis
 
-import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, Model}
+import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, IntExpr, Model}
 import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
@@ -18,7 +18,7 @@ case class InductiveSynthesis(
     def getPredicates(rel: Relation): Set[Predicate] = map(rel)
 
     override def toString: String =
-      map.map{ case (rel, preds) => s"${rel.name}: ${preds.mkString("\n")}" }.mkString("\n")
+      map.map { case (rel, preds) => s"${rel.name}: ${preds.mkString("\n")}" }.mkString("\n")
   }
 
   val interpreter: Interpreter = Interpreter(interpreterContext)
@@ -38,7 +38,7 @@ case class InductiveSynthesis(
   val encodings: Map[Relation, List[BoolExpr]] = makeEncoding(z3ctx)
 
   /** For each Rule, create a list of Z3 Bool variables, one for each predicate.
-    * The length of the list matches the number of predicates for that Rule. */
+   * The length of the list matches the number of predicates for that Rule. */
   def makeEncoding(z3ctx: Context): Map[Relation, List[BoolExpr]] = {
     predicates.map { case (rel, preds) =>
       val boolVars = preds.toList.zipWithIndex.map { case (_, i) =>
@@ -49,10 +49,10 @@ case class InductiveSynthesis(
   }
 
   /**
-    * For a given EvaluatedTrace, return a sequence of (Transaction, List[Boolean])
-    * where each transaction is paired with the previous state and the predicate
-    * evaluation results for that state and transaction.
-    */
+   * For a given EvaluatedTrace, return a sequence of (Transaction, List[Boolean])
+   * where each transaction is paired with the previous state and the predicate
+   * evaluation results for that state and transaction.
+   */
   def evaluatePredicates(evaluatedTrace: EvaluatedTrace): Seq[(Transaction, List[Boolean])] = {
     val pairs = shiftTrace(evaluatedTrace)
     pairs.map { case (state, tx) =>
@@ -63,13 +63,13 @@ case class InductiveSynthesis(
   }
 
   /**
-    * For each (tx, boolList) in evalResults:
-    *   - Fetch the list of Z3 Bool variables from encodings for that relation.
-    *   - For each i, assert boolVar[i] implies boolList[i].
-    *   - Conjunct all assertions for the transaction.
-    * Conjunct all transaction constraints into a single Z3 BoolExpr and return.
-   *  Assert that the trace cannot go through.
-    */
+   * For each (tx, boolList) in evalResults:
+   *   - Fetch the list of Z3 Bool variables from encodings for that relation.
+   *   - For each i, assert boolVar[i] implies boolList[i].
+   *   - Conjunct all assertions for the transaction.
+   *     Conjunct all transaction constraints into a single Z3 BoolExpr and return.
+   *     Assert that the trace cannot go through.
+   */
   def makeConstraints(evalResults: Seq[(Transaction, List[Boolean])]): BoolExpr = {
     val txConstraints = evalResults.map { case (tx, boolList) =>
       val boolVars = encodings(tx.relation)
@@ -120,41 +120,42 @@ case class InductiveSynthesis(
       }
     }
 
-    val newSteps = old.steps.map{case (tx, state) =>
+    val newSteps = old.steps.map { case (tx, state) =>
       val triggerRelation = toTxTriggerRelation(tx.relation)
       (tx.updateRelation(triggerRelation), state)
     }
-    old.copy(steps=newSteps)
+    old.copy(steps = newSteps)
   }
 
   def synthesize(sketch: Program,
                  evaluatedTraces: Set[EvaluatedTrace],
                  maxSolutions: Int,
                  disambiguationTraces: Set[EvaluatedTrace]): Program = {
-    val candidates = synthesizeMultiSolution(evaluatedTraces, maxSolutions)
+    val candidates = synthesizeMultiSolution(evaluatedTraces, maxSolutions, disambiguationTraces)
     val selection = disambiguate(disambiguationTraces, candidates.toSet)
     makeProgram(sketch, selection)
+  }
+
+  private def permissiveness(disambiguationTraces: Set[EvaluatedTrace], repr: Representation): Int = {
+
+    def accept(trace: EvaluatedTrace, repr: Representation): Boolean = {
+      trace.iterateTxAndStateBefore.forall {
+        case (state, tx) =>
+          val predicates = repr.getPredicates(tx.relation)
+          val accepts = predicates.map(p => p -> interpreter.evaluate(state, tx, p)).toMap
+          predicates.forall(accepts)
+      }
+    }
+
+    val renamedTrace = disambiguationTraces.map(renameTxRelationInTrace)
+    renamedTrace.count(t => accept(t, repr))
   }
 
   private def disambiguate(disambiguationTraces: Set[EvaluatedTrace],
                            candidates: Set[Representation]): Representation = {
 
-    def accept(trace: EvaluatedTrace, repr: Representation): Boolean = {
-      trace.iterateTxAndStateBefore.forall{
-        case (state, tx) =>
-          val predicates = repr.getPredicates(tx.relation)
-          val accepts = predicates.map(p => p->interpreter.evaluate(state, tx, p)).toMap
-          predicates.forall(accepts)
-      }
-    }
-
-    def permissiveness(traces: Set[EvaluatedTrace], repr: Representation): Int =
-      traces.count(t => accept(t, repr))
-
-    val renamedTrace = disambiguationTraces.map(renameTxRelationInTrace)
-
     val permissivenessScores: Map[Representation, Int] = {
-      candidates.map( c => c -> permissiveness(renamedTrace, c) ).toMap
+      candidates.map(c => c -> permissiveness(disambiguationTraces, c)).toMap
     }
     val best = candidates.maxBy(permissivenessScores)
     val bestScore = permissivenessScores(best)
@@ -166,22 +167,35 @@ case class InductiveSynthesis(
   }
 
   /** Perform the synthesis given EvaluatedTraces and predicates, returning up to maxSolutions programs. */
-  def synthesizeMultiSolution(evaluatedTraces: Set[EvaluatedTrace], maxSolutions: Int = 1): List[Representation] = {
+  def synthesizeMultiSolution(evaluatedTraces: Set[EvaluatedTrace], maxSolutions: Int, disambiguationTraces: Set[EvaluatedTrace]): List[Representation] = {
     // rename relations in Evaluated Trace to ones with recv_ prefix
     val renamedTraces = evaluatedTraces.map(renameTxRelationInTrace)
     val traceConstraints = renamedTraces.map(t => {
       val evalResults = evaluatePredicates(t)
       makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
     })
-    val constraint = z3ctx.mkAnd(traceConstraints.toSeq:_*)
-    val solver = z3ctx.mkSolver()
-    solver.add(constraint)
+    val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
+    // val solver = z3ctx.mkSolver()
+    val solver = z3ctx.mkOptimize()
+    solver.Add(constraint)
+
+    /** Metric: minimize the number of selected predicats */
+    val numSelection = {
+      def boolToInt(b: BoolExpr): IntExpr = z3ctx.mkITE(b, z3ctx.mkInt(1), z3ctx.mkInt(0)).asInstanceOf[IntExpr]
+
+      val boolVars = encodings.flatMap(_._2).toSeq
+      z3ctx.mkAdd(boolVars.map(boolToInt): _*)
+    }
+
+    solver.MkMinimize(numSelection)
+
     var solutions = List.empty[Representation]
     var found = 0
-    while (found < maxSolutions && solver.check() == com.microsoft.z3.Status.SATISFIABLE) {
+
+    while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
       val model = solver.getModel
       val selection = interpretModel(model)
-      solutions = solutions :+ selection
+
       // Add blocking clause to prevent finding the same model again
       val block = encodings.flatMap { case (_, boolVars) =>
         boolVars.map { v =>
@@ -189,8 +203,13 @@ case class InductiveSynthesis(
           if (value.isTrue) z3ctx.mkNot(v) else v
         }
       }.toSeq
-      solver.add(z3ctx.mkOr(block:_*))
-      found += 1
+      solver.Add(z3ctx.mkOr(block: _*))
+
+      val validated: Boolean = validate(disambiguationTraces, selection)
+      if (validated) {
+        solutions = solutions :+ selection
+        found += 1
+      }
     }
     solutions
   }
@@ -204,7 +223,9 @@ case class InductiveSynthesis(
       // Check if this rule is a transaction rule by finding its transaction literal (if any)
       val txLiteralOpt = try {
         Some(PredicateEnumerator.extractTxLiteral(r))
-      } catch { case _: Throwable => None }
+      } catch {
+        case _: Throwable => None
+      }
 
       txLiteralOpt match {
         case Some(txLit) => {
@@ -228,18 +249,18 @@ case class InductiveSynthesis(
 
     // Reuse program metadata from sketch
     // datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
-    sketch.copy(rules=newRules)
+    sketch.copy(rules = newRules)
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {
 
     def _resolveCollision(_preds: Set[Predicate]): Set[Predicate] = {
       val groups = _preds.groupBy(_.context.bindingLiterals)
-      if (groups.size == 1 ) return _preds
+      if (groups.size == 1) return _preds
 
       var renamedPredicates = Set[Predicate]()
       // using one idx per group
-      for ( (group, idx) <- groups.zipWithIndex ) {
+      for ((group, idx) <- groups.zipWithIndex) {
         val (bindingLits, predGroup) = group
         val renameMapping = bindingLits.map(lit => {
           val (_, valueParam) = interpreter.extractKeyValueVar(lit)
@@ -284,8 +305,48 @@ case class InductiveSynthesis(
   }
 
   /** Validate the synthesis results. */
-  def validate(): Boolean = {
-    // Not implemented: placeholder returns false
-    false
+  def validate(disambiguationTrace: Set[EvaluatedTrace], selection: Representation): Boolean = {
+    val score = permissiveness(disambiguationTrace, selection)
+    score > 0
   }
+
+  def validateAndBlockZeroScore(
+    disambiguationTraces: Set[EvaluatedTrace],
+    selectionBatch: Set[Representation],
+    encodings: Map[Relation, List[BoolExpr]],
+    z3ctx: Context
+  ): (Set[Representation], BoolExpr) = {
+    // Compute scores
+    val scores = selectionBatch.map(sel => sel -> permissiveness(disambiguationTraces, sel)).toMap
+    val nonZeroSelections = scores.filter(_._2 > 0).keys.toSet
+    val zeroSelections = scores.filter(_._2 == 0).keys.toSeq
+
+    println(s"${zeroSelections.size} 0 permissive program found.")
+
+    // Find common true variables among zero-score selections
+    val trueVarsPerSelection = zeroSelections.map { sel =>
+      encodings.flatMap { case (rel, boolVars) =>
+        val selectedPreds = sel.getPredicates(rel)
+        val preds = predicates(rel).toList
+        boolVars.zip(preds).collect {
+          case (v, p) if selectedPreds.contains(p) => v
+        }
+      }.toSet
+    }
+
+    val commonTrueVars =
+      if (trueVarsPerSelection.nonEmpty) trueVarsPerSelection.reduce(_ intersect _)
+      else Set.empty[BoolExpr]
+
+    println(s"Blocking the common predicate ${commonTrueVars} in next iteration.")
+
+    // Blocking clause: at least one of these must be false
+    val block: BoolExpr =
+      if (commonTrueVars.nonEmpty) z3ctx.mkOr(commonTrueVars.map(z3ctx.mkNot).toSeq: _*)
+      else z3ctx.mkFalse()
+
+    (nonZeroSelections, block)
+  }
+
+
 }
