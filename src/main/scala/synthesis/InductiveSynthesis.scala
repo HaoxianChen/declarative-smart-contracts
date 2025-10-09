@@ -189,75 +189,77 @@ case class InductiveSynthesis(
 
     solver.MkMinimize(numSelection)
 
-    // val batchSize = 50
-    // var solutions = List.empty[Representation]
-    // var found = 0
-
-    // while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
-    //   var batch = List.empty[Representation]
-    //   var batchCount = 0
-
-    //   // Collect a batch of candidate models
-    //   while (batchCount < batchSize && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
-    //     val model = solver.getModel
-    //     val selection = interpretModel(model)
-    //     batch +:= selection
-
-    //     // Block this model for next candidate
-    //     val block = encodings.flatMap { case (_, boolVars) =>
-    //       boolVars.map { v =>
-    //         val value = model.eval(v, true)
-    //         if (value.isTrue) z3ctx.mkNot(v) else v
-    //       }
-    //     }.toSeq
-    //     solver.Add(z3ctx.mkOr(block: _*))
-
-    //     batchCount += 1
-    //   }
-
-    //   // Validate and block common predicates in zero-score batch
-    //   val (validSelections, blockClause) =
-    //     validateAndBlockZeroScore(disambiguationTraces, batch, encodings, z3ctx)
-
-    //   if (blockClause != null && !blockClause.isFalse) {
-    //     solver.Add(blockClause)
-    //   }
-
-    //   // Add valid selections to solutions
-    //   solutions ++= validSelections
-    //   found += validSelections.size
-    // }
-
-    // if (solutions.isEmpty) {
-    //   println(s"[synthesize] No solution found.")
-    // }
-
-    val (_, blockAlwaysFalsePredicates) = constantFalsePredicates(disambiguationTraces)
-    solver.Add(blockAlwaysFalsePredicates)
-
+    val batchSize = 50
     var solutions = List.empty[Representation]
     var found = 0
 
     while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
-      val model = solver.getModel
-      val selection = interpretModel(model)
+      var batch = List.empty[Representation]
+      var batchCount = 0
 
-      // Add blocking clause to prevent finding the same model again
-      val block = encodings.flatMap { case (_, boolVars) =>
-        boolVars.map { v =>
-          val value = model.eval(v, true)
-          if (value.isTrue) z3ctx.mkNot(v) else v
-        }
-      }.toSeq
-      solver.Add(z3ctx.mkOr(block: _*))
+      // Collect a batch of candidate models
+      while (batchCount < batchSize && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+        val model = solver.getModel
+        val selection = interpretModel(model)
+        batch +:= selection
 
-      val validated: Boolean = validate(disambiguationTraces, selection)
-      if (validated) {
-        println(s"Found ${found} solutions.")
-        solutions = solutions :+ selection
-        found += 1
+        // Block this model for next candidate
+        val block = encodings.flatMap { case (_, boolVars) =>
+          boolVars.map { v =>
+            val value = model.eval(v, true)
+            if (value.isTrue) z3ctx.mkNot(v) else v
+          }
+        }.toSeq
+        solver.Add(z3ctx.mkOr(block: _*))
+
+        batchCount += 1
       }
+
+      // Validate and block common predicates in zero-score batch
+      val (validSelections, blockClause) =
+        validateAndBlockZeroScore(disambiguationTraces, batch, encodings, z3ctx)
+
+      if (blockClause != null && !blockClause.isFalse) {
+        solver.Add(blockClause)
+      }
+
+      // Add valid selections to solutions
+      solutions ++= validSelections
+      found += validSelections.size
     }
+
+    if (solutions.isEmpty) {
+      println(s"[synthesize] No solution found.")
+    }
+
+    /** single mode */
+
+    // val (_, blockAlwaysFalsePredicates) = constantFalsePredicates(disambiguationTraces)
+    // solver.Add(blockAlwaysFalsePredicates)
+
+    // var solutions = List.empty[Representation]
+    // var found = 0
+
+    // while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+    //   val model = solver.getModel
+    //   val selection = interpretModel(model)
+
+    //   // Add blocking clause to prevent finding the same model again
+    //   val block = encodings.flatMap { case (_, boolVars) =>
+    //     boolVars.map { v =>
+    //       val value = model.eval(v, true)
+    //       if (value.isTrue) z3ctx.mkNot(v) else v
+    //     }
+    //   }.toSeq
+    //   solver.Add(z3ctx.mkOr(block: _*))
+
+    //   val validated: Boolean = validate(disambiguationTraces, selection)
+    //   if (validated) {
+    //     println(s"Found ${found} solutions.")
+    //     solutions = solutions :+ selection
+    //     found += 1
+    //   }
+    // }
     solutions
   }
 
@@ -370,36 +372,45 @@ case class InductiveSynthesis(
 
     println(s"${zeroSelections.size} 0 permissive program found.")
 
-    // Find common true variables among zero-score selections
-    val trueVarsPerSelection = zeroSelections.map { sel =>
-      encodings.flatMap { case (rel, boolVars) =>
-        val selectedPreds = sel.getPredicates(rel)
-        val preds = predicates(rel).toList
-        boolVars.zip(preds).collect {
-          case (v, p) if selectedPreds.contains(p) => v
-        }
+    // For each zero-permissive selection, find minimal blocking subset
+    val minimalBlocks = zeroSelections.toList.flatMap { sel =>
+      val allSelected: Set[(Relation, Predicate)] = encodings.keys.flatMap { rel =>
+        sel.getPredicates(rel).map(p => (rel, p))
       }.toSet
+
+      // Greedy minimization: try removing each predicate and check permissiveness
+      def isStillZero(subset: Set[(Relation, Predicate)]): Boolean = {
+        val testSel = new Representation(encodings.keys.map { rel =>
+          val preds = subset.collect { case (`rel`, p) => p }
+          rel -> preds
+        }.toMap)
+        permissiveness(disambiguationTraces, testSel) == 0
+      }
+
+      // Try to minimize the subset
+      var minimal = allSelected
+      for ((rel, p) <- allSelected) {
+        val candidate = minimal - ((rel, p))
+        if (candidate.nonEmpty && isStillZero(candidate)) {
+          minimal = candidate
+        }
+      }
+      if (minimal.nonEmpty) Some(minimal) else None
     }
 
-    val commonTrueVars =
-      if (trueVarsPerSelection.nonEmpty) trueVarsPerSelection.reduce(_ intersect _)
-      else Set.empty[BoolExpr]
-
-    // read the common predicates here
-    val commonPredicates: Set[Predicate] = commonTrueVars.flatMap { v =>
-      encodings.collectFirst {
-        case (rel, boolVars) if boolVars.contains(v) =>
-          val idx = boolVars.indexOf(v)
-          predicates(rel).toList.lift(idx)
-      }.flatten
+    // Create blocking clauses for each minimal subset
+    val blockClauses = minimalBlocks.map { subset =>
+      val vars = subset.flatMap { case (rel, p) =>
+        val idx = predicates(rel).toList.indexOf(p)
+        if (idx >= 0) Some(encodings(rel)(idx)) else None
+      }
+      // At least one must be false
+      z3ctx.mkOr(vars.map(z3ctx.mkNot).toSeq: _*)
     }
 
-    println(s"Blocking the common predicate ${commonPredicates} in next iteration.")
+    println(s"Block ${blockClauses} clauss.")
 
-    // Blocking clause: at least one of these must be false
-    val block: BoolExpr =
-      if (commonTrueVars.nonEmpty) z3ctx.mkOr(commonTrueVars.map(z3ctx.mkNot).toSeq: _*)
-      else z3ctx.mkFalse()
+    val block = if (blockClauses.nonEmpty) z3ctx.mkAnd(blockClauses: _*) else z3ctx.mkFalse()
 
     (nonZeroSelections.toList, block)
   }
