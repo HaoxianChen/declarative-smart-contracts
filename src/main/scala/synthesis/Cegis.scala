@@ -26,7 +26,7 @@ case class Cegis(sketch: Program) {
    *  - Run the inductive synthesizer that generate new program that blocks such EvaluatedTrace
    *  - iterate until no counter example is found by the BMC.
   *  */
-  def run(maxBound: Int = 4, maxIters: Int = 10, maxSolutionsPerStep: Int = 20): Program = {
+  def run(maxBound: Int = 4, maxIters: Int = 50, maxSolutionsPerStep: Int = 20): Program = {
     // Assumptions made:
     // 1) We try to use the SolidityInterpreter whenever possible. We construct a
     //    minimal `ReadValueFromMap` statement that performs a read using constant
@@ -40,6 +40,13 @@ case class Cegis(sketch: Program) {
     var program: Program = sketch
     var traces: Set[EvaluatedTrace] = Set()
     val bmc = BoundedModelChecker()
+
+    // Build predicate candidates and the interpreter context for synthesis
+    val interpreterContext = InterpreterContext.makeContext(program)
+    val enumerator = PredicateEnumerator(interpreterContext)
+    val candidates = enumerator.enumeratePredicates(program)
+
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
 
     var iter = 0
     while (iter < maxIters) {
@@ -59,13 +66,6 @@ case class Cegis(sketch: Program) {
       println(s"[CEGIS] Counterexample trace found: $trace")
 
       val evaluatedTrace = interpreter.interpret(txDefs, trace)
-
-      // Build predicate candidates and the interpreter context for synthesis
-      val interpreterContext = InterpreterContext.makeContext(program)
-      val enumerator = PredicateEnumerator(interpreterContext)
-      val candidates = enumerator.enumeratePredicates(program)
-
-      val synthesizer = InductiveSynthesis(candidates, interpreterContext)
 
       traces += evaluatedTrace
       println("[CEGIS] Running inductive synthesis to block the counterexample...")

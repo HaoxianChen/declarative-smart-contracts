@@ -4,6 +4,7 @@ import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, IntExpr, Model}
 import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
+import scala.collection.mutable
 
 /** Given an EvaluatedTrace object, a set of predicates, return
  * a mapping, each transaction type to a bit vector encoding,
@@ -22,6 +23,8 @@ case class InductiveSynthesis(
   }
 
   val interpreter: Interpreter = Interpreter(interpreterContext)
+
+  private val synthesisCache: mutable.Map[Set[EvaluatedTrace], List[Representation]] = mutable.Map.empty
 
   /** Reorganize and make the predicate lookup by relation efficient. */
   val predicates: Map[Relation, Set[Predicate]] = {
@@ -134,9 +137,83 @@ case class InductiveSynthesis(
     val renamedDisambiguationTrace = disambiguationTraces.map(renameTxRelationInTrace)
     val renamedSafetyTrace = evaluatedTraces.map(renameTxRelationInTrace)
 
-    val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
-    val selection = disambiguate(renamedDisambiguationTrace, candidates)
+    // val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
+    // val selection = disambiguate(renamedDisambiguationTrace, candidates)
+    val selection = synthesizePerRelation(renamedSafetyTrace, maxSolutions,
+      renamedDisambiguationTrace)
     makeProgram(sketch, selection)
+  }
+
+  /** Synthesize predicates for each relation independently, then combine best selections. */
+  private def synthesizePerRelation(evaluatedTraces: Set[EvaluatedTrace],
+                                       maxSolutions: Int,
+                                       disambiguationTraces: Set[EvaluatedTrace]
+                                     ): Representation = {
+    // Group traces by last transaction relation
+    val grouped: Map[Relation, Set[EvaluatedTrace]] =
+      evaluatedTraces.groupBy(_.steps.last._1.relation)
+
+    // For each relation, synthesize and disambiguate
+    val allSolutions: Map[Relation, List[Representation]] = grouped.map { case (rel, traces) =>
+      synthesisCache.get(traces) match {
+        case Some(cached) =>
+          println(s"[synthesizePerRelation] Using cached synthesis for relation ${rel.name}")
+          rel -> cached
+        case None => {
+          val solver = z3ctx.mkOptimize()
+          val traceConstraints = traces.map { t =>
+            val evalResults = evaluatePredicates(t)
+            makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
+          }
+          val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
+          solver.Add(constraint)
+
+          // Block all other relations
+          val otherRelations = encodings.keySet - rel
+          val blockOthers = otherRelations.flatMap(encodings).map(z3ctx.mkNot)
+          if (blockOthers.nonEmpty) solver.Add(z3ctx.mkAnd(blockOthers.toSeq: _*))
+
+          // Maximize permissiveness for this relation
+          val permissivenessObjective = makePermissivenessObjective(disambiguationTraces, encodings, z3ctx)
+          solver.MkMaximize(permissivenessObjective)
+
+          var selections = List.empty[Representation]
+          var found = 0
+          while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+            val model = solver.getModel
+            val selection = interpretModel(model)
+
+            // Block this model for next candidate
+            val block = encodings.flatMap { case (_, boolVars) =>
+              boolVars.map { v =>
+                val value = model.eval(v, true)
+                if (value.isTrue) z3ctx.mkNot(v) else v
+              }
+            }.toSeq
+            solver.Add(z3ctx.mkOr(block: _*))
+
+            selections :+= selection
+            found += 1
+          }
+          synthesisCache.update(traces,selections)
+          rel -> selections
+        }
+      }
+    }
+
+    // Disambiguate for each relation after collecting all solutions
+    val bestSelections: Map[Relation, Set[Predicate]] = allSolutions.map { case (rel, candidates) =>
+      val best = disambiguate(disambiguationTraces, candidates)
+      rel -> best.getPredicates(rel)
+    }
+
+    // Combine best selections for all relations, defaulting to empty set for missing keys
+    val allRelations = encodings.keySet
+    val completeSelections: Map[Relation, Set[Predicate]] = allRelations.map { rel =>
+      rel -> bestSelections.getOrElse(rel, Set.empty[Predicate])
+    }.toMap
+
+    Representation(completeSelections)
   }
 
   private def permissiveness(disambiguationTraces: Set[EvaluatedTrace], repr: Representation): Int = {
@@ -340,7 +417,27 @@ case class InductiveSynthesis(
 
     val permissiveness: Seq[IntExpr] = disambigAcceptExprs.map(boolToInt)
 
-    z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+    // z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+    val permissivenessSum = z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+
+    // Penalize by number of binding literals in each predicate
+    val allBoolVars = encodings.values.flatten.toSeq
+    // val numSelectedPredicates = z3ctx.mkAdd(allBoolVars.map(boolToInt): _*).asInstanceOf[IntExpr]
+    // val penalty = z3ctx.mkMul(z3ctx.mkInt(1), numSelectedPredicates).asInstanceOf[IntExpr]
+    val penaltyTerms = allBoolVars.map { b =>
+      val boolExprToPredicate: Map[BoolExpr, Predicate] = encodings.flatMap { case (rel, boolVars) =>
+        val preds = predicates(rel).toList
+        boolVars.zip(preds)
+      }.toMap
+      val predicate = boolExprToPredicate(b)
+      val bindingCount = predicate.context.bindingLiterals.size
+      z3ctx.mkMul(z3ctx.mkInt(bindingCount), boolToInt(b)).asInstanceOf[IntExpr]
+    }
+    val penalty = z3ctx.mkAdd(penaltyTerms: _*).asInstanceOf[IntExpr]
+
+
+    // Objective: maximize permissiveness - penalty
+    z3ctx.mkSub(permissivenessSum, penalty).asInstanceOf[IntExpr]
   }
 
 
