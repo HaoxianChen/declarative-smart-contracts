@@ -1,8 +1,9 @@
 package synthesis
 
 import com.microsoft.z3.FuncDecl
-import datalog.{Add, AnyType, Arithmetic, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, Mul, Negative, NumberType, One, Param, Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, SymbolType, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, Arithmetic, Balance, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Program, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, This, UnitType, Variable, Zero}
 import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, GroundVar, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue}
+import synthesis.SolidityInterpreter.{msgSenderName, msgValueName}
 
 /**
  * A small, modular Solidity interpreter.
@@ -46,6 +47,7 @@ case class SolidityInterpreter() {
   }
 
   private def evaluateTransaction(funcDecl: DeclFunction, tx: Transaction, state: State): Unit = {
+    // setup the state using input argument
     funcDecl.params.zip(tx.parameters).foreach {
       case (param, constant) => {
         param match {
@@ -54,6 +56,9 @@ case class SolidityInterpreter() {
         }
       }
     }
+    // setup implicit parameters
+    state.updateInt(msgSenderName, tx.implicitParameters.msgSender)
+    state.updateInt(msgValueName, tx.implicitParameters.value)
     interpretStatement(funcDecl.stmt, state)
   }
 
@@ -111,7 +116,25 @@ case class SolidityInterpreter() {
       case And(a, b) => _interpretCond(a) && _interpretCond(b)
       case Or(a, b) => _interpretCond(a) || _interpretCond(b)
       // leave as todos
-      case MatchRelationField(relation, keys, index, p, enableProjection) => ???
+      case MatchRelationField(relation, keys, index, p, enableProjection) => {
+        relation match {
+          case reserved: ReservedRelation => reserved match {
+            case Balance() => ???
+            case MsgSender() => {
+              val v1 = state.lookup(p.name)
+              val v2 = state.lookup(msgSenderName)
+              v1 == v2
+            }
+            case MsgValue() => {
+              val v1 = state.lookup(p.name)
+              val v2 = state.lookup(msgValueName)
+              v1 == v2
+            }
+            case _ => ???
+          }
+          case _ => ???
+        }
+      }
       case BooleanFunction(name, parameters) => ???
     }
 
@@ -229,4 +252,10 @@ case class SolidityInterpreter() {
     }
     newState
   }
+}
+
+
+object SolidityInterpreter {
+  val msgSenderName: String = s"msgSender"
+  val msgValueName: String = s"msgValue"
 }
