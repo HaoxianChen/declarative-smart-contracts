@@ -131,8 +131,11 @@ case class InductiveSynthesis(
                  evaluatedTraces: Set[EvaluatedTrace],
                  maxSolutions: Int,
                  disambiguationTraces: Set[EvaluatedTrace]): Program = {
-    val candidates = synthesizeMultiSolution(evaluatedTraces, maxSolutions, disambiguationTraces)
-    val selection = disambiguate(disambiguationTraces, candidates)
+    val renamedDisambiguationTrace = disambiguationTraces.map(renameTxRelationInTrace)
+    val renamedSafetyTrace = evaluatedTraces.map(renameTxRelationInTrace)
+
+    val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
+    val selection = disambiguate(renamedDisambiguationTrace, candidates)
     makeProgram(sketch, selection)
   }
 
@@ -147,8 +150,8 @@ case class InductiveSynthesis(
       }
     }
 
-    val renamedTrace = disambiguationTraces.map(renameTxRelationInTrace)
-    renamedTrace.count(t => accept(t, repr))
+    // val renamedTrace = disambiguationTraces.map(renameTxRelationInTrace)
+    disambiguationTraces.count(t => accept(t, repr))
   }
 
   private def disambiguate(disambiguationTraces: Set[EvaluatedTrace],
@@ -157,20 +160,67 @@ case class InductiveSynthesis(
     val permissivenessScores: Map[Representation, Int] = {
       candidates.map(c => c -> permissiveness(disambiguationTraces, c)).toMap
     }
-    val best = candidates.maxBy(permissivenessScores)
-    val bestScore = permissivenessScores(best)
-    if (bestScore == 0) {
-      println(s"[Warning]")
-    }
-    println(s"Selected $best with permissive score: $bestScore / ${disambiguationTraces.size}.")
+    // val best = candidates.maxBy(permissivenessScores)
+    // val bestScore = permissivenessScores(best)
+    // if (bestScore == 0) {
+    //   println(s"[Warning]")
+    // }
+    // println(s"Selected $best with permissive score: $bestScore / ${disambiguationTraces.size}.")
+    val maxScore = permissivenessScores.values.max
+    val bestCandidates = candidates.filter(c => permissivenessScores(c) == maxScore)
+
+    def numPredicates(repr: Representation): Int =
+      repr.map.values.map(_.size).sum
+
+    val minPredCount = bestCandidates.map(numPredicates).min
+    val finalCandidates = bestCandidates.filter(c => numPredicates(c) == minPredCount)
+    val best = finalCandidates.head
+    println(s"Selected $best with permissive score: $maxScore / ${disambiguationTraces.size}, min predicates: $minPredCount.")
+
     best
   }
 
   /** Perform the synthesis given EvaluatedTraces and predicates, returning up to maxSolutions programs. */
-  def synthesizeMultiSolution(evaluatedTraces: Set[EvaluatedTrace], maxSolutions: Int, disambiguationTraces: Set[EvaluatedTrace]): List[Representation] = {
-    // rename relations in Evaluated Trace to ones with recv_ prefix
-    val renamedTraces = evaluatedTraces.map(renameTxRelationInTrace)
-    val traceConstraints = renamedTraces.map(t => {
+  private def synthesizeMultiSolution(evaluatedTraces: Set[EvaluatedTrace],
+                                       maxSolutions: Int,
+                                       disambiguationTraces: Set[EvaluatedTrace]
+                                     ): List[Representation] = {
+    val traceConstraints = evaluatedTraces.map(t => {
+      val evalResults = evaluatePredicates(t)
+      makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
+    })
+    val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
+    val solver = z3ctx.mkOptimize()
+    solver.Add(constraint)
+
+    /** Metric: maximize permissiveness */
+    val permissivenessObjective = makePermissivenessObjective(disambiguationTraces, encodings, z3ctx)
+    solver.MkMaximize(permissivenessObjective)
+
+    var solutions = List.empty[Representation]
+    var found = 0
+
+    while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+      val model = solver.getModel
+      val selection = interpretModel(model)
+
+      val block = encodings.flatMap { case (_, boolVars) =>
+        boolVars.map { v =>
+          val value = model.eval(v, true)
+          if (value.isTrue) z3ctx.mkNot(v) else v
+        }
+      }.toSeq
+      solver.Add(z3ctx.mkOr(block: _*))
+
+      solutions = solutions :+ selection
+      found += 1
+    }
+    solutions
+  }
+
+  /** Perform the synthesis given EvaluatedTraces and predicates, returning up to maxSolutions programs. */
+  private def synthesizeMultiSolutionBatch(evaluatedTraces: Set[EvaluatedTrace], maxSolutions: Int, disambiguationTraces: Set[EvaluatedTrace]): List[Representation] = {
+    val traceConstraints = evaluatedTraces.map(t => {
       val evalResults = evaluatePredicates(t)
       makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
     })
@@ -180,14 +230,18 @@ case class InductiveSynthesis(
     solver.Add(constraint)
 
     /** Metric: minimize the number of selected predicats */
-    val numSelection = {
-      def boolToInt(b: BoolExpr): IntExpr = z3ctx.mkITE(b, z3ctx.mkInt(1), z3ctx.mkInt(0)).asInstanceOf[IntExpr]
+   //  val numSelection = {
+   //    def boolToInt(b: BoolExpr): IntExpr = z3ctx.mkITE(b, z3ctx.mkInt(1), z3ctx.mkInt(0)).asInstanceOf[IntExpr]
 
-      val boolVars = encodings.flatMap(_._2).toSeq
-      z3ctx.mkAdd(boolVars.map(boolToInt): _*)
-    }
+   //    val boolVars = encodings.flatMap(_._2).toSeq
+   //    z3ctx.mkAdd(boolVars.map(boolToInt): _*)
+   //  }
+   //
+   //  solver.MkMinimize(numSelection)
 
-    solver.MkMinimize(numSelection)
+    /** New metric: maximize permissiveness */
+    val permissivenessObjective = makePermissivenessObjective(disambiguationTraces, encodings, z3ctx)
+    solver.MkMaximize(permissivenessObjective)
 
     val batchSize = 50
     var solutions = List.empty[Representation]
@@ -262,6 +316,33 @@ case class InductiveSynthesis(
     // }
     solutions
   }
+
+  private def makePermissivenessObjective(
+                                           disambiguationTraces: Set[EvaluatedTrace],
+                                           encodings: Map[Relation, List[BoolExpr]],
+                                           z3ctx: Context
+                                         ): IntExpr = {
+    def boolToInt(b: BoolExpr): IntExpr = z3ctx.mkITE(b, z3ctx.mkInt(1), z3ctx.mkInt(0)).asInstanceOf[IntExpr]
+
+    val disambigAcceptExprs: Seq[BoolExpr] = disambiguationTraces.toSeq.map { trace =>
+      val evalResults = evaluatePredicates(trace)
+      val txAccepts = evalResults.map { case (tx, boolList) =>
+        val boolVars = encodings(tx.relation)
+        val assertions = boolList.zipWithIndex.map { case (b, i) =>
+          val premise = boolVars(i)
+          val conclusion = z3ctx.mkBool(b)
+          z3ctx.mkImplies(premise, conclusion)
+        }
+        z3ctx.mkAnd(assertions: _*)
+      }
+      z3ctx.mkAnd(txAccepts: _*)
+    }
+
+    val permissiveness: Seq[IntExpr] = disambigAcceptExprs.map(boolToInt)
+
+    z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+  }
+
 
   private def makeProgram(sketch: Program, repr: Representation): Program = {
     // For each rule in the sketch, if it is a transaction rule, replace it with a rule
@@ -405,10 +486,11 @@ case class InductiveSynthesis(
         if (idx >= 0) Some(encodings(rel)(idx)) else None
       }
       // At least one must be false
+      // z3ctx.mkOr(vars.map(z3ctx.mkNot).toSeq: _*)
       z3ctx.mkOr(vars.map(z3ctx.mkNot).toSeq: _*)
     }
 
-    println(s"Block ${blockClauses} clauss.")
+    println(s"Block ${blockClauses.size} claues.")
 
     val block = if (blockClauses.nonEmpty) z3ctx.mkAnd(blockClauses: _*) else z3ctx.mkFalse()
 
