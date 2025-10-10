@@ -38,7 +38,7 @@ case class Disambiguator(sketch: Program,
     Transaction(rel, params, ImplicitParameters(msgSender,msgValue))
   }
 
-  def makeTracesHeuristic(numTraces: Int = 1000, txsPerTrace: Int = 3): Set[EvaluatedTrace] = {
+  def makeTracesHeuristic(numTraces: Int): Set[EvaluatedTrace] = {
     // Helper to get possible values for a type
     def paramDomain(t: Type): Seq[String] = t match {
       case SymbolType(_) => addresses
@@ -87,7 +87,14 @@ case class Disambiguator(sketch: Program,
 
     val traces = allTxs.map(tx => Trace(setupTxs :+ tx))
 
-    traces.map(t => solInterpreter.interpret(txDefs, t)).toSet
+    val sampledTraces =
+      if (traces.size > numTraces) {
+        println(s"[Disambiguation trace] Sampling ${numTraces} traces out of ${traces.size}.")
+        Random.shuffle(traces).take(numTraces)
+      } else
+        traces
+
+    sampledTraces.map(t => solInterpreter.interpret(txDefs, t)).toSet
   }
 
 }

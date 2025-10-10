@@ -16,7 +16,7 @@ case class Cegis(sketch: Program) {
 
   val disambiguationTraces: Set[EvaluatedTrace] = {
     val disambiguator = Disambiguator(sketch, interpreter, txDefs)
-    disambiguator.makeTracesHeuristic(1000)
+    disambiguator.makeTracesHeuristic(500)
   }
 
   /**  This is a composed object that :
