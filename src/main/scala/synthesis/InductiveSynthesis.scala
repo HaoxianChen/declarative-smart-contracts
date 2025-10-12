@@ -137,9 +137,10 @@ case class InductiveSynthesis(
     // Remove the first constructor transaction from each trace if present
     def stripConstructor(trace: EvaluatedTrace): EvaluatedTrace = {
       val steps = trace.steps
-      if (steps.nonEmpty && steps.head._1.relation.name == "constructor")
-        trace.copy(steps = steps.tail)
-      else
+      if (steps.nonEmpty && steps.head._1.relation.name == "constructor") {
+        val initState = steps.head._2
+        trace.copy(initialState = initState, steps = steps.tail)
+      } else
         trace
     }
 

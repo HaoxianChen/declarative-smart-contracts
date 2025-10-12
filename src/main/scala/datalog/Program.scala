@@ -136,7 +136,7 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
                    functions: Set[Relation],
                    violations: Set[Relation],
                    name: String = "Contract0") {
-  val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
+  val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation) ++ interfaces.map(_.relation)
   val violationRules: Set[Rule] = rules.filter(r => violations.contains(r.head.relation))
 
   override def toString: String = {

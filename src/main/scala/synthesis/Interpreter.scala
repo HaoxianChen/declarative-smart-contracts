@@ -151,21 +151,27 @@ case class Interpreter(interpreterContext: InterpreterContext) {
   }
 
   def extractKeyValueVar(literal: Literal): (Seq[Parameter], Parameter) = {
-    val rel = literal.relation match {
-      case r: SimpleRelation => r
-      case _ => throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
+    literal.relation match {
+      case sr: SimpleRelation => {
+        val keyIndices = relationIndices.getOrElse(sr,
+          throw new IllegalArgumentException(s"Missing indices for relation: $sr"))
+
+        val keyParams = keyIndices.map(literal.fields(_))
+
+        val valueIndices = literal.fields.indices.diff(keyIndices)
+        if (valueIndices.size != 1)
+          throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
+        val valueIdx = valueIndices.head
+        val valueParam = literal.fields(valueIdx)
+        (keyParams, valueParam)
+      }
+      case _: SingletonRelation => {
+        (Seq(), literal.fields.head)
+      }
+      case _ => {
+        throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
+      }
     }
-    val keyIndices = relationIndices.getOrElse(rel,
-      throw new IllegalArgumentException(s"Missing indices for relation: $rel"))
-
-    val keyParams = keyIndices.map(literal.fields(_))
-
-    val valueIndices = literal.fields.indices.diff(keyIndices)
-    if (valueIndices.size != 1)
-      throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
-    val valueIdx = valueIndices.head
-    val valueParam = literal.fields(valueIdx)
-    (keyParams, valueParam)
   }
 
   private def makeBindings(state: State, context: Context, transaction: Transaction): Seq[State.Binding] = {
@@ -274,7 +280,13 @@ case class Interpreter(interpreterContext: InterpreterContext) {
   }
 
   private def evalParam(state: State, p: Parameter): Int = p match {
-    case Constant(_type, name) => name.toInt
+    case Constant(_type, name) => _type match {
+      case _:SymbolType | _:NumberType => name.toInt
+      case AnyType() => ???
+      case UnitType() => ???
+      case BooleanType() => if (name.toBoolean) 1 else 0
+      case compoundType: CompoundType => ???
+    }
     case Variable(_type, name) => state.lookup(name)
   }
 

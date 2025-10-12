@@ -239,6 +239,10 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
               Lesser(Param(v), Param(Constant(v._type, "0"))),
               Leq(Param(v), Param(Constant(v._type, "0")))
             )
+          case datalog.BooleanType() => Set(
+            Equal(v, Constant.CTrue),
+            Equal(v, Constant.CFalse),
+          )
           case _ => Set.empty[Functor]
         }
     }.flatten.toSet

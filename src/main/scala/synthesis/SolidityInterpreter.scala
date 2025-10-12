@@ -1,8 +1,8 @@
 package synthesis
 
 import com.microsoft.z3.FuncDecl
-import datalog.{Add, AnyType, Arithmetic, Balance, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Program, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, This, UnitType, Variable, Zero}
-import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, GroundVar, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue}
+import datalog.{Add, AnyType, Arithmetic, Balance, BinaryOperator, BooleanType, CompoundType, Constant, Div, Expr, Min, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Program, Receive, Relation, ReservedRelation, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, This, UnitType, Variable, Zero}
+import imp.{And, Assign, BooleanFunction, Call, CallObjectMethod, Condition, Constructor, ConvertType, DeclContract, DeclEvent, DeclFunction, DeclModifier, DeclVariable, DefineStruct, Emit, False, ForLoop, Geq, GetObjectAttribute, Greater, GroundVar, If, Increment, Leq, Lesser, Match, MatchRelationField, Or, ReadArray, ReadTuple, ReadValueFromMap, Require, Return, Revert, SendEther, SetTuple, SolidityStatement, Statement, True, Unequal, UpdateMap, UpdateMapValue, Empty}
 import synthesis.SolidityInterpreter.{msgSenderName, msgValueName}
 
 /**
@@ -138,6 +138,17 @@ case class SolidityInterpreter() {
       case BooleanFunction(name, parameters) => ???
     }
 
+    def _interpretParam(p: Parameter): Int = p match {
+      case Constant(_type, name) => _type match {
+        case _:NumberType | _:SymbolType => name.toInt
+        case UnitType() => ???
+        case AnyType() => ???
+        case BooleanType() => if (name.toBoolean) 1 else 0
+        case compoundType: CompoundType => ???
+      }
+      case Variable(_type, name) => state.lookup(name)
+    }
+
     def _interpret(statement: Statement): Unit = statement match {
       case imp.Seq(a,b) => {
         _interpret(a)
@@ -184,13 +195,14 @@ case class SolidityInterpreter() {
           case Constant(_type, name) => name.toInt
           case v: Variable => state.lookup(v.name)
         }
-        val updateValue = state.lookup(p.name)
+        // val updateValue = state.lookup(p.name)
+        val updateValue = _interpretParam(p)
         state.update(name, keyIds, updateValue)
       }
       case SetTuple(relation, params) => {
         require(relation.sig.size==1, s"Assuming only has one fields: $relation.")
         val varId = relation.name
-        val value = state.lookup(params.head.name)
+        val value = _interpretParam(params.head)
         state.updateInt(varId, value)
       }
       case ConvertType(from, to) => {
@@ -234,6 +246,7 @@ case class SolidityInterpreter() {
         ()
       }
       case Emit(event, parameters) => ()
+      case Empty() => ()
     }
     _interpret(statement)
   }
