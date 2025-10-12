@@ -1,6 +1,6 @@
 package imp
 
-import datalog.{Add, Arithmetic, Div, Expr, Min, Mul, Negative, One, Param, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, Variable, Zero}
+import datalog.{Add, Arithmetic, Div, Expr, Min, Mul, Negative, One, Param, Parameter, Relation, ReservedRelation, SimpleRelation, SingletonRelation, Sub, UnitType, Variable, Zero}
 import imp.SolidityTranslator.transactionRelationPrefix
 
 case class Inliner(solidityProgram: Statement,

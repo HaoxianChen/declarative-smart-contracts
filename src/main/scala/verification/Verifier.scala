@@ -30,6 +30,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val violationRules = program.rules.filter(r => program.violations.contains(r.head.relation))
     val readByViolationRules = violationRules.flatMap(r => r.body.map(_.relation))
     (fromStatements++readByViolationRules).filterNot(_.isInstanceOf[ReservedRelation])
+      .filterNot(_.name.startsWith(transactionRelationPrefix))
   }
 
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
@@ -234,15 +235,25 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
 
-    // Construct the (named) key constants for clarity (but do not existentially bind them)
-    val keyConsts: Array[Expr[_]] = {
-      var keys: Set[Parameter] = Set()
-      for (lit <- rule.body) {
-        val _indicies = getIndices(lit.relation)
-        keys ++= _indicies.map(i => lit.fields(i)).toSet
-      }
-      keys.map(p => paramToConst(ctx, p, prefix)._1).toArray
+    val constraints = {
+      val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)
+      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
+      renamed
     }
+    // the query for violation
+    constraints.asInstanceOf[BoolExpr]
+  }
+
+  def getTxViolationCheck(ctx: Context, rule: Rule, varPrefix: String): BoolExpr = {
+    val recvLit = {
+      val recvLitOpt = rule.body.find(_.relation.name.startsWith(transactionRelationPrefix))
+      if (recvLitOpt.isEmpty) throw new Exception(s"No transaction interface found: $rule.")
+      recvLitOpt.get
+    }
+
+    val prefix = varPrefix
+    val bodyConstraints = rule.body.diff(Set(recvLit)).map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
 
     val constraints = {
       val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)

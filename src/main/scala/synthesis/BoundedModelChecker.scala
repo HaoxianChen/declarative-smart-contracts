@@ -2,7 +2,7 @@ package synthesis
 
 import datalog.{Constant, Literal, Parameter, Program, Relation, Rule}
 import imp.ImperativeTranslator
-import verification.{Verifier, Z3Helper}
+import verification.{TransitionSystem, Verifier, Z3Helper}
 import com.microsoft.z3._
 import Verifier.indicatorConstForTransactionTriggerRelation
 import imp.SolidityTranslator.transactionRelationPrefix
@@ -54,6 +54,11 @@ case class BoundedModelChecker() {
      // 2) Collect renamable symbols (state vars + other top-level consts)
      val (stateVars, otherConsts) = collectRenamables(ts, properties, ctx)
 
+    // 3.1) Check state transaction first.
+    val (result, optCounterexample) = checkTxProperties(ts, violationRules, verifier,
+      program, ctx, stateVars, otherConsts)
+    if (optCounterexample.isDefined) return (result, optCounterexample)
+
     // Clear any previously cached per-step substitutions (important if same BMC instance is reused)
     stepSubstCache.clear()
     // NOTE: per-step substitutions are computed lazily by `getStepSubst` when needed.
@@ -95,13 +100,99 @@ case class BoundedModelChecker() {
 
     println(s"[BMC] Transition system ready for program '${program.name}'")
     val ctx = ts.ctx
-    val properties: Seq[(Rule, BoolExpr)] = program.violationRules.toSeq.map { vr =>
+
+    val txViolationRules = program.violationRules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+    val stateViolationRules = program.violationRules.diff(txViolationRules)
+
+    // val properties: Seq[(Rule, BoolExpr)] = program.violationRules.toSeq.map { vr =>
+    val stateProperties: Seq[(Rule, BoolExpr)] = stateViolationRules.toSeq.map { vr =>
       // val prop = verifier.getProperty(ctx, vr)
       val prop = verifier.getViolationCheck(ctx, vr)
       (vr, prop)
     }
+    // val txProperties: Seq[(Rule, BoolExpr)] = ???
+
+    val properties = stateProperties // ++ txProperties
     properties.foreach { case (vr, prop) => println(s"[BMC] Property for violation rule '${vr.head.relation.name}': $prop") }
     (verifier, ts, ctx, properties)
+  }
+
+  /** Check if transaction parameter violates txViolation rules but still able to
+   *  go through the transaction.
+   *  */
+  private def checkTxProperties(ts: TransitionSystem, violationRules : Set[Rule],
+                                verifier: Verifier,
+                                program: Program,
+                                ctx: Context,
+                                stateVars: Seq[(Expr[_], Expr[_])],
+                                otherConsts: Set[Expr[_]]): (Boolean, Option[Trace]) = {
+    // Find rules that mention transaction interfaces (recv_/transactionRelationPrefix)
+    val txRules = violationRules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+
+    if (txRules.isEmpty) return (true, None)
+
+    for (r <- txRules) {
+      val recvLitOpt = r.body.find(_.relation.name.startsWith(transactionRelationPrefix))
+      if (recvLitOpt.isEmpty) throw new Exception(s"No transaction interface found: $r.")
+      val recvLit = recvLitOpt.get
+      val recvName = recvLit.relation.name
+
+      val violationExpr: BoolExpr = {
+        val prefix = "kv" // this is the top-level transaction relation parameter prefix.
+        val expr = verifier.getTxViolationCheck(ctx, r, prefix)
+
+        // recvLit is available in the outer scope (the transaction literal for this rule)
+        val params = recvLit.fields
+
+        // Build from/to arrays for substitution: kv<name> -> i0_<name>
+        val fromArr = params.map { p =>
+          ctx.mkConst(s"${prefix}_${p.name}", Z3Helper.typeToSort(ctx, p._type) )
+        }.toArray[Expr[_]]
+
+        val toArr = params.map { p =>
+          ctx.mkConst(s"i0_${p.name}", Z3Helper.typeToSort(ctx, p._type))
+        }.toArray[Expr[_]]
+
+        expr.substitute(fromArr, toArr).asInstanceOf[BoolExpr]
+      }
+
+      // Find candidate transition expressions that mention the transaction relation or indicator
+      val candidates = ts.getTrs().filter { tr =>
+        try {
+          val s = tr.toString
+          s.contains(recvName) || s.contains(recvName.stripPrefix(transactionRelationPrefix))
+        } catch { case _: Throwable => false }
+      }
+      if (candidates.isEmpty)
+        throw new Exception(s"[BMC] Warning: no transition expression found for transaction '$recvName' (rule ${r.head.relation.name})")
+
+
+
+      for (tr <- candidates) {
+        // Rename both to step 0 (bind input params via getStepSubst/renameForStep)
+        val trAt0 = renameForStep(tr, 0, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
+        val violAt0 = renameForStep(violationExpr, 0, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
+
+        val combined = ctx.mkAnd(trAt0, violAt0)
+
+        // Solve combined constraint (single-step). Use a short timeout.
+        val solver = ctx.mkSolver()
+        val p = ctx.mkParams(); p.add("timeout", 20000); p.add("smt.mbqi", true)
+        solver.setParameters(p)
+        solver.add(combined)
+        val res = solver.check()
+        println(s"[BMC] Tx-check for rule ${r.head.relation.name} with transition candidate -> $res")
+        if (res == Status.SATISFIABLE) {
+          val model = solver.getModel
+          val traceOpt = extractTraceFromModel(model, 1, ctx, program, stateVars, otherConsts)
+          traceOpt match {
+            case Some(t) => return (false, Some(t))
+            case None => throw new Exception("SAT model but failed to extract trace")
+          }
+        }
+      } // end for candidates
+    } // end for txRules
+    (true, None)
   }
 
   private def collectRenamables(ts: verification.TransitionSystem, properties: Seq[(Rule, BoolExpr)], ctx: Context)

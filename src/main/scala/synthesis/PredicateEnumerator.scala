@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, Rule, SimpleRelation, Unequal, Variable}
+import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Unequal, Variable}
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
@@ -86,6 +86,13 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     case (rel, _) => interpreterContext.materializedRelations.contains(rel)
   }
 
+  private val singletonRelations: Set[SingletonRelation] =
+    interpreterContext.materializedRelations.collect{
+      case sr: SingletonRelation => {
+        sr
+      }
+    }
+
   def enumeratePredicates(program: Program): Map[Rule,Set[Predicate]] = {
     val txRules = program.transactionRules()
 
@@ -104,7 +111,11 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       }
       val withBindings: Set[Predicate] = withOneBinding(txLiteral, indexedRelations)
 
-      predicates.update(txRule, singles ++ withBindings)
+      /** 3. Binding one singleton relation, and add one predicate. */
+      val withOneSingleton = singletonRelations.flatMap(
+        r => withOneBindingSingleton(txLiteral, r))
+
+      predicates.update(txRule, singles ++ withBindings ++ withOneSingleton)
     }
     predicates.toMap
   }
@@ -140,6 +151,29 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
         functors.map(f => Predicate(context, f))
       }
     }
+  }
+
+  private def withOneBindingSingleton(txLiteral: Literal, relation: SingletonRelation): Set[Predicate] = {
+    def makeSingletonLiteral(relation: SingletonRelation): Literal = {
+      val paramName: String = s"${relation.name}_${relation.memberNames.head}"
+      val p = Variable(relation.sig.head, paramName)
+      Literal(relation, List(p))
+    }
+    val bindingLiteral: Literal = makeSingletonLiteral(relation)
+
+    val context = Context(txLiteral, Set(bindingLiteral))
+
+    // Only keep functors that refer to at least one variable in bindingLiteral
+    val singles = singleAtomCandidates(bindingLiteral)
+    val crossTx = crossRelationComparison(txLiteral, bindingLiteral)
+    val crossMsgSender = crossRelationComparison(bindingLiteral, Context.msgSender)
+    val crossMsgValue = crossRelationComparison(bindingLiteral, Context.msgValue)
+    val functors = (singles ++ crossTx ++ crossMsgSender ++ crossMsgValue)
+    //   .filter { f => functorParams(f).exists {
+    //     case v: Variable => bindingVars.contains(v)
+    //     case _ => false
+    //   }}
+    functors.map(f => Predicate(context, f))
   }
 
 

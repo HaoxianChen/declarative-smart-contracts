@@ -153,7 +153,7 @@ object Z3Helper {
 
 
   def getArraySort(ctx: Context, relation: Relation, indices: List[Int]): (Sort, Sort, Sort) = {
-    require(indices.nonEmpty)
+    require(indices.nonEmpty, s"$relation, $indices")
     val keyTypes = indices.map(i => relation.sig(i))
     val valueIndices = relation.sig.indices.filterNot(i=>indices.contains(i)).toList
     val valueTypes = valueIndices.map(i=>relation.sig(i))
