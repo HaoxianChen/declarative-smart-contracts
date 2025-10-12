@@ -174,6 +174,16 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       context.tx.fields.zip(transaction.parameters).collect {
         case (v: Variable, c: Constant) => State.Binding.Scalar(v, c)
       }
+
+    // Also collect the bindings with singleton relation
+    val singletonBindings: Set[State.Binding] = context.bindingLiterals.collect {
+      case lit if lit.relation.isInstanceOf[SingletonRelation] =>
+        val variable = lit.fields.head.asInstanceOf[Variable]
+        val value = state.lookup(lit.relation.name)
+        val valueConst = Constant(variable._type, value.toString)
+        State.Binding.Scalar(variable, valueConst)
+    }
+
     // Step 1b: Bind implicit parameters (msgSender and msgValue)
     val msgSenderVar = Context.msgSender.fields.head.asInstanceOf[Variable]
     val msgValueVar = Context.msgValue.fields.head.asInstanceOf[Variable]
@@ -183,7 +193,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       State.Binding.Scalar(msgSenderVar, msgSenderConst),
       State.Binding.Scalar(msgValueVar, msgValueConst)
     )
-    val allScalarBindings = scalarBindings ++ implicitBindings
+    val allScalarBindings = scalarBindings ++ singletonBindings ++ implicitBindings
     // Build a map from variable to its bound value from step 1 and implicit bindings
     val scalarBindingMap: Map[Variable, Constant] =
       allScalarBindings.collect { case State.Binding.Scalar(v, c) => v -> c }.toMap
@@ -191,11 +201,13 @@ case class Interpreter(interpreterContext: InterpreterContext) {
     // Step 2: For each binding literal, bind the value variable to the lookup result from state
     val mapBindings = {
       val bindings = mutable.Buffer[State.Binding]()
-      for (literal <- context.bindingLiterals) {
-        val rel = literal.relation match {
-          case r: SimpleRelation => r
-          case _ => throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
-        }
+      // for (literal <- context.bindingLiterals) {
+      for (literal <- context.bindingLiterals.collect { case lit if lit.relation.isInstanceOf[SimpleRelation] => lit }) {
+        val rel = literal.relation
+        // match {
+        //   case r: SimpleRelation => r
+        //   case _ => throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
+        // }
         // val keyIndices = relationIndices.getOrElse(rel,
         //   throw new IllegalArgumentException(s"Missing indices for relation: $rel"))
         // Evaluate key parameters from transaction (may be Constant or Variable)
@@ -218,7 +230,10 @@ case class Interpreter(interpreterContext: InterpreterContext) {
           case other => throw new IllegalArgumentException(s"Value field must be Variable, got: $other")
         }
         // Lookup the value from state
-        val lookupValue = state.lookup(rel, keyInts)
+        val lookupValue = rel match {
+          case sr: SimpleRelation => state.lookup(sr, keyInts)
+          case _ => throw  new Exception(s"unsupported relation type ${rel}")
+        }
         // Bind valueVar to the looked up value as a Constant
         val valueType = valueVar._type
         val valueConst = Constant(valueType, lookupValue.toString)

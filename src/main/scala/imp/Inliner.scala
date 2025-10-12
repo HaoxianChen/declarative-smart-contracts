@@ -115,7 +115,9 @@ case class Inliner(solidityProgram: Statement,
     def scan(s: Statement, acc: Map[String, DeclFunction]): Map[String, DeclFunction] = s match {
       case ss: SolidityStatement => ss match {
         case df: DeclFunction => acc + (df.name -> df)
-        case Constructor(_, body) => scan(body, acc)
+        case Constructor(params, body) => {
+          acc + ("constructor" -> DeclFunction("constructor", params, UnitType(), body, FunctionMetaData()))
+        }
         case ForLoop(_, _, _, _, body) => scan(body, acc)
         case DeclModifier(_, _, before, after) => scan(before, acc) ++ scan(after, acc)
         case DeclContract(_, body) => scan(body, acc)

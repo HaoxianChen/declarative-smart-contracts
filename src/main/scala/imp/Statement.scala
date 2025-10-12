@@ -156,6 +156,10 @@ case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean, isT
     List(publicityStr, viewStr, modifierStr).mkString(" ")
   }
 }
+object FunctionMetaData {
+  def apply(): FunctionMetaData = FunctionMetaData(Publicity.Public, isView = false, isTransaction = false,
+    modifiers=Set())
+}
 sealed abstract class SolidityStatement extends Statement
 case class Constructor(params: List[Parameter], statement: Statement) extends SolidityStatement {
   override def toString: String = {

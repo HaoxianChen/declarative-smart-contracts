@@ -134,8 +134,26 @@ case class InductiveSynthesis(
                  evaluatedTraces: Set[EvaluatedTrace],
                  maxSolutions: Int,
                  disambiguationTraces: Set[EvaluatedTrace]): Program = {
-    val renamedDisambiguationTrace = disambiguationTraces.map(renameTxRelationInTrace)
-    val renamedSafetyTrace = evaluatedTraces.map(renameTxRelationInTrace)
+    // Remove the first constructor transaction from each trace if present
+    def stripConstructor(trace: EvaluatedTrace): EvaluatedTrace = {
+      val steps = trace.steps
+      if (steps.nonEmpty && steps.head._1.relation.name == "constructor")
+        trace.copy(steps = steps.tail)
+      else
+        trace
+    }
+
+    val renamedDisambiguationTrace = {
+      val strippedDisambiguationTraces = disambiguationTraces.map(stripConstructor)
+      strippedDisambiguationTraces.map(renameTxRelationInTrace)
+    }
+    val renamedSafetyTrace = {
+      val strippedSafetyTraces = evaluatedTraces.map(stripConstructor)
+      strippedSafetyTraces.map(renameTxRelationInTrace)
+    }
+
+    // val renamedDisambiguationTrace = disambiguationTraces.map(renameTxRelationInTrace)
+    // val renamedSafetyTrace = evaluatedTraces.map(renameTxRelationInTrace)
 
     // val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
     // val selection = disambiguate(renamedDisambiguationTrace, candidates)
@@ -446,7 +464,7 @@ case class InductiveSynthesis(
     // that includes the selected predicates' binding literals in the body and predicate functors
     // in the rule's functors set. Non-transaction rules are kept as-is.
 
-    val newRules: Set[Rule] = sketch.rules.map { r =>
+    val newRules: Set[Rule] = sketch.rules.diff(sketch.violationRules).map { r =>
       // Check if this rule is a transaction rule by finding its transaction literal (if any)
       val txLiteralOpt = try {
         Some(PredicateEnumerator.extractTxLiteral(r))
@@ -476,7 +494,7 @@ case class InductiveSynthesis(
 
     // Reuse program metadata from sketch
     // datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
-    sketch.copy(rules = newRules)
+    sketch.copy(rules = newRules++sketch.violationRules)
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {

@@ -53,27 +53,36 @@ case class BoundedModelChecker() {
 
      // 2) Collect renamable symbols (state vars + other top-level consts)
      val (stateVars, otherConsts) = collectRenamables(ts, properties, ctx)
+     val (_, _, encMap0) = getStepSubst(0, stateVars, otherConsts, ctx)
 
     // 3.1) Check state transaction first.
-    val (result, optCounterexample) = checkTxProperties(ts, violationRules, verifier,
-      program, ctx, stateVars, otherConsts)
-    if (optCounterexample.isDefined) return (result, optCounterexample)
+    val txProperties = getTxProperties(ts, violationRules, verifier,
+        program, ctx, stateVars, otherConsts)
 
     // Clear any previously cached per-step substitutions (important if same BMC instance is reused)
     stepSubstCache.clear()
     // NOTE: per-step substitutions are computed lazily by `getStepSubst` when needed.
 
      // 3) Unroll and check bounds (start at k=1 to require at least one transition)
-     for (k <- 0 to bound) {
+     for (k <- 1 to bound) {
        println(s"[BMC] Checking bound = $k")
        val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
        // println(s"Path constraint:\n $pathConstraint")
        // check each property at this bound
+       for ((rule, prop) <- txProperties) {
+         // val violation = ctx.mkNot(prop)
+         val violation = prop
+         val violationAtK = renameForStep(violation, k-1, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
+         checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx, ts, encMap0) match {
+           case Some(trace) => return (false, Some(trace))
+           case None => // continue
+         }
+       }
        for ((rule, prop) <- properties) {
          // val violation = ctx.mkNot(prop)
          val violation = prop
          val violationAtK = renameForStep(violation, k, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
-         checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx) match {
+         checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx, ts, encMap0) match {
            case Some(trace) => return (false, Some(trace))
            case None => // continue
          }
@@ -120,16 +129,21 @@ case class BoundedModelChecker() {
   /** Check if transaction parameter violates txViolation rules but still able to
    *  go through the transaction.
    *  */
-  private def checkTxProperties(ts: TransitionSystem, violationRules : Set[Rule],
+  private def getTxProperties(ts: TransitionSystem, violationRules : Set[Rule],
                                 verifier: Verifier,
                                 program: Program,
                                 ctx: Context,
                                 stateVars: Seq[(Expr[_], Expr[_])],
-                                otherConsts: Set[Expr[_]]): (Boolean, Option[Trace]) = {
+                                otherConsts: Set[Expr[_]]): // (Boolean, Option[Trace]) = {
+                                Seq[(Rule, BoolExpr)] = {
     // Find rules that mention transaction interfaces (recv_/transactionRelationPrefix)
     val txRules = violationRules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
 
-    if (txRules.isEmpty) return (true, None)
+    var properties: Seq[(Rule,BoolExpr)] = Seq()
+    // if (txRules.isEmpty) return (true, None)
+
+    val init0: BoolExpr = renameForStep(ts.getInit(), 0, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
+    val (_, _, encMap0) = getStepSubst(0, stateVars, otherConsts, ctx)
 
     for (r <- txRules) {
       val recvLitOpt = r.body.find(_.relation.name.startsWith(transactionRelationPrefix))
@@ -153,7 +167,19 @@ case class BoundedModelChecker() {
           ctx.mkConst(s"i0_${p.name}", Z3Helper.typeToSort(ctx, p._type))
         }.toArray[Expr[_]]
 
-        expr.substitute(fromArr, toArr).asInstanceOf[BoolExpr]
+        val subsExpr = expr.substitute(fromArr, toArr).asInstanceOf[BoolExpr]
+
+        // Create the indicator constant and implication: indicator = 1 => (violation with params)
+        val anyIndicatorEq1: BoolExpr = {
+          val triggeredRulesForInterface = program.transactionRules().filter(_.body.exists(_.relation == recvLit.relation)).toSeq
+          val indicatorLits: Seq[BoolExpr] = triggeredRulesForInterface.zipWithIndex.map { case (_, i) =>
+            val indicatorConst: IntExpr = indicatorConstForTransactionTriggerRelation(ctx, recvLit.relation, i)
+            ctx.mkEq(indicatorConst, ctx.mkInt(1))
+          }
+          if (indicatorLits.isEmpty) ctx.mkFalse() else ctx.mkOr(indicatorLits: _*)
+        }
+
+        ctx.mkAnd(anyIndicatorEq1, subsExpr)
       }
 
       // Find candidate transition expressions that mention the transaction relation or indicator
@@ -166,33 +192,9 @@ case class BoundedModelChecker() {
       if (candidates.isEmpty)
         throw new Exception(s"[BMC] Warning: no transition expression found for transaction '$recvName' (rule ${r.head.relation.name})")
 
-
-
-      for (tr <- candidates) {
-        // Rename both to step 0 (bind input params via getStepSubst/renameForStep)
-        val trAt0 = renameForStep(tr, 0, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
-        val violAt0 = renameForStep(violationExpr, 0, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
-
-        val combined = ctx.mkAnd(trAt0, violAt0)
-
-        // Solve combined constraint (single-step). Use a short timeout.
-        val solver = ctx.mkSolver()
-        val p = ctx.mkParams(); p.add("timeout", 20000); p.add("smt.mbqi", true)
-        solver.setParameters(p)
-        solver.add(combined)
-        val res = solver.check()
-        println(s"[BMC] Tx-check for rule ${r.head.relation.name} with transition candidate -> $res")
-        if (res == Status.SATISFIABLE) {
-          val model = solver.getModel
-          val traceOpt = extractTraceFromModel(model, 1, ctx, program, stateVars, otherConsts)
-          traceOpt match {
-            case Some(t) => return (false, Some(t))
-            case None => throw new Exception("SAT model but failed to extract trace")
-          }
-        }
-      } // end for candidates
+      properties +:= (r, violationExpr)
     } // end for txRules
-    (true, None)
+    properties
   }
 
   private def collectRenamables(ts: verification.TransitionSystem, properties: Seq[(Rule, BoolExpr)], ctx: Context)
@@ -293,7 +295,9 @@ case class BoundedModelChecker() {
   }
 
   private def checkPropertyAtBound(rule: Rule, violationAtK: BoolExpr, pathConstraint: BoolExpr, k: Int,
-                                   program: Program, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context): Option[Trace] = {
+                                   program: Program, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context,
+                                   ts: TransitionSystem,
+                                   encMap0: Map[String, Expr[_]]): Option[Trace] = {
     // Dump control: check system property or environment variable
     val dumpEnabled: Boolean = {
       val prop = sys.props.get("bmc.dump.smt")
@@ -344,12 +348,13 @@ case class BoundedModelChecker() {
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
       // println(s"Model:$model")
+      val constructorTx = extractConstructorFromModel(model, ts.getInit(), program, encMap0, ctx)
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       // println(trace)
       // val evalutedTrace = extractEvaluatedTraceFromModel(model, k, ctx, program, stateVars, otherConsts)
       // println(evalutedTrace)
       trace match {
-        case Some(t) => trace
+        case Some(t) => Some(Trace( constructorTx +: t.steps))
         case None => throw new Exception("No counter example found")
       }
     } else None
@@ -394,6 +399,25 @@ case class BoundedModelChecker() {
    */
   private def stepVar(name: String, sort: Sort, step: Int, ctx: Context, encMap: Map[String, Expr[_]] = Map.empty): Expr[_] = {
     encMap.getOrElse(name, ctx.mkConst(otherConstName(name, step), sort))
+  }
+
+  private def extractConstructorFromModel(model: Model, initConstraint: BoolExpr, program: Program,
+                                          encMap0: Map[String, Expr[_]], ctx: Context): Transaction = {
+    val constructorRel = program.relations.find(_.name == "constructor")
+      .getOrElse(throw new Exception("Constructor relation not found in program.relations"))
+
+    val constructorParams = constructorRel.paramList.map (
+      p => {
+        val sort = Z3Helper.typeToSort(ctx, p._type)
+        val expr = ctx.mkConst(otherConstName(s"_${p.name}", 0), sort)
+        val value: String = evalModelExpr(model, expr).getOrElse("").replaceAll("\"", "")
+        datalog.Constant(p._type, value)
+      }
+    )
+
+    val msgSenderVal: Int = evalModelInt(model, stepVar("msgSender", ctx.getIntSort, 0, ctx, encMap0)).getOrElse(0)
+    val msgValueVal: Int = evalModelInt(model, stepVar("msgValue", ctx.getIntSort, 0, ctx, encMap0)).getOrElse(0)
+    Transaction(constructorRel, constructorParams, ImplicitParameters(msgSenderVal,msgValueVal))
   }
 
   private def extractTraceFromModel(model: Model, k: Int, ctx: Context, program: Program,

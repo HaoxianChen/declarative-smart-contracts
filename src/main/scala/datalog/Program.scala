@@ -148,7 +148,7 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
   }
   def setName(newName: String): Program = this.copy(name=newName)
 
-  def transactionRules(): Set[Rule] = rules.filter(_.body.exists(
+  def transactionRules(): Set[Rule] = rules.diff(violationRules).filter(_.body.exists(
                                          _.relation.name.startsWith(transactionRelationPrefix)))
 
   def addRules(newRules: Set[Rule]): Program = this.copy(rules = this.rules++newRules)

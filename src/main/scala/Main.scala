@@ -243,11 +243,19 @@ object Main extends App {
   }
 
   else if (args(0) == "cegis") {
-    val datalog_filepath = args(1)
-    val sketch = parseProgram(datalog_filepath)
-    val cegis = Cegis(sketch)
-    val program = cegis.run()
-    println(s"Synthesis output:\n${program}")
+    val synthesisBenchmarks = List("wallet.dl", "bnb/bnb.dl",
+      "controllable.dl",
+      //"cappedCrowdSale.dl"
+    )
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    for (p <- synthesisBenchmarks) {
+      println(s"$p")
+      val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
+      val sketch = parseProgram(datalog_filepath)
+      val cegis = Cegis(sketch)
+      val program = cegis.run()
+      println(s"Synthesis output:\n${program}")
+    }
   }
 
   else if (args(0) == "synthesis-all") {

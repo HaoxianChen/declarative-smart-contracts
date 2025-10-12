@@ -187,7 +187,12 @@ case class SolidityInterpreter() {
         val updateValue = state.lookup(p.name)
         state.update(name, keyIds, updateValue)
       }
-      case SetTuple(relation, params) => ???
+      case SetTuple(relation, params) => {
+        require(relation.sig.size==1, s"Assuming only has one fields: $relation.")
+        val varId = relation.name
+        val value = state.lookup(params.head.name)
+        state.updateInt(varId, value)
+      }
       case ConvertType(from, to) => {
         val v = _interpretExpr(from)
         state.updateInt(to.name, v)

@@ -39,7 +39,6 @@ case class Cegis(sketch: Program) {
 
     var program: Program = sketch
     var traces: Set[EvaluatedTrace] = Set()
-    val bmc = BoundedModelChecker()
 
     // Build predicate candidates and the interpreter context for synthesis
     val interpreterContext = InterpreterContext.makeContext(program)
@@ -50,6 +49,7 @@ case class Cegis(sketch: Program) {
 
     var iter = 0
     while (iter < maxIters) {
+      val bmc = BoundedModelChecker()
       println(s"[CEGIS] Iteration: $iter (BMC bound = $maxBound)")
 
       val (sat, optTrace) = bmc.check(program, program.violationRules, maxBound)
@@ -126,6 +126,9 @@ case class Cegis(sketch: Program) {
         case None => println(s"[CEGIS] Warning: function definition for interface ${iface.relation.name} (expected '$funcName') not found")
       }
     }
+
+    val constructorKey = "constructor"
+    mappings += (constructorKey->funcDefs(constructorKey))
 
     mappings.toMap
   }

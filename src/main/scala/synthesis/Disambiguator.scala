@@ -38,6 +38,30 @@ case class Disambiguator(sketch: Program,
     Transaction(rel, params, ImplicitParameters(msgSender,msgValue))
   }
 
+  // Make a constructor transaction, with address field randomly drawn from the
+  // address universe, and others from the numberRange
+  def makeConstructorTransaction(): Transaction = {
+    // find the relation called constructor.
+    val rel = {
+      val constructorRelOpt = sketch.relations.find(_.name.equalsIgnoreCase("constructor"))
+      constructorRelOpt.get
+    }
+
+    val params = rel.sig.zipWithIndex.map { case (t, idx) =>
+      t match {
+        case SymbolType(_) =>
+          datalog.Constant(t, addresses(Random.nextInt(addresses.length)))
+        case _: NumberType =>
+          datalog.Constant(t, (Random.nextInt(numberRange) + 1).toString)
+        case _ =>
+          datalog.Constant(t, Random.nextInt(numberRange).toString)
+      }
+    }
+    val implicitParameters = ImplicitParameters(Random.nextInt(addresses.length),
+              Random.nextInt(numberRange))
+    Transaction(rel, params, implicitParameters)
+  }
+
   def makeTracesHeuristic(numTraces: Int): Set[EvaluatedTrace] = {
     // Helper to get possible values for a type
     def paramDomain(t: Type): Seq[String] = t match {
@@ -85,7 +109,8 @@ case class Disambiguator(sketch: Program,
     // Build all possible transactions for all relations
     val allTxs: Seq[Transaction] = txRelations.flatMap(allTransactions)
 
-    val traces = allTxs.map(tx => Trace(setupTxs :+ tx))
+    val constructorTx = makeConstructorTransaction()
+    val traces = allTxs.map(tx => Trace( constructorTx +: setupTxs :+ tx))
 
     val sampledTraces =
       if (traces.size > numTraces) {
