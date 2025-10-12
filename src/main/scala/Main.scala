@@ -243,18 +243,45 @@ object Main extends App {
   }
 
   else if (args(0) == "cegis") {
-    val synthesisBenchmarks = List("wallet.dl", "bnb/bnb.dl",
-      "controllable.dl",
-      //"cappedCrowdSale.dl"
+    val synthesisBenchmarks = List(
+      // "wallet.dl", "bnb/bnb.dl",
+      // "controllable.dl",
+      "cappedCrowdSale.dl"
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
     for (p <- synthesisBenchmarks) {
-      println(s"$p")
-      val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
-      val sketch = parseProgram(datalog_filepath)
-      val cegis = Cegis(sketch)
-      val program = cegis.run()
-      println(s"Synthesis output:\n${program}")
+      try {
+        println(s"$p")
+        val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
+        val sketch = parseProgram(datalog_filepath)
+        val cegis = Cegis(sketch)
+        val program = cegis.run()
+        println(s"Synthesis output:\n${program}")
+
+        // Write Datalog output
+        val datalogOutDir = "synthesis-output"
+        createDirectory(datalogOutDir)
+        val datalogOutfile = Paths.get(datalogOutDir, s"${p}.dl").toString
+        Misc.writeToFile(program.toString, datalogOutfile)
+
+        // Write associated Solidity file to disk
+        val impTranslator = new ImperativeTranslator(
+          program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
+          enableProjection = true
+        )
+        val imperative = impTranslator.translate()
+        val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
+          Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+        ).translate()
+        val solidityOutfile = Paths.get(datalogOutDir, s"${p}.sol").toString
+        Misc.writeToFile(solidity.toString, solidityOutfile)
+
+
+      }
+      catch {
+        case ex: Exception =>
+          println(s"[ERROR] Synthesis failed for $p: ${ex.getMessage}")
+      }
     }
   }
 
