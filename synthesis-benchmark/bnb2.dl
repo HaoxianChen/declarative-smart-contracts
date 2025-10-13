@@ -52,9 +52,9 @@ unfreeze(p,n) :- recv_unfreeze(p,n).
 withdrawEther(p,n) :- recv_withdrawEther(p,n).// msgSender(p).
 // send(p,n) :- withdrawEther(p,n).
 
-.public recv_freeze
-.public recv_unfreeze
-.public recv_withdrawEther
+// .public recv_freeze
+// .public recv_unfreeze
+// .public recv_withdrawEther
 
 .decl totalMint(p: address, n: int)[0]
 .decl totalBurn(p: address, n: int)[0]
@@ -103,7 +103,7 @@ transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
 // increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d), msgSender(s).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
@@ -113,17 +113,21 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 // Properties
-.decl *totalBalances(m: int)
-.decl *freezeSum(m: int)
-.decl *unequalBalance(s: int, n: int)
+// .decl *totalBalances(m: int)
+// .decl *freezeSum(m: int)
+// .decl *unequalBalance(s: int, n: int)
 
-.violation unequalBalance
-
-totalBalances(n) :- constructor(n).
-totalBalances(s) :- s = sum n: balanceOf(_,n).
-freezeSum(s) :- s = sum n: freezeOf(_,n).
-unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
+// .violation unequalBalance
+//
+// // totalBalances(n) :- constructor(n).
+// totalBalances(s) :- s = sum n: balanceOf(_,n).
+// freezeSum(s) :- s = sum n: freezeOf(_,n).
+// unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+
+// .decl negativeAllowance(s:address,p:address,n:int)[0,1]
+// .violation negativeAllowance
+// negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
