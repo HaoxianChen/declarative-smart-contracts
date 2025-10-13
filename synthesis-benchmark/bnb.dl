@@ -113,20 +113,20 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
 // Properties
-// .decl *totalBalances(m: int)
-// .decl *freezeSum(m: int)
-// .decl *unequalBalance(s: int, n: int)
+.decl *totalBalances(m: int)
+.decl *freezeSum(m: int)
+.decl *unequalBalance(s: int, n: int)
 
-// .violation unequalBalance
-//
-// // totalBalances(n) :- constructor(n).
-// totalBalances(s) :- s = sum n: balanceOf(_,n).
-// freezeSum(s) :- s = sum n: freezeOf(_,n).
-// unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
+.violation unequalBalance
 
-// .decl negativeBalance(p:address,n:int)[0]
-// .violation negativeBalance
-// negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+// totalBalances(n) :- constructor(n).
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+freezeSum(s) :- s = sum n: freezeOf(_,n).
+unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance

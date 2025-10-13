@@ -13,10 +13,10 @@ Rules:
 allMint(s) :- s = sum n: mint(_,n).
 balanceOf(p,s) :- totalOut(p,o),totalIn(p,i),s := i-o.
 owner(s) :- constructor(),msgSender(s).
-transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
 transfer(p,address(0),n) :- burn(p,n).
 burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 transfer(address(0),p,n) :- mint(p,n).
 allBurn(s) :- s = sum n: burn(_,n).

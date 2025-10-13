@@ -121,3 +121,7 @@ negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 .decl illegalRedeem(p: address, n: int)[0]
 .violation illegalRedeem
 illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), p!=c.
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.

@@ -27,8 +27,10 @@ totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
 mint(p,n) :- buyToken(p,n).
 cap(c) :- constructor(c),c>0.
 buyToken(p,n) :- recv_buyToken(p,m),rate(r),n := m*r.
+finalize() :- recv_finalize(),totalSupply(totalSupply_n),totalSupply_n<0.
 onceFinalize(true) :- finalize().
 finalized(true) :- finalize().
+balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_),m = sum n: transferFrom(o,_,s,n).
 allMint(s) :- s = sum n: mint(_,n).
@@ -39,8 +41,6 @@ transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_1),
 totalSupply(0) :- constructor(_).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
-finalize() :- recv_finalize(),finalized(finalized_b),finalized_b==true.
-balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 illegalFinalization() :- onceFinalize(true),raised(r),cap(c),r<c.
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 buyAfterFinalize() :- recv_buyToken(_,_),onceFinalize(true).
