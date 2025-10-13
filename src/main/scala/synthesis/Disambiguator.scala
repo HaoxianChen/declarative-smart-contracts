@@ -106,20 +106,53 @@ case class Disambiguator(sketch: Program,
       } else Nil
     }
 
-    // Build all possible transactions for all relations
-    val allTxs: Seq[Transaction] = txRelations.flatMap(allTransactions)
-
     val constructorTx = makeConstructorTransaction()
-    val traces = allTxs.map(tx => Trace( constructorTx +: setupTxs :+ tx))
 
-    val sampledTraces =
-      if (traces.size > numTraces) {
-        println(s"[Disambiguation trace] Sampling ${numTraces} traces out of ${traces.size}.")
-        Random.shuffle(traces).take(numTraces)
-      } else
-        traces
+    // Build all possible transactions for all relations
+    // val allTxs: Seq[Transaction] = txRelations.flatMap(allTransactions)
+    // val traces = allTxs.map(tx => Trace( constructorTx +: setupTxs :+ tx))
 
-    sampledTraces.map(t => solInterpreter.interpret(txDefs, t)).toSet
+
+    // // sample traces when exceeds quota
+    // val sampledTraces =
+    //   if (traces.size > numTraces) {
+    //     println(s"[Disambiguation trace] Sampling ${numTraces} traces out of ${traces.size}.")
+    //     Random.shuffle(traces).take(numTraces)
+    //   } else
+    //     traces
+
+    // sampledTraces.map(t => solInterpreter.interpret(txDefs, t)).toSet
+
+    // build per-relation traces
+    val perRelTraces: Seq[Seq[Trace]] = txRelations.map { rel =>
+      val relTxs = allTransactions(rel)
+      Random.shuffle(relTxs).map(tx => Trace(constructorTx +: setupTxs :+ tx))
+    }
+
+    // take up to per-transaction quota per relation
+    val perTransactionQuota = Math.ceil(numTraces.toDouble / txRelations.size).toInt
+    val selectedBuilder = Vector.newBuilder[Trace]
+    val takenCounts = perRelTraces.map { traces =>
+      val takeN = Math.min(traces.size, perTransactionQuota)
+      selectedBuilder ++= traces.take(takeN)
+      takeN
+    }
+
+    var selected = selectedBuilder.result()
+
+    // if we still need more to reach numTraces, fill from leftovers across relations
+    if (selected.size < numTraces) {
+      val needed = numTraces - selected.size
+      val leftovers: Seq[Trace] = perRelTraces.zip(takenCounts).flatMap { case (traces, taken) =>
+        traces.drop(taken)
+      }
+      selected ++= leftovers.take(needed)
+    }
+
+    // cap to numTraces in case per-transaction quotas exceeded global budget
+    val finalSampled = if (selected.size > numTraces) selected.take(numTraces) else selected
+
+    finalSampled.map(t => solInterpreter.interpret(txDefs, t)).toSet
   }
 
 }

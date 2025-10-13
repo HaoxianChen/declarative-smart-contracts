@@ -244,9 +244,9 @@ object Main extends App {
 
   else if (args(0) == "cegis") {
     val synthesisBenchmarks = List(
-      // "wallet.dl", "bnb/bnb.dl",
-      // "controllable.dl",
-      "cappedCrowdSale.dl"
+      "wallet.dl", "bnb/bnb.dl",
+      "controllable.dl",
+      // "cappedCrowdSale.dl"
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
     for (p <- synthesisBenchmarks) {
@@ -260,8 +260,9 @@ object Main extends App {
 
         // Write Datalog output
         val datalogOutDir = "synthesis-output"
+        val filenameNoExt = p.stripSuffix(".dl")
         createDirectory(datalogOutDir)
-        val datalogOutfile = Paths.get(datalogOutDir, s"${p}.dl").toString
+        val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
         Misc.writeToFile(program.toString, datalogOutfile)
 
         // Write associated Solidity file to disk
@@ -273,7 +274,7 @@ object Main extends App {
         val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
           Set(), isInstrument = false, monitorViolation = false, enableProjection = true
         ).translate()
-        val solidityOutfile = Paths.get(datalogOutDir, s"${p}.sol").toString
+        val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
         Misc.writeToFile(solidity.toString, solidityOutfile)
 
 
