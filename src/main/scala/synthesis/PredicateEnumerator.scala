@@ -136,7 +136,9 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       bindingLiterals.flatMap { bindingLiteral =>
         val context = Context(txLiteral, Set(bindingLiteral))
 
-        val bindingVars = bindingLiteral.fields.collect { case v: Variable => v }.toSet
+        // val bindingVars = bindingLiteral.fields.collect { case v: Variable => v }
+        val bindingVars = indices.map(i => bindingLiteral.fields(i))
+        val valueVars = bindingLiteral.fields.diff(bindingVars)
 
         // Only keep functors that refer to at least one variable in bindingLiteral
         val singles = singleAtomCandidates(bindingLiteral)
@@ -145,7 +147,8 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
         val crossMsgValue = crossRelationComparison(bindingLiteral, Context.msgValue)
         val functors = (singles ++ crossTx ++ crossMsgSender ++ crossMsgValue)
           .filter { f => functorParams(f).exists {
-            case v: Variable => bindingVars.contains(v)
+            // case v: Variable => bindingVars.contains(v)
+            case v: Variable => valueVars.contains(v)
             case _ => false
           }}
         functors.map(f => Predicate(context, f))
@@ -200,7 +203,10 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
         for (a <- acc; p <- params) yield a :+ p
       }
       // Step 5: Build fields for the new literal
-      combos.map { paramsForIndices =>
+      val uniqueCombos = combos.filter(params => params.distinct.size == params.size)
+
+      // combos.map { paramsForIndices =>
+      uniqueCombos.map { paramsForIndices =>
         val fields = indexedRelation.sig.zipWithIndex.map { case (t, i) =>
           val idxInIndices = allIdxs.indexOf(i)
           if (idxInIndices >= 0) paramsForIndices(idxInIndices) else Variable(t, s"${indexedRelation.name}_x$i")

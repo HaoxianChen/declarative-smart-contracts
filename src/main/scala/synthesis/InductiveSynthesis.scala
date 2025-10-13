@@ -24,7 +24,7 @@ case class InductiveSynthesis(
 
   val interpreter: Interpreter = Interpreter(interpreterContext)
 
-  private val synthesisCache: mutable.Map[Set[EvaluatedTrace], List[Representation]] = mutable.Map.empty
+  private val synthesisCache: mutable.Map[List[EvaluatedTrace], List[Representation]] = mutable.Map.empty
 
   /** Reorganize and make the predicate lookup by relation efficient. */
   val predicates: Map[Relation, Set[Predicate]] = {
@@ -131,7 +131,7 @@ case class InductiveSynthesis(
   }
 
   def synthesize(sketch: Program,
-                 evaluatedTraces: Set[EvaluatedTrace],
+                 evaluatedTraces: List[EvaluatedTrace],
                  maxSolutions: Int,
                  disambiguationTraces: Set[EvaluatedTrace]): Program = {
     // Remove the first constructor transaction from each trace if present
@@ -163,13 +163,62 @@ case class InductiveSynthesis(
     makeProgram(sketch, selection)
   }
 
+  // debug info
+  private def filterAndRankCandidates(
+                                       evaluatedTraces: List[EvaluatedTrace],
+                                       disambiguationTraces: Set[EvaluatedTrace]
+                                     ): Map[Rule, List[(Predicate, Boolean, Int)]] = {
+
+    predicatesPerRule.map { case (rule, preds) =>
+      // Safely extract the transaction relation for the rule; if not present, treat as no occurrences.
+      val txRelationOpt = try {
+        Some(PredicateEnumerator.extractTxLiteral(rule).relation)
+      } catch {
+        case _: Throwable => None
+      }
+
+      val infos = preds.toList.flatMap { p =>
+        val (total, trueCount) = txRelationOpt match {
+          case Some(txRel) =>
+            val evalResults: Seq[Boolean] = evaluatedTraces.toSeq.flatMap { trace =>
+              trace.iterateTxAndStateBefore.collect {
+                case (st, tx) if tx.relation == txRel => interpreter.evaluate(st, tx, p) }
+            }
+            (evalResults.size, evalResults.count(identity))
+          case None =>
+            (0, 0)
+        }
+
+        // Predicate blocks at least one occurrence iff it's observed and not always true
+        val blocksEvaluatedTrace = total > 0 && trueCount != total
+
+        val permissiveness = txRelationOpt match {
+          case Some(txRel) =>
+            disambiguationTraces.count { trace =>
+              val occ = trace.iterateTxAndStateBefore.collect {
+                case (st, tx) if tx.relation == txRel => (st, tx)
+              }
+              occ.nonEmpty && occ.forall {
+                case (st, tx) => interpreter.evaluate(st, tx, p)
+              }
+            }
+          case None => 0
+        }
+        Some((p, blocksEvaluatedTrace, permissiveness))
+      }.sortBy { case (_, _, perm) => -perm }
+
+      rule -> infos
+    }
+  }
+
+
   /** Synthesize predicates for each relation independently, then combine best selections. */
-  private def synthesizePerRelation(evaluatedTraces: Set[EvaluatedTrace],
+  private def synthesizePerRelation(evaluatedTraces: List[EvaluatedTrace],
                                        maxSolutions: Int,
                                        disambiguationTraces: Set[EvaluatedTrace]
                                      ): Representation = {
     // Group traces by last transaction relation
-    val grouped: Map[Relation, Set[EvaluatedTrace]] =
+    val grouped: Map[Relation, List[EvaluatedTrace]] =
       evaluatedTraces.groupBy(_.steps.last._1.relation)
 
     // For each relation, synthesize and disambiguate
@@ -231,6 +280,11 @@ case class InductiveSynthesis(
     val completeSelections: Map[Relation, Set[Predicate]] = allRelations.map { rel =>
       rel -> bestSelections.getOrElse(rel, Set.empty[Predicate])
     }.toMap
+
+    /** Turn on for debugging. */
+    // val debugInfo = filterAndRankCandidates(evaluatedTraces, disambiguationTraces)
+    // println(debugInfo)
+
 
     Representation(completeSelections)
   }

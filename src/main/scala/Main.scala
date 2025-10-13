@@ -237,16 +237,17 @@ object Main extends App {
     /** Synthesize by adding validation condition */
     val synthesizer = InductiveSynthesis(candidates, interpreterContext)
     val testTrace = EvaluatedTrace.testTrace1(program)
-    val synthesisOutput = synthesizer.synthesize(program, Set(testTrace),
+    val synthesisOutput = synthesizer.synthesize(program, List(testTrace),
       maxSolutions = 1, disambiguationTraces = Set())
     // println(synthesisOutput)
   }
 
   else if (args(0) == "cegis") {
     val synthesisBenchmarks = List(
-      "wallet.dl", "bnb/bnb.dl",
+      // "wallet.dl",
       "controllable.dl",
-      // "cappedCrowdSale.dl"
+      // "cappedCrowdSale.dl",
+      // "bnb.dl",
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
     for (p <- synthesisBenchmarks) {

@@ -89,20 +89,39 @@ case class Disambiguator(sketch: Program,
 
     val setupTxs: List[Transaction] = txRelations.flatMap { rel =>
       // Heuristic: if relation name contains "mint" (case-insensitive), produce per-address setup
-      if (rel.name.toLowerCase.contains("mint")) {
-        addresses.map { addr =>
+      // if (rel.name.toLowerCase.contains("mint")) {
+      if (rel.name.toLowerCase.contains("mint") || rel.name.toLowerCase.contains("increaseallowance")) {
+        val symbolIndices = rel.sig.zipWithIndex.collect { case (SymbolType(_), idx) => idx }
+        val addressCombos = List.fill(symbolIndices.size)(addresses).foldLeft(Seq(Seq.empty[String])) {
+          (acc, addrs) => for { a <- acc; addr <- addrs } yield a :+ addr
+        }//.filter(combo => combo.distinct.size == combo.size) // skip combos with duplicate addresses
+
+        addressCombos.map { combo =>
           val params = rel.sig.zipWithIndex.map { case (t, idx) =>
             t match {
               case SymbolType(_) =>
-                // first param assumed to be address
-                datalog.Constant(t, addr)
+                val comboIdx = symbolIndices.indexOf(idx)
+                datalog.Constant(t, combo(comboIdx))
               case _ =>
                 datalog.Constant(t, "10")
             }
           }
-          val implicitParameters = ImplicitParameters(0,0)
+          val implicitParameters = ImplicitParameters(0, 0)
           Transaction(rel, params, implicitParameters)
         }
+          // addresses.map { addr =>
+          // val params = rel.sig.zipWithIndex.map { case (t, idx) =>
+          //   t match {
+          //     case SymbolType(_) =>
+          //       // first param assumed to be address
+          //       datalog.Constant(t, addr)
+          //     case _ =>
+          //       datalog.Constant(t, "10")
+          //   }
+          // }
+          // val implicitParameters = ImplicitParameters(0,0)
+          // Transaction(rel, params, implicitParameters)
+        // }
       } else Nil
     }
 
@@ -152,7 +171,10 @@ case class Disambiguator(sketch: Program,
     // cap to numTraces in case per-transaction quotas exceeded global budget
     val finalSampled = if (selected.size > numTraces) selected.take(numTraces) else selected
 
-    finalSampled.map(t => solInterpreter.interpret(txDefs, t)).toSet
+    val evaluatedTrace = finalSampled.map(t => solInterpreter.interpret(txDefs, t)).toSet
+    evaluatedTrace
+    val takeLastTxTrace = evaluatedTrace.map(_.takeLast())
+    takeLastTxTrace
   }
 
 }

@@ -22,6 +22,17 @@ case class EvaluatedTrace(
     val txs = steps.map(_._1)
     states.zip(txs).iterator
   }
+
+  def takeLast(): EvaluatedTrace = {
+    if (steps.isEmpty) {
+      EvaluatedTrace(initialState, Seq.empty)
+    } else {
+      val lastIdx = steps.length - 1
+      val prevState = if (lastIdx == 0) initialState else steps(lastIdx - 1)._2
+      val lastStep = steps(lastIdx)
+      EvaluatedTrace(prevState, Seq(lastStep))
+    }
+  }
 }
 
 object EvaluatedTrace {
