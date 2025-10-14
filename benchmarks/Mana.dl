@@ -1,0 +1,95 @@
+.decl *owner(p: address)
+.decl *weiRaised_1(a: uint)
+.decl *weiRaised_2(a:uint)
+.decl *cap(a: uint)
+.decl *bucketAmount(a: uint)
+.decl *issuance(a: uint)
+
+.decl *crowdsaleFinalized(b: bool)
+.decl *continuousSaleStarted(b: bool)
+
+.decl *totalSupply(a: uint)
+
+.decl constructor()
+owner(s) :- constructor(), msgSender(s).
+cap(86206) :- constructor().
+bucketAmount(0) :- constructor().
+
+crowdsaleFinalized(false) :- constructor().
+continuousSaleStarted(false) :- constructor().
+totalSupply(0) :- constructor().
+
+
+.decl mint(p: address, a:uint)
+.decl totalMint(p:address, a:uint)[0]
+
+/// crowdsale buyTokens 
+.decl recv_buyTokens(p:address)
+.public recv_buyTokens
+.decl buyTokens(p:address)
+buyTokens(p) :- recv_buyTokens(p), p!=0, msgValue(a), a!=0, 
+                weiRaised_1(b), cap(c), c>=(a+b).
+
+.decl raised_1(a:uint)
+raised_1(a) :- buyTokens(_), msgValue(a).
+weiRaised_1(s) :- raised_1(_), s = sum n: raised_1(n).
+
+mint(p,a) :- buyTokens(p), msgValue(a).
+totalMint(p,n) :- mint(p,_), n = sum m : mint(p,m).
+totalSupply(n) :- totalMint(_,_), n = sum m: totalMint(_,m).
+
+.decl recv_finalize()
+.public recv_finalize
+.decl finalize()
+finalize() :- msgSender(s), owner(s), crowdsaleFinalized(false), cap(n), weiRaised_1(m), m>n.
+crowdsaleFinalized(true) :- finalize().
+
+.decl recv_beginContinuousSale()
+.public recv_beginContinuousSale
+.decl beginContinuousSale()
+beginContinuousSale() :- recv_beginContinuousSale(), msgSender(s), owner(s),
+                    crowdsaleFinalized(true).
+
+/// transfer ownership of MANAToken to continuousSale  
+.decl transferOwnership(p: address)
+transferOwnership(p) :- beginContinuousSale(), msgSender(s), owner(s), p:=10.
+owner(s) :- transferOwnership(s).
+
+/// start continuousSale
+.decl start()
+start() :- beginContinuousSale(), msgSender(s), owner(s), 
+        continuousSaleStarted(false), totalSupply(a), n:=a*8/100*12/1, issuance(n).  
+continuousSaleStarted(true) :- start().
+
+/// continuousSale buyToken
+.decl recv_buyToken1(p:address)
+.public recv_buyToken1
+.decl buyToken1(p:address)
+buyToken1(p) :- recv_buyToken1(p), p!=0, msgValue(a), a!=0, continuousSaleStarted(true),
+                bucketAmount(b), issuance(c), c>=(a+b).
+
+.decl processPurchase(p: address, a: uint)
+processPurchase(p,a) :- buyToken1(p), msgValue(a).
+
+.decl raised_2(a: uint)
+raised_2(a) :- processPurchase(_,a).
+weiRaised_2(n) :- raised_2(_), n = sum m : raised_2(m).
+mint(p,a) :- processPurchase(p,a).
+
+.decl bucketAmount_increase(a:uint)
+bucketAmount_increase(a) :- processPurchase(_,a).
+bucketAmount(a) :- bucketAmount_increase(a).
+
+
+//// Properties
+.decl *alwaysLessThanIssuance(b:bool)
+.decl moreThanCap(b:bool)
+
+.violation moreThanCap
+
+alwaysLessThanIssuance(false) :- bucketAmount(a), issuance(b), a>b.
+moreThanCap(true) :- alwaysLessThanIssuance(false).
+
+
+
+

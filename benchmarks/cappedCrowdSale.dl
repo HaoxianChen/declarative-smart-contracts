@@ -18,8 +18,8 @@
 .decl recv_transfer(to: address, amount: uint)
 
 // New transactions
-// .decl recv_transferFrom(from: address, to: address, amount: uint)
-// .decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
 .decl recv_approve(s: address, n:uint)
 
 // Interfaces

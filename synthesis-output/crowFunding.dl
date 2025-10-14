@@ -1,0 +1,42 @@
+Interfaces:
+raised(): int
+balanceOf(address): int
+recv_close()
+closed(): bool
+recv_refund(address,int)
+recv_invest(address,int)
+target(): int
+recv_withdraw(address,int)
+Indices:
+SimpleRelation(investTotal,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(refundTotal,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(balanceOf,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(negativeBalance,List(address, int),List(p, n)) -> List(0)
+Rules:
+closed(true) :- close().
+onceRefund(true) :- refund(_,_).
+invalidTx() :- recv_withdraw(_,_),raised(r),target(t),r<t.
+withdraw(p,r) :- recv_withdraw(p,r),raised(r),target(t),r>=t.
+refund(p,n) :- recv_refund(p,n),closed(b_0),target(t_1),n<balanceOf_x1,balanceOf(p,balanceOf_x1),r_1<t_1,raised(r_1),b_0!=false.
+beneficiary(p) :- constructor(_,p).
+onceWithdraw(true) :- withdraw(_,_).
+close() :- recv_close(),owner(o),msgSender(s),o==s.
+totalBalance(m) :- m = sum n: balanceOf(_,n).
+onceRefund(false) :- constructor(_,_).
+negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
+refundTotal(p,s) :- refund(p,_),s = sum m: refund(p,m).
+balanceOf(p,s) :- investTotal(p,i),refundTotal(p,r),s := i-r.
+invalidTx() :- recv_refund(_,_),closed(b),b==false.
+raised(s) :- s = sum m: invest(_,m).
+raised(0) :- constructor(_,_).
+invest(p,n) :- recv_invest(p,n),closed(closed_b_1),n>0,closed_b_1==false.
+illegalRefund() :- onceRefund(true),raised(r),target(t),r>=t.
+refundAndWithdraw() :- onceWithdraw(true),onceRefund(true).
+owner(p) :- constructor(_,_),msgSender(p).
+onceWithdraw(false) :- constructor(_,_).
+missingFund(m,r) :- m!=r,totalBalance(m),b==false,closed(b),raised(r).
+target(t) :- constructor(t,_).
+invalidTx() :- recv_close(),owner(o),msgSender(s),o!=s.
+investTotal(p,s) :- invest(p,_),s = sum m: invest(p,m).
+totalBalance(0) :- constructor(_,_).
+invalidTx() :- recv_refund(_,_),raised(r),target(t),r>=t.

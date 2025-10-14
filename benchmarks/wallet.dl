@@ -16,15 +16,16 @@
 
 // Interfaces
 .public recv_mint
-.public recv_burn
-.public recv_transfer
+// .public recv_burn
+// .public recv_transfer
 .public balanceOf(1)
 .public totalSupply(0)
 
 // Rules
 owner(s) :- constructor(), msgSender(s).
 
-mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0, p!=0.
+// mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), n>0, p!=0.
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
 burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0, balanceOf(p,m), n<=m.
 /* A bug caught by verification: n should be greater than zero,
 *  otherwise could lead to negative balance at r.
