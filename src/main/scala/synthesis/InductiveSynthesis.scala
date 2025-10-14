@@ -16,7 +16,7 @@ case class InductiveSynthesis(
 ) {
 
   case class Representation(map: Map[Relation, Set[Predicate]]) {
-    def getPredicates(rel: Relation): Set[Predicate] = map(rel)
+    def getPredicates(rel: Relation): Set[Predicate] = map.getOrElse(rel, Set())
 
     override def toString: String =
       map.map { case (rel, preds) => s"${rel.name}: ${preds.mkString("\n")}" }.mkString("\n")
@@ -550,6 +550,17 @@ case class InductiveSynthesis(
     // Reuse program metadata from sketch
     // datalog.Program(newRules, sketch.interfaces, sketch.relationIndices, sketch.functions, sketch.violations, sketch.name)
     sketch.copy(rules = newRules++sketch.violationRules)
+  }
+
+  def augmentSketchWithPredicates(sketch: Program,
+                                  candidates: Map[Rule, Predicate],
+                                 ): Program = {
+    val predicatesPerRelation: Map[Relation, Set[Predicate]] = candidates.groupBy {
+      case (rule, predicate) => PredicateEnumerator.extractTxLiteral(rule).relation
+    }.mapValues(_.values.toSet).toMap
+
+    val newProgram = makeProgram(sketch, Representation(predicatesPerRelation))
+    newProgram
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {

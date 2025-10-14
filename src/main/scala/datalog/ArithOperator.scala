@@ -252,4 +252,14 @@ object Functor {
       }
     }
   }
+
+  def negate(functor: Functor): Functor = functor match {
+    case Greater(a, b) => Leq(a, b)
+    case Lesser(a, b)  => Geq(a, b)
+    case Geq(a, b)     => Lesser(a, b)
+    case Leq(a, b)     => Greater(a, b)
+    case Unequal(a, b) => Equal(a, b)
+    case Equal(a, b)   => Unequal(a, b)
+    case Assign(_, _)  => throw new Exception(s"Cannot negate assignment: $functor")
+  }
 }

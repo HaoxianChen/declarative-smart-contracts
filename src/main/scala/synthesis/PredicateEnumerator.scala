@@ -5,6 +5,7 @@ import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
 import PredicateEnumerator.functorParams
+import imp.SolidityTranslator.transactionRelationPrefix
 
 import scala.collection.mutable
 
@@ -93,6 +94,33 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       }
     }
 
+  def extractPredicateFromTxProperties(program: Program): Map[Rule,Predicate] = {
+    val txViolationRules = program.violationRules.filter(
+      _.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+
+    // for each txViolation rule: recv_tx(...), p1, p2,...
+    // if it has only one functor, then negate that functor, and keep p1,p2,...
+    // as the binding literal, and recv_tx... as the tx literal.
+    // if it has more than one functor, skip it for now.
+    val predicates = txViolationRules.flatMap  { rule =>
+      val txLiteral = PredicateEnumerator.extractTxLiteral(rule)
+
+      // collect binding literals (all body Literals except the tx literal)
+      val bindingLiterals: Set[Literal] =
+        rule.body.collect { case l: Literal if l != txLiteral => l }.toSet
+
+      if (rule.functors.size > 1) {
+        None
+      }
+      else {
+        val f = rule.functors.head
+        val negated = Functor.negate(f)
+        Some(rule -> Predicate(Context(txLiteral, bindingLiterals), negated))
+      }
+    }.toMap
+    predicates
+  }
+
   def enumeratePredicates(program: Program): Map[Rule,Set[Predicate]] = {
     val txRules = program.transactionRules()
 
@@ -115,7 +143,10 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       val withOneSingleton = singletonRelations.flatMap(
         r => withOneBindingSingleton(txLiteral, r))
 
-      predicates.update(txRule, singles ++ withBindings ++ withOneSingleton)
+      /** 4. todo: Bind two singleton relation, and add a binary operator that compares the two. */
+      val withTwoSingleton = withTwoSingletonBindings(txLiteral, singletonRelations)
+
+      predicates.update(txRule, singles ++ withBindings ++ withOneSingleton ++ withTwoSingleton)
     }
     predicates.toMap
   }
@@ -225,6 +256,23 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       Set(Literal(r, vars))
     }
   }
+
+  private def withTwoSingletonBindings(txLiteral: Literal, singletonRelations: Set[SingletonRelation]): Set[Predicate] = {
+    val allRelations: Set[Relation] = singletonRelations ++ Set(MsgSender())
+    val singletonPairs = allRelations.subsets(2).collect {
+      case pair if pair.size == 2 => pair.toList
+    }
+    singletonPairs.flatMap {
+      case List(r1, r2) =>
+        val lit1 = Literal(r1, r1.sig.map(t => Variable(t, s"${r1.name}_x")))
+        val lit2 = Literal(r2, r2.sig.map(t => Variable(t, s"${r2.name}_x")))
+        val context = Context(txLiteral, Set(lit1, lit2))
+        val functors = crossRelationComparison(lit1, lit2).map(f => Predicate(context, f))
+        functors
+      case _ => Set.empty[Predicate]
+    }.toSet
+  }
+
 
   // ----- helpers -----
   private def relationArity(r: Relation): Int = r.sig.length

@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{AnyType, BooleanType, CompoundType, NumberType, Program, Relation, ReservedRelation, SimpleRelation, SingletonRelation, SymbolType, UnitType}
+import datalog.{AnyType, BooleanType, CompoundType, NumberType, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, SymbolType, UnitType}
 import imp.SolidityStatement
 import imp.{ImperativeTranslator, Inliner}
 import imp.SolidityTranslator.transactionRelationPrefix
@@ -47,6 +47,11 @@ case class Cegis(sketch: Program) {
 
     val synthesizer = InductiveSynthesis(candidates, interpreterContext)
 
+    val predicatesFromTxRules = enumerator.extractPredicateFromTxProperties(program)
+    val augmented = synthesizer.augmentSketchWithPredicates(program, predicatesFromTxRules)
+    println(predicatesFromTxRules)
+    program = augmented
+
     var iter = 0
     while (iter < maxIters) {
       val bmc = BoundedModelChecker()
@@ -69,7 +74,7 @@ case class Cegis(sketch: Program) {
 
       traces :+= evaluatedTrace
       println("[CEGIS] Running inductive synthesis to block the counterexample...")
-      val newProgram = synthesizer.synthesize(sketch, traces, maxSolutionsPerStep, disambiguationTraces)
+      val newProgram = synthesizer.synthesize(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
 
       if (newProgram == program) {
         println("[CEGIS] Synthesizer produced no change. Stopping.")
