@@ -12,14 +12,18 @@ SimpleRelation(negativeBalance,List(address, int),List(p, n)) -> List(0)
 Rules:
 allMint(s) :- s = sum n: mint(_,n).
 balanceOf(p,s) :- totalOut(p,o),totalIn(p,i),s := i-o.
+burn(p,n) :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 owner(s) :- constructor(),msgSender(s).
 transfer(p,address(0),n) :- burn(p,n).
-burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
-transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 transfer(address(0),p,n) :- mint(p,n).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
-mint(p,n) :- recv_mint(p,n),n>=0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+invalidTx() :- recv_burn(_,_),owner(o),msgSender(s),o!=s.
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+mint(p,n) :- msgSender(s),0!=balanceOf_x1,recv_mint(p,n),balanceOf(p,balanceOf_x1),o==s,owner(o).
+unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
 totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).

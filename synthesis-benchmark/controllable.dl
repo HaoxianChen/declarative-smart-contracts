@@ -125,3 +125,9 @@ illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), p!=c.
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+
+.decl invalidTx()
+.violation invalidTx
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.

@@ -2,6 +2,7 @@
 
 // parameters
 .decl *owner(p: address)
+.public owner(0)
 
 // views
 .decl *totalSupply(n: int)
@@ -136,6 +137,8 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
 .decl invalidTx()
 .violation invalidTx
-invalidTx() :- paused(true), recv_transfer(_,_,_).
-invalidTx() :- paused(true), recv_transferFrom(_,_,_,_).
+invalidTx() :- paused(b), b==true, recv_transfer(_,_,_).
+invalidTx() :- paused(b), b==true, recv_transferFrom(_,_,_,_).
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 
