@@ -90,7 +90,11 @@ case class Disambiguator(sketch: Program,
     val setupTxs: List[Transaction] = txRelations.flatMap { rel =>
       // Heuristic: if relation name contains "mint" (case-insensitive), produce per-address setup
       // if (rel.name.toLowerCase.contains("mint")) {
-      if (rel.name.toLowerCase.contains("mint") || rel.name.toLowerCase.contains("increaseallowance")) {
+      val lname = rel.name.toLowerCase
+      if (lname.contains("mint")
+        || lname.contains("increaseallowance")
+        || lname.contains("invest")
+      ) {
         val symbolIndices = rel.sig.zipWithIndex.collect { case (SymbolType(_), idx) => idx }
         val addressCombos = List.fill(symbolIndices.size)(addresses).foldLeft(Seq(Seq.empty[String])) {
           (acc, addrs) => for { a <- acc; addr <- addrs } yield a :+ addr
