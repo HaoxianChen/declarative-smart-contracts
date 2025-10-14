@@ -189,7 +189,14 @@ case class SolidityInterpreter() {
         val value = state.lookup(relation.name, keyIds)
         state.updateInt(p.name,value)
       }
-      case UpdateMap(name, keys, tupleTypeName, params) => ???
+      case UpdateMap(name, keys, tupleTypeName, params) => {
+        val keyIds = keys.map {
+          case Constant(_type, name) => name.toInt
+          case v: Variable => state.lookup(v.name)
+        }
+        val value = _interpretParam(params.head)
+        state.update(name, keyIds, value)
+      }
       case UpdateMapValue(name, keys, fieldName, p) => {
         val keyIds = keys.map {
           case Constant(_type, name) => name.toInt

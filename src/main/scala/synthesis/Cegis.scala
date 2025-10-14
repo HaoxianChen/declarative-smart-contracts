@@ -26,7 +26,7 @@ case class Cegis(sketch: Program) {
    *  - Run the inductive synthesizer that generate new program that blocks such EvaluatedTrace
    *  - iterate until no counter example is found by the BMC.
   *  */
-  def run(maxBound: Int = 4, maxIters: Int = 80, maxSolutionsPerStep: Int = 20): Program = {
+  def run(maxBound: Int = 4, maxIters: Int = 100, maxSolutionsPerStep: Int = 20): Program = {
     // Assumptions made:
     // 1) We try to use the SolidityInterpreter whenever possible. We construct a
     //    minimal `ReadValueFromMap` statement that performs a read using constant

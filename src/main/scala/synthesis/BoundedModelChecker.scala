@@ -31,7 +31,8 @@ case class BoundedModelChecker() {
     import verification.Verifier.indicatorConstForTransactionTriggerRelation
     val txInterfaces = program.interfaces.filter(i => i.relation.name.startsWith(transactionRelationPrefix))
     txInterfaces.map { t =>
-      val triggeredRules = program.rules.filter(r => r.body.exists(lit => lit.relation == t.relation))
+      val triggeredRules = program.rules.diff(program.violationRules)
+        .filter(r => r.body.exists(lit => lit.relation == t.relation))
       val indicators = triggeredRules.zipWithIndex.map { case (triggeredRule, i) =>
         val const: IntExpr = indicatorConstForTransactionTriggerRelation(ctx, t.relation, i)
         val trigLit: Literal = triggeredRule.body.filter(_.relation.name.startsWith(transactionRelationPrefix)).head

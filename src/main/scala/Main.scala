@@ -245,7 +245,9 @@ object Main extends App {
   else if (args(0) == "cegis") {
     val synthesisBenchmarks = List(
       // "wallet.dl",
-      "controllable.dl",
+      // "erc20.dl",
+      "matic.dl"
+      // "controllable.dl",
       // "cappedCrowdSale.dl",
       // "bnb.dl",
     )
