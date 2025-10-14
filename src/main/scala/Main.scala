@@ -246,10 +246,12 @@ object Main extends App {
     val synthesisBenchmarks = List(
       // "wallet.dl",
       // "erc20.dl",
-      "matic.dl"
+      // "matic.dl",
       // "controllable.dl",
       // "cappedCrowdSale.dl",
       // "bnb.dl",
+      // "crowFunding.dl",
+      "tether.dl"
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
     for (p <- synthesisBenchmarks) {
