@@ -1,0 +1,59 @@
+Interfaces:
+allowance(address,address): int
+balanceOf(address): int
+paused(): bool
+recv_transfer(address,address,int)
+recv_increaseAllowance(address,address,int)
+recv_unpause()
+totalSupply(): int
+recv_burn(address,int)
+recv_mint(address,int)
+recv_transferFrom(address,address,address,int)
+recv_decreaseAllowance(address,address,int)
+recv_pause()
+Indices:
+SimpleRelation(allowanceTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
+SimpleRelation(spentTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
+SimpleRelation(allowance,List(address, address, int),List(p, s, n)) -> List(0, 1)
+SimpleRelation(totalMint,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(decreaseAllowanceTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
+SimpleRelation(isPauser,List(address, bool),List(p, b)) -> List(0)
+SimpleRelation(balanceOf,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(negativeBalance,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(totalOut,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(totalIn,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(negativeAllowance,List(address, address, int),List(s, p, n)) -> List(0, 1)
+SimpleRelation(totalBurn,List(address, int),List(p, n)) -> List(0)
+Rules:
+negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
+totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
+decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n),allowance(o,s,allowance_x2),n<allowance_x2.
+transfer(s,r,n) :- balanceOf(s,balanceOf_x1_1),paused_b_2==false,n<balanceOf_x1_1,paused(paused_b_2),recv_transfer(s,r,n),n>0.
+paused(false) :- constructor(_).
+pause() :- recv_pause().
+paused(true) :- pause().
+invalidTx() :- paused(true),recv_transfer(_,_,_).
+decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_),m = sum n: decreaseAllowance(o,s,n).
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
+totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+unpause() :- recv_unpause().
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+allMint(s) :- s = sum n: mint(_,n).
+invalidTx() :- paused(true),recv_transferFrom(_,_,_,_).
+owner(s) :- constructor(_),msgSender(s).
+negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
+isPauser(s,true) :- constructor(_),msgSender(s).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),n>0.
+spentTotal(o,s,m) :- transferFrom(o,_,s,_),m = sum n: transferFrom(o,_,s,n).
+allowance(o,s,n) :- allowanceTotal(o,s,m),spentTotal(o,s,l),decreaseAllowanceTotal(o,s,d),n := (m-l)-d.
+totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
+paused(false) :- unpause().
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),paused_b_3==false,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2,paused(paused_b_3),balanceOf(o,balanceOf_x1_2).
+totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
+unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
+mint(p,n) :- recv_mint(p,n),n>=0.
