@@ -1,0 +1,52 @@
+Interfaces:
+allowance(address,address): int
+totalSupply(): int
+balanceOf(address): int
+recv_transferFrom(address,address,address,int)
+recv_increaseAllowance(address,address,int)
+recv_issue(address,int)
+recv_addBlackList(address)
+isBlackListed(address): bool
+recv_redeem(address,int)
+recv_transfer(address,address,int)
+Indices:
+SimpleRelation(allowanceTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
+SimpleRelation(spentTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
+SimpleRelation(allowance,List(address, address, int),List(p, s, n)) -> List(0, 1)
+SimpleRelation(isBlackListed,List(address, bool),List(p, b)) -> List(0)
+SimpleRelation(totalRedeem,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(negativeAllowance,List(address, address, int),List(s, p, n)) -> List(0, 1)
+SimpleRelation(negativeBalance,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(totalOut,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(totalIn,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(totalIssue,List(address, int),List(p, n)) -> List(0)
+SimpleRelation(balanceOf,List(address, int),List(p, n)) -> List(0)
+Rules:
+totalRedeem(p,s) :- redeem(p,_),s = sum n: redeem(p,n).
+addBlackList(p) :- recv_addBlackList(p),owner(o),msgSender(s),o==s.
+allIssue(s) :- s = sum n: issue(_,n).
+balanceOf(p,s) :- totalRedeem(p,m),s := ((n+i)-m)-o,totalIssue(p,n),totalOut(p,o),totalIn(p,i).
+isBlackListed(p,true) :- addBlackList(p).
+invalidTx() :- recv_addBlackList(_),owner(o),msgSender(s),o!=s.
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>=0,n<=balanceOf_x1_1.
+invalidTx() :- recv_issue(_,_),owner(o),msgSender(s),o!=s.
+destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).
+negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
+totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
+totalSupply(n) :- allIssue(m),allRedeem(b),n := m-b.
+allRedeem(s) :- s = sum n: redeem(_,n).
+owner(s) :- constructor(_),msgSender(s).
+negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
+redeem(p,n) :- recv_redeem(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+totalIssue(p,s) :- issue(p,_),s = sum n: issue(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+issue(p,n) :- msgSender(s),n>0,recv_issue(p,n),o==s,owner(o).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_),m = sum n: transferFrom(o,_,s,n).
+redeem(p,n) :- destroyBlackFund(p,n).
+allowance(o,s,n) :- allowanceTotal(o,s,m),spentTotal(o,s,l),n := m-l.
+unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
+totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
