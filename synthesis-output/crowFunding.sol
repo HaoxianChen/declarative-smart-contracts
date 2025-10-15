@@ -3,6 +3,10 @@ contract CrowFunding {
     address p;
     bool _valid;
   }
+  struct BeneficiaryTuple {
+    address p;
+    bool _valid;
+  }
   struct BalanceOfTuple {
     int n;
     bool _valid;
@@ -19,6 +23,7 @@ contract CrowFunding {
     int n;
     bool _valid;
   }
+  BeneficiaryTuple beneficiary;
   mapping(address=>BalanceOfTuple) balanceOf;
   RaisedTuple raised;
   OwnerTuple owner;
@@ -30,21 +35,27 @@ contract CrowFunding {
   event Refund(address p,int n);
   event Invest(address p,int n);
   constructor(int t,address b) public {
-    updateRaisedOnInsertConstructor_r17();
-    updateTargetOnInsertConstructor_r24(t);
-    updateBeneficiaryOnInsertConstructor_r5(b);
-    updateTotalBalanceOnInsertConstructor_r27();
-    updateOnceWithdrawOnInsertConstructor_r22();
-    updateOwnerOnInsertConstructor_r21();
-    updateOnceRefundOnInsertConstructor_r9();
+    updateOnceRefundOnInsertConstructor_r12();
+    updateOnceWithdrawOnInsertConstructor_r23();
+    updateBeneficiaryOnInsertConstructor_r7(b);
+    updateRaisedOnInsertConstructor_r3();
+    updateTotalBalanceOnInsertConstructor_r28();
+    updateOwnerOnInsertConstructor_r22();
+    updateTargetOnInsertConstructor_r25(t);
   }
   function getClosed() public view  returns (bool) {
       bool b = closed.b;
       return b;
   }
-  function refund(address p,int n) public    {
-      bool r4 = updateRefundOnInsertRecv_refund_r4(p,n);
-      if(r4==false) {
+  function withdraw(address p,int n) public    {
+      bool r6 = updateWithdrawOnInsertRecv_withdraw_r6(p,n);
+      if(r6==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function invest(address p,int n) public    {
+      bool r9 = updateInvestOnInsertRecv_invest_r9(p,n);
+      if(r9==false) {
         revert("Rule condition failed");
       }
   }
@@ -52,9 +63,9 @@ contract CrowFunding {
       int n = balanceOf[p].n;
       return n;
   }
-  function withdraw(address p,int n) public    {
-      bool r3 = updateWithdrawOnInsertRecv_withdraw_r3(p,n);
-      if(r3==false) {
+  function refund(address p,int n) public    {
+      bool r5 = updateRefundOnInsertRecv_refund_r5(p,n);
+      if(r5==false) {
         revert("Rule condition failed");
       }
   }
@@ -62,86 +73,25 @@ contract CrowFunding {
       int n = raised.n;
       return n;
   }
-  function close() public    {
-      bool r7 = updateCloseOnInsertRecv_close_r7();
-      if(r7==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function invest(address p,int n) public    {
-      bool r18 = updateInvestOnInsertRecv_invest_r18(p,n);
-      if(r18==false) {
-        revert("Rule condition failed");
-      }
-  }
   function getTarget() public view  returns (int) {
       int t = target.t;
       return t;
   }
-  function updateOnceWithdrawOnInsertConstructor_r22() private    {
-      // Empty()
-  }
-  function updateTargetOnInsertConstructor_r24(int t) private    {
-      target = TargetTuple(t,true);
-  }
-  function updateInvestTotalOnInsertInvest_r26(address p,int m) private    {
-      int delta0 = int(m);
-      updateBalanceOfOnIncrementInvestTotal_r14(p,delta0);
-  }
-  function updateOwnerOnInsertConstructor_r21() private    {
-      address p = msg.sender;
-      owner = OwnerTuple(p,true);
-  }
-  function updateRaisedOnInsertInvest_r16(int m) private    {
-      raised.n += m;
-  }
-  function updateRefundOnInsertRecv_refund_r4(address p,int n) private   returns (bool) {
-      int t_1 = target.t;
-      int r_1 = raised.n;
-      bool b_0 = closed.b;
-      int balanceOf_x1 = balanceOf[p].n;
-      if(b_0!=false && r_1<t_1 && n<balanceOf_x1) {
-        updateSendOnInsertRefund_r13(p,n);
-        updateRefundTotalOnInsertRefund_r12(p,n);
-        emit Refund(p,n);
-        return true;
+  function close() public    {
+      bool r10 = updateCloseOnInsertRecv_close_r10();
+      if(r10==false) {
+        revert("Rule condition failed");
       }
-      return false;
   }
-  function updateSendOnInsertWithdraw_r11(address p,int r) private    {
-      payable(p).send(r);
-  }
-  function updateBalanceOfOnIncrementInvestTotal_r14(address p,int i) private    {
-      balanceOf[p].n += i;
-  }
-  function updateintByint(int x,int delta) private   returns (int) {
-      int newValue = x+delta;
-      return newValue;
-  }
-  function updateTotalBalanceOnInsertConstructor_r27() private    {
-      // Empty()
-  }
-  function updateBalanceOfOnIncrementRefundTotal_r14(address p,int r) private    {
-      balanceOf[p].n -= r;
-  }
-  function updateBeneficiaryOnInsertConstructor_r5(address p) private    {
-      // Empty()
-  }
-  function updateSendOnInsertRefund_r13(address p,int n) private    {
-      payable(p).send(n);
-  }
-  function updateOnceRefundOnInsertConstructor_r9() private    {
+  function updateOnceWithdrawOnInsertConstructor_r23() private    {
       // Empty()
   }
   function updateClosedOnInsertClose_r0() private    {
       closed = ClosedTuple(true,true);
   }
-  function updateRaisedOnInsertConstructor_r17() private    {
-      raised = RaisedTuple(0,true);
-  }
-  function updateRefundTotalOnInsertRefund_r12(address p,int m) private    {
+  function updateRefundTotalOnInsertRefund_r15(address p,int m) private    {
       int delta0 = int(m);
-      updateBalanceOfOnIncrementRefundTotal_r14(p,delta0);
+      updateBalanceOfOnIncrementRefundTotal_r17(p,delta0);
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -149,28 +99,7 @@ contract CrowFunding {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function updateInvestOnInsertRecv_invest_r18(address p,int n) private   returns (bool) {
-      bool closed_b_1 = closed.b;
-      if(n>0 && closed_b_1==false) {
-        updateRaisedOnInsertInvest_r16(n);
-        updateInvestTotalOnInsertInvest_r26(p,n);
-        emit Invest(p,n);
-        return true;
-      }
-      return false;
-  }
-  function updateWithdrawOnInsertRecv_withdraw_r3(address p,int r) private   returns (bool) {
-      int t = target.t;
-      if(r==raised.n) {
-        if(r>=t) {
-          updateSendOnInsertWithdraw_r11(p,r);
-          emit Withdraw(p,r);
-          return true;
-        }
-      }
-      return false;
-  }
-  function updateCloseOnInsertRecv_close_r7() private   returns (bool) {
+  function updateCloseOnInsertRecv_close_r10() private   returns (bool) {
       address s = msg.sender;
       address o = owner.p;
       if(o==s) {
@@ -179,5 +108,81 @@ contract CrowFunding {
         return true;
       }
       return false;
+  }
+  function updateBeneficiaryOnInsertConstructor_r7(address p) private    {
+      beneficiary = BeneficiaryTuple(p,true);
+  }
+  function updateintByint(int x,int delta) private   returns (int) {
+      int newValue = x+delta;
+      return newValue;
+  }
+  function updateRaisedOnInsertInvest_r19(int m) private    {
+      raised.n += m;
+  }
+  function updateSendOnInsertRefund_r16(address p,int n) private    {
+      payable(p).send(n);
+  }
+  function updateBalanceOfOnIncrementInvestTotal_r17(address p,int i) private    {
+      balanceOf[p].n += i;
+  }
+  function updateOnceRefundOnInsertConstructor_r12() private    {
+      // Empty()
+  }
+  function updateTargetOnInsertConstructor_r25(int t) private    {
+      target = TargetTuple(t,true);
+  }
+  function updateWithdrawOnInsertRecv_withdraw_r6(address p,int r) private   returns (bool) {
+      int t_1 = target.t;
+      int r_1 = raised.n;
+      address b_0 = beneficiary.p;
+      if(p==b_0 && r_1>=t_1) {
+        updateSendOnInsertWithdraw_r14(p,r);
+        emit Withdraw(p,r);
+        return true;
+      }
+      return false;
+  }
+  function updateRefundOnInsertRecv_refund_r5(address p,int n) private   returns (bool) {
+      int t_1 = target.t;
+      int r_1 = raised.n;
+      bool b_0 = closed.b;
+      int balanceOf_x1 = balanceOf[p].n;
+      if(b_0!=false && r_1<t_1 && n<balanceOf_x1) {
+        updateSendOnInsertRefund_r16(p,n);
+        updateRefundTotalOnInsertRefund_r15(p,n);
+        emit Refund(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateRaisedOnInsertConstructor_r3() private    {
+      raised = RaisedTuple(0,true);
+  }
+  function updateTotalBalanceOnInsertConstructor_r28() private    {
+      // Empty()
+  }
+  function updateBalanceOfOnIncrementRefundTotal_r17(address p,int r) private    {
+      balanceOf[p].n -= r;
+  }
+  function updateOwnerOnInsertConstructor_r22() private    {
+      address p = msg.sender;
+      owner = OwnerTuple(p,true);
+  }
+  function updateSendOnInsertWithdraw_r14(address p,int r) private    {
+      payable(p).send(r);
+  }
+  function updateInvestOnInsertRecv_invest_r9(address p,int n) private   returns (bool) {
+      bool closed_b_1 = closed.b;
+      if(n>=0 && closed_b_1==false) {
+        updateInvestTotalOnInsertInvest_r27(p,n);
+        updateRaisedOnInsertInvest_r19(n);
+        emit Invest(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateInvestTotalOnInsertInvest_r27(address p,int m) private    {
+      int delta0 = int(m);
+      updateBalanceOfOnIncrementInvestTotal_r17(p,delta0);
   }
 }
