@@ -33,7 +33,6 @@ mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
 paused(false) :- constructor(_).
 pause() :- recv_pause().
 paused(true) :- pause().
-transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),paused(b),b!=true,n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
@@ -54,6 +53,7 @@ paused(false) :- unpause().
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_),m = sum n: decreaseAllowance(o,s,n).
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),paused(b),b!=true,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
 invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 invalidTx() :- paused(b),recv_transferFrom(_,_,_,_),b==true.
 totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).

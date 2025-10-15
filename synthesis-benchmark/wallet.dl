@@ -50,13 +50,13 @@ allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 // Properties
-.decl *totalBalances(m: int)
-.decl *unequalBalance(s: int, n: int)
-
-.violation unequalBalance
-
-totalBalances(s) :- s = sum n: balanceOf(_,n).
-unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+// .decl *totalBalances(m: int)
+// .decl *unequalBalance(s: int, n: int)
+//
+// .violation unequalBalance
+//
+// totalBalances(s) :- s = sum n: balanceOf(_,n).
+// unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance

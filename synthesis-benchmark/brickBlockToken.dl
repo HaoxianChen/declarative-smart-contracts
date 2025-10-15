@@ -1,190 +1,216 @@
 // parameters
 .decl *owner(p: address)
 .decl *paused(p: bool)
+.public paused(0)
 .decl constructor()
 
 // views
-.decl allowed(p: address, p2: address, a: uint)[0,1]
+.decl allowed(p: address, p2: address, a: int)[0,1]
+.public allowed(2)
 
 // Constructor
 owner(s) :- constructor(), msgSender(s).
 paused(true) :- constructor().
 
 // ownable
-.decl recv_transferownership(_new: address)
-.decl transferOwnership(old: address, _new: address)
-
-transferOwnership(s,_new) :- recv_transferownership(_new), 
-                        msgSender(s), owner(s), _new!=0.
-owner(_new) :- transferOwnership(_,_new).
+// .decl recv_transferownership(old: address, _new: address)
+// .decl transferOwnership(old: address, _new: address)
+//
+// transferOwnership(s,_new) :- recv_transferownership(s, _new).
+//                         // msgSender(s), owner(s), _new!=0.
+// owner(_new) :- transferOwnership(_,_new).
 
 // pausable
 .decl recv_pause()
 .decl pause()
-pause() :- recv_pause(), msgSender(s), owner(s), paused(a), a!=true.
+pause() :- recv_pause(). // msgSender(s), owner(s), paused(a), a!=true.
 paused(a) :- pause(), a:=true.
 
 // basicToken
-.decl *totalSupply(a:uint)
-.decl balances(p: address, a: uint)[0]
+.decl *totalSupply(a:int)
+.decl balances(p: address, a: int)[0]
+.public balances(1)
 
-.decl recv_transfer(from: address, to: address, a: uint)
-.decl transfer(from: address, to: address, a:uint)
 
-transfer(s,r,n) :- recv_transfer(s,r,n), paused(false), msgSender(s), r!=0, balances(s,m), n<=m.
+.decl recv_transfer(from: address, to: address, a: int)
+.decl transfer(from: address, to: address, a:int)
+
+transfer(s,r,n) :- recv_transfer(s,r,n).
+// , paused(false), msgSender(s), r!=0, balances(s,m), n<=m.
 
 // standardToken
-.decl recv_transferFrom(from: address, to: address, a: uint)
-.decl recv_approve(s: address, n: uint)
-.decl recv_increaseApproval(s: address, a:uint)
-.decl recv_decreaseApproval(s: address, a:uint)
+.decl recv_transferFrom(operator: address, from: address, to: address, a: int)
+// .decl recv_approve(s: address, n: int)
+.decl recv_increaseAllowance(o: address, s: address, d: int)
+.decl recv_decreaseAllowance(o: address, s: address, d: int)
 .public recv_transfer
 .public recv_transferFrom
-.public recv_approve
-.public recv_increaseApproval
-.public recv_decreaseApproval
+// .public recv_approve
+.public recv_increaseAllowance
+.public recv_decreaseAllowance
 
-.decl transferFrom(operator: address, from: address, to: address, a: uint)
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n), r!=0, balances(f,m), n<=m,
-                    msgSender(s), allowed(f,s,a), n<=a.
+.decl transferFrom(operator: address, from: address, to: address, a: int)
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+//                          , r!=0, balances(f,m), n<=m,
+//                     msgSender(s), allowed(f,s,a), n<=a.
 
-.decl burn(p:address, n:uint)
-.decl totalIn(p:address,n:uint)[0]
-.decl totalOut(p:address,n:uint)[0]
+.decl burn(p:address, n:int)
+.decl mint(p:address, n:int)
+.decl recv_mint(p:address, n:int)
+.public recv_mint
+.decl totalIn(p:address,n:int)[0]
+.decl totalOut(p:address,n:int)[0]
 transfer(s,r,n) :- transferFrom(_,s,r,n).
 transfer(s,0,n) :- burn(s,n).
+transfer(0,p,n) :- mint(p,n).
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
-totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n). 
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 balances(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
 
-.decl spentTotal(o:address, s:address, m:uint)[0,1]
+mint(p,n) :- recv_mint(p,n).
+
+.decl spentTotal(o:address, s:address, m:int)[0,1]
 spentTotal(f,s,m) :- transferFrom(f,s,_,_), m = sum n: transferFrom(f,s,_,n).
 
 
-.decl approve(owner: address, operator:address, n: uint)
-approve(s,o,n) :- recv_approve(o,n), msgSender(s).
+// .decl approve(owner: address, operator:address, n: int)
+// approve(s,o,n) :- recv_approve(o,n), msgSender(s).
 
-.decl increaseAllowance(o: address, s: address, d: uint)
-increaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n>m, d:=n-m.
-increaseAllowance(o,s,m) :- recv_increaseApproval(s,m), msgSender(o).
+.decl increaseAllowance(o: address, s: address, d: int)
+// increaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n>m, d:=n-m.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d). // msgSender(o).
 
-.decl decreaseAllowance(o: address, s:address, a:uint)[0,1]
-decreaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n<m, d:=m-n.
-decreaseAllowance(o,s,d) :- recv_decreaseApproval(s,m), msgSender(o),
-                        allowed(o,s,n), n>=m, d:=n-m.  
+.decl decreaseAllowance(o: address, s:address, d:int)[0,1]
+// decreaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n<m, d:=m-n.
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d). // , msgSender(o),
+                        // allowed(o,s,n), n>=m, d:=n-m.
 
-.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
-.decl decreaseTotal(o:address, s:address, m:uint)[0,1]
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl decreaseTotal(o:address, s:address, m:int)[0,1]
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
 decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_), m = sum n: decreaseAllowance(f,s,n).
 
 allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d), m := n-l-d.
-            
+
 
 // BrickblockToken
-.decl *predecessorAddress(p:address)
-.decl *bonusDistributionAddress(p:address)
-.decl *fountainContractAddress(p:address)
-.decl *successorAddress(p:address)
-.decl *tokenSaleActive(b:bool)
+// .decl *predecessorAddress(p:address)
+// .decl *bonusDistributionAddress(p:address)
+// .decl *fountainContractAddress(p:address)
+// .decl *successorAddress(p:address)
+// .decl *tokenSaleActive(b:bool)
 .decl *dead(b:bool)
-.decl *initialSupply(a:uint)
+.public dead(0)
+.decl *initialSupply(a:int)
+//
+// .decl BrickblockToken()
+// // initialSupply(a) :- BrickblockToken(), a:= 500 * (10 ** 6) * (10 ** uint256(decimals)).
+// initialSupply(a) :- BrickblockToken(), a:= 500 * 1000000.
+// dead(b) :- BrickblockToken(), b:=false.
+// tokenSaleActive(b) :- BrickblockToken(), b:=true.
 
-.decl BrickblockToken()
-// initialSupply(a) :- BrickblockToken(), a:= 500 * (10 ** 6) * (10 ** uint256(decimals)).
-initialSupply(a) :- BrickblockToken(), a:= 500 * 1000000.
-dead(b) :- BrickblockToken(), b:=false.
-tokenSaleActive(b) :- BrickblockToken(), b:=true.
-
-.decl *burnTotal(n:uint)
+.decl *burnTotal(n:int)
 burnTotal(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- initialSupply(i), burnTotal(b), n:=i-b.
 
 .decl unpause()
 .decl recv_unpause()
 .public recv_unpause
-unpause() :- recv_unpause(), msgSender(s), owner(s), paused(b), b==true, dead(false). 
+unpause() :- recv_unpause().// , msgSender(s), owner(s), paused(b), b==true, dead(false).
 paused(false) :- unpause().
 
-.decl recv_changeBonusDistributionAddress(p:address)
-bonusDistributionAddress(a) :- recv_changeBonusDistributionAddress(a),
-                                        msgSender(s), owner(s), this(thisAddr), thisAddr!=a.
+// .decl recv_changeBonusDistributionAddress(p:address)
+// bonusDistributionAddress(a) :- recv_changeBonusDistributionAddress(a),
+//                                         msgSender(s), owner(s), this(thisAddr), thisAddr!=a.
+//
+// .decl recv_changeFountainContractAddress(p:address)
+// .public recv_changeFountainContractAddress
+// fountainContractAddress(a):- recv_changeFountainContractAddress(a),
+//                                 msgSender(s), owner(s), a!=s, this(thisAddr), thisAddr!=a.
+//
+// .decl recv_distributeTokens(p:address, v:int)
+// .public recv_distributeTokens
+// .decl distributeTokens(p:address, v:int)
+// distributeTokens(a, n) :- recv_distributeTokens(a,n), msgSender(s), owner(s),
+//                                     tokenSaleActive(b), b==true, a!=0, a!=s.
+// transfer(s,p,n) :- distributeTokens(p,n), this(s).
 
-.decl recv_changeFountainContractAddress(p:address)
-.public recv_changeFountainContractAddress
-fountainContractAddress(a):- recv_changeFountainContractAddress(a),
-                                msgSender(s), owner(s), a!=s, this(thisAddr), thisAddr!=a.
-
-.decl recv_distributeTokens(p:address, v:uint)
-.public recv_distributeTokens
-.decl distributeTokens(p:address, v:uint)
-distributeTokens(a, n) :- recv_distributeTokens(a,n), msgSender(s), owner(s),
-                                    tokenSaleActive(b), b==true, a!=0, a!=s.
-transfer(s,p,n) :- distributeTokens(p,n), this(s).
-
-.decl finalizeTokenSale()
-.decl recv_finalizeTokenSale()
-.public recv_finalizeTokenSale
-.decl *bonusShare(n: uint)
-.decl *companyShare(n: uint)
-finalizeTokenSale() :- recv_finalizeTokenSale(), msgSender(s), owner(s), tokenSaleActive(true),
-                bonusDistributionAddress(a), a!=0, fountainContractAddress(fa), fa!=0.
-transfer(p,bda,n) :- finalizeTokenSale(), this(p), bonusDistributionAddress(bda), bonusShare(bs),
-                initialSupply(s), n := s * bs / 100.
-tokenSaleActive(false) :- finalizeTokenSale().
+// .decl finalizeTokenSale()
+// .decl recv_finalizeTokenSale()
+// .public recv_finalizeTokenSale
+// .decl *bonusShare(n: int)
+// .decl *companyShare(n: int)
+// finalizeTokenSale() :- recv_finalizeTokenSale().
+// //                 , msgSender(s), owner(s), tokenSaleActive(true),
+// //                 bonusDistributionAddress(a), a!=0, fountainContractAddress(fa), fa!=0.
+// transfer(p,bda,n) :- finalizeTokenSale(), this(p), bonusDistributionAddress(bda), bonusShare(bs),
+//                 initialSupply(s), n := s * bs / 100.
+// tokenSaleActive(false) :- finalizeTokenSale().
 
 .decl recv_upgrade(p: address)
 .public recv_upgrade
 .decl upgrade(p: address)
-upgrade(p) :- recv_upgrade(p), msgSender(s), owner(s), p!=0.
+upgrade(p) :- recv_upgrade(p). //, msgSender(s), owner(s), p!=0.
 dead(true) :- upgrade(_).
 paused(true):- upgrade(_).
 
 .decl recv_evacuate(p:address)
 .public recv_evacuate
-burn(p,n) :- recv_evacuate(p), dead(true), msgSender(s), successorAddress(s), balances(p,n).
+.decl evacuate(p:address)
+evacuate(p) :- recv_evacuate(p). //, dead(true), msgSender(s), successorAddress(s).
+burn(p,n) :- evacuate(p), balances(p,n).
+// burn(p,n) :- recv_evacuate(p), dead(true), msgSender(s), successorAddress(s), balances(p,n).
 
-.decl *noEtherTransfer()
-.violation noEtherTransfer
-noEtherTransfer() :- dead(true), paused(false).
-
-.decl *onceEndSale(b: bool)
-onceEndSale(false) :- constructor().
-onceEndSale(true) :- finalizeTokenSale().
-
-.decl *transferAfterEndSale()
-.violation transferAfterEndSale
-transferAfterEndSale() :- transaction(recv_distributeTokens), onceEndSale(true).
+// .decl *noEtherTransfer()
+// .violation noEtherTransfer
+// noEtherTransfer() :- dead(true), paused(false).
+//
+// .decl *onceEndSale(b: bool)
+// onceEndSale(false) :- constructor().
+// onceEndSale(true) :- finalizeTokenSale().
+//
+// // .decl *transferAfterEndSale()
+// // .violation transferAfterEndSale
+// // transferAfterEndSale() :- transaction(recv_distributeTokens), onceEndSale(true).
 
 .decl *transferBeforeUnpause()
 .violation transferBeforeUnpause
 .decl *onceUnpaused(b:bool)
 onceUnpaused(false) :- constructor().
 onceUnpaused(true) :- unpause().
-transferBeforeUnpause() :- transaction(recv_transfer), onceUnpaused(false).
+// transferBeforeUnpause() :- transaction(recv_transfer), onceUnpaused(false).
+transferBeforeUnpause() :- recv_transfer(_,_,_), paused(b), b==true.
 
 .decl *evacuateAfterUpgrade()
 .violation evacuateAfterUpgrade
 .decl *onceUpgrade(b:bool)
 onceUpgrade(false) :- constructor().
 onceUpgrade(true) :- upgrade(_).
-evacuateAfterUpgrade() :- transaction(recv_evacuate), onceUpgrade(false).
+evacuateAfterUpgrade() :- recv_evacuate(_), onceUpgrade(b), b==false.
 
-// .decl distributedTokens(n: uint)
-// .decl companyTokens(n: uint)
-// .decl bonusTokens(n: uint)
-// .decl newTotalSupply(n: uint)
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.
+
+// .decl distributedTokens(n: int)
+// .decl companyTokens(n: int)
+// .decl bonusTokens(n: int)
+// .decl newTotalSupply(n: int)
 // .function distributedTokens
 // .function companyTokens
 // .function newTotalSupply
 // {
-//     function bonusToken(): uint = {
+//     function bonusToken(): int = {
 //     }
-//     function distributedTokens(): uint = {
-//         uint s = initialSupply.n;
+//     function distributedTokens(): int = {
+//         int s = initialSupply.n;
 //         return s - balances[this].n;
 //     }
-//     function newTotalSupply(): uint = {
+//     function newTotalSupply(): int = {
 //         return distributedTokens() + bonusTokens() + companyTokens();
 //     }
 // }

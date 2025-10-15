@@ -35,12 +35,6 @@ contract Tether {
   constructor(int n) public {
     updateOwnerOnInsertConstructor_r16();
   }
-  function transferFrom(address from,address to,address spender,int amount) public    {
-      bool r7 = updateTransferFromOnInsertRecv_transferFrom_r7(from,to,spender,amount);
-      if(r7==false) {
-        revert("Rule condition failed");
-      }
-  }
   function getBalanceOf(address p) public view  returns (int) {
       int n = balanceOf[p].n;
       return n;
@@ -48,12 +42,6 @@ contract Tether {
   function getIsBlackListed(address p) public view  returns (bool) {
       bool b = isBlackListed[p].b;
       return b;
-  }
-  function increaseAllowance(address p,address s,int n) public    {
-      bool r20 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r20(p,s,n);
-      if(r20==false) {
-        revert("Rule condition failed");
-      }
   }
   function redeem(address p,int amount) public    {
       bool r18 = updateRedeemOnInsertRecv_redeem_r18(p,amount);
@@ -77,6 +65,18 @@ contract Tether {
         revert("Rule condition failed");
       }
   }
+  function increaseAllowance(address p,address s,int n) public    {
+      bool r20 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r20(p,s,n);
+      if(r20==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function transferFrom(address from,address to,address spender,int amount) public    {
+      bool r4 = updateTransferFromOnInsertRecv_transferFrom_r4(from,to,spender,amount);
+      if(r4==false) {
+        revert("Rule condition failed");
+      }
+  }
   function transfer(address from,address to,int amount) public    {
       bool r9 = updateTransferOnInsertRecv_transfer_r9(from,to,amount);
       if(r9==false) {
@@ -87,6 +87,9 @@ contract Tether {
       int n = allowance[p][s].n;
       return n;
   }
+  function updateIsBlackListedOnInsertAddBlackList_r5(address p) private    {
+      isBlackListed[p] = IsBlackListedTuple(true,true);
+  }
   function updateAllRedeemOnInsertRedeem_r15(int n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllRedeem_r14(delta0);
@@ -94,16 +97,6 @@ contract Tether {
   function updateOwnerOnInsertConstructor_r16() private    {
       address s = msg.sender;
       owner = OwnerTuple(s,true);
-  }
-  function updateAddBlackListOnInsertRecv_addBlackList_r1(address p) private   returns (bool) {
-      address s = msg.sender;
-      address o = owner.p;
-      if(o==s) {
-        updateIsBlackListedOnInsertAddBlackList_r4(p);
-        emit AddBlackList(p);
-        return true;
-      }
-      return false;
   }
   function updateAllowanceOnIncrementAllowanceTotal_r25(address o,address s,int m) private    {
       allowance[o][s].n += m;
@@ -121,6 +114,17 @@ contract Tether {
   }
   function updateAllowanceOnIncrementSpentTotal_r25(address o,address s,int l) private    {
       allowance[o][s].n -= l;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r4(address o,address r,address s,int n) private   returns (bool) {
+      int balanceOf_x1_2 = balanceOf[o].n;
+      int allowance_x2_1 = allowance[o][s].n;
+      if(n>0 && n<=allowance_x2_1 && n<balanceOf_x1_2) {
+        updateTransferOnInsertTransferFrom_r7(o,r,n);
+        updateSpentTotalOnInsertTransferFrom_r23(o,s,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -140,15 +144,22 @@ contract Tether {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r3(p,delta0);
   }
-  function updateIsBlackListedOnInsertAddBlackList_r4(address p) private    {
-      isBlackListed[p] = IsBlackListedTuple(true,true);
-  }
-  function updateSpentTotalOnInsertTransferFrom_r23(address o,address s,int n) private    {
+  function updateAllIssueOnInsertIssue_r2(int n) private    {
       int delta0 = int(n);
-      updateAllowanceOnIncrementSpentTotal_r25(o,s,delta0);
+      updateTotalSupplyOnIncrementAllIssue_r14(delta0);
   }
   function updateBalanceOfOnIncrementTotalOut_r3(address p,int o) private    {
       balanceOf[p].n -= o;
+  }
+  function updateAddBlackListOnInsertRecv_addBlackList_r1(address p) private   returns (bool) {
+      address s = msg.sender;
+      address o = owner.p;
+      if(o==s) {
+        updateIsBlackListedOnInsertAddBlackList_r5(p);
+        emit AddBlackList(p);
+        return true;
+      }
+      return false;
   }
   function updateTransferOnInsertRecv_transfer_r9(address s,address r,int n) private   returns (bool) {
       int balanceOf_x1_1 = balanceOf[s].n;
@@ -199,28 +210,17 @@ contract Tether {
   function updateBalanceOfOnIncrementTotalIn_r3(address p,int i) private    {
       balanceOf[p].n += i;
   }
-  function updateAllIssueOnInsertIssue_r2(int n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllIssue_r14(delta0);
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r7(address o,address r,address s,int n) private   returns (bool) {
-      int balanceOf_x1_2 = balanceOf[o].n;
-      int allowance_x2_1 = allowance[o][s].n;
-      if(n>0 && n<allowance_x2_1 && n<balanceOf_x1_2) {
-        updateTransferOnInsertTransferFrom_r6(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r23(o,s,n);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
-  }
   function updateTotalSupplyOnIncrementAllRedeem_r14(int b) private    {
       totalSupply.n -= b;
   }
   function updateBalanceOfOnIncrementTotalRedeem_r3(address p,int m) private    {
       balanceOf[p].n -= m;
   }
-  function updateTransferOnInsertTransferFrom_r6(address o,address r,int n) private    {
+  function updateSpentTotalOnInsertTransferFrom_r23(address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementSpentTotal_r25(o,s,delta0);
+  }
+  function updateTransferOnInsertTransferFrom_r7(address o,address r,int n) private    {
       updateTotalOutOnInsertTransfer_r27(o,n);
       updateTotalInOnInsertTransfer_r13(r,n);
       emit Transfer(o,r,n);

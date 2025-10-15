@@ -27,6 +27,7 @@ invalidTx() :- recv_burn(_,_),owner(o),msgSender(s),o!=s.
 balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
 transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2.
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
@@ -37,7 +38,6 @@ invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 totalBalances(0) :- constructor().
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
 totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).
-transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,n<=allowance_x2_1,n>=0.
 owner(s) :- constructor(),msgSender(s).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_),m = sum n: transferFrom(o,_,s,n).
