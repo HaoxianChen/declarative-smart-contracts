@@ -4,7 +4,7 @@
 // views
 .decl *totalSupply(n: int)
 .decl balanceOf(p: address, n: int)[0]
-.decl constructor(c: int)
+.decl constructor(c: int, r: int)
 
 // New views
 .decl allowance(p: address, s: address, n:int)[0,1]
@@ -38,8 +38,8 @@
 .public allowance(2)
 
 // Rules
-owner(s) :- constructor(_), msgSender(s).
-totalSupply(0) :- constructor(_).
+owner(s) :- constructor(_,_), msgSender(s).
+totalSupply(0) :- constructor(_,_).
 
 // mint(p,n) :- recv_mint(p,n), msgSender(s), owner(o), s==o, p!=0.
 // burn(p,n) :- recv_burn(p,n), msgSender(s), owner(o), s==o, p!=0 ,balanceOf(p,m), n<=m.
@@ -100,9 +100,10 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 .decl buyToken(p:address, amount: int)
 .public recv_buyToken
 
-buyToken(p,n) :- recv_buyToken(p,m), rate(r), n:=m*r.
+rate(r) :- constructor(_,r), r>0.
+buyToken(p,m) :- recv_buyToken(p,m).
 // finalized(f), f==false, p!=0, m!=0, now(t), start(s), end(e), t>s, t<e.
-mint(p,n) :- buyToken(p,n).
+mint(p,n) :- buyToken(p,m), rate(r), n:=m*r.
 
 .decl *raised(n: int)
 raised(s) :- s = sum n: buyToken(_,n).
@@ -110,7 +111,7 @@ raised(s) :- s = sum n: buyToken(_,n).
 .public raised(0)
 .public cap(0)
 
-cap(c) :- constructor(c), c>0.
+cap(c) :- constructor(c,_), c>0.
 // finalize() :- recv_finalize(), msgSender(s), owner(o), s==o, finalized(f), f==false, now(t), end(e), t>e.
 // finalize() :- recv_finalize(), msgSender(s), owner(o), s==o, finalized(f), f==false, raised(m), cap(c), m>=c.
 finalize() :- recv_finalize().
@@ -119,7 +120,7 @@ finalized(true) :- finalize().
 
 //property
 .decl *onceFinalize(b:bool)
-onceFinalize(false) :- constructor(_).
+onceFinalize(false) :- constructor(_,_).
 onceFinalize(true) :- finalize().
 
 .decl illegalFinalization()
