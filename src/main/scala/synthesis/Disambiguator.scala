@@ -130,6 +130,8 @@ case class Disambiguator(sketch: Program,
       } else Nil
     }
 
+    println(s"Setup trace length: ${setupTxs.size}.")
+
     val constructorTx = makeConstructorTransaction()
 
     // Build all possible transactions for all relations

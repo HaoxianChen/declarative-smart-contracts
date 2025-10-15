@@ -244,27 +244,40 @@ object Main extends App {
 
   else if (args(0) == "cegis") {
     val synthesisBenchmarks = List(
-      // "wallet.dl",
+      "wallet.dl",
       // "erc20.dl",
       // "matic.dl",
       // "controllable.dl",
       // "cappedCrowdSale.dl",
       // "bnb.dl",
       // "crowFunding.dl",
-      "tether.dl"
+      // "tether.dl",
+      // "brickBlockToken.dl",
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
+    val datalogOutDir = "synthesis-output"
+    val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
+    createDirectory(datalogOutDir)
+    Misc.writeToFile("benchmark,relations,tx_interfaces,time_ms\n", statsFile) // CSV header
     for (p <- synthesisBenchmarks) {
-      try {
         println(s"$p")
         val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
         val sketch = parseProgram(datalog_filepath)
+
+        /** Track stats. */
+        val relationCount = sketch.relations.size
+        val txInterfaceCount = sketch.interfaces.count(_.relation.name.startsWith("recv_"))
+        val startTime = System.currentTimeMillis()
+
         val cegis = Cegis(sketch)
         val program = cegis.run()
+
+        val endTime = System.currentTimeMillis()
+        val elapsed = endTime - startTime
+
         println(s"Synthesis output:\n${program}")
 
         // Write Datalog output
-        val datalogOutDir = "synthesis-output"
         val filenameNoExt = p.stripSuffix(".dl")
         createDirectory(datalogOutDir)
         val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
@@ -282,12 +295,9 @@ object Main extends App {
         val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
         Misc.writeToFile(solidity.toString, solidityOutfile)
 
-
-      }
-      catch {
-        case ex: Exception =>
-          println(s"[ERROR] Synthesis failed for $p: ${ex.getMessage}")
-      }
+        // Record stats
+        val statsLine = s"$p,$relationCount,$txInterfaceCount,$elapsed\n"
+        Misc.appendToFile(statsLine, statsFile)
     }
   }
 

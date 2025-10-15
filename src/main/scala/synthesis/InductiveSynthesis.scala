@@ -282,7 +282,7 @@ case class InductiveSynthesis(
     }.toMap
 
     /** Turn on for debugging. */
-    // val debugInfo = filterAndRankCandidates(evaluatedTraces, disambiguationTraces)
+    val debugInfo = filterAndRankCandidates(evaluatedTraces, disambiguationTraces)
     // println(debugInfo)
 
 

@@ -119,6 +119,10 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
   protected def getTriggeredRules(trigger: Trigger): Set[Rule] = {
     def isTransactionTrigger(trigger: Trigger): Boolean = trigger.relation.name.startsWith(transactionRelationPrefix)
 
+    val txNames = program.interfaces.map(_.relation.name).flatMap(
+      n => if (n.startsWith(transactionRelationPrefix)) Some(n.stripPrefix(transactionRelationPrefix)) else None
+    )
+
     // val triggeredRules: Set[Rule] = program.rules.filter(
     val triggeredRules: Set[Rule] = rulesToEvaluate.filter(
       r => r.body.map(_.relation).contains(trigger.relation) || r.aggregators.exists(_.relation==trigger.relation)
@@ -127,6 +131,9 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
     ).filterNot( /** relations that declared as functions are not triggered */
       // r=>program.functions.contains(r.head.relation)
       r=>queryRelations.contains(r.head.relation)
+    ).filterNot(/** rule body contains other transaction relation are not triggered. */
+      r=> r.body.exists( lit =>
+        lit.relation != trigger.relation && txNames.contains(lit.relation.name))
     )
 
     trigger match {

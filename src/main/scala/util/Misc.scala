@@ -4,6 +4,7 @@ import datalog.{Parser, Program, TypeChecker}
 
 import java.io.{BufferedWriter, File, FileWriter}
 import scala.io.Source
+import java.nio.file.{Files, Paths, StandardOpenOption}
 
 object Misc {
   def fileToString(filename: String): String = {
@@ -49,6 +50,11 @@ object Misc {
     val raw = parser.parseAll(parser.program, inputStr).get
     val typeChecker = TypeChecker()
     typeChecker.updateTypes(raw)
+  }
+
+  def appendToFile(text: String, filePath: String): Unit = {
+    val path = Paths.get(filePath)
+    Files.write(path, text.getBytes("UTF-8"), StandardOpenOption.CREATE, StandardOpenOption.APPEND)
   }
 
 

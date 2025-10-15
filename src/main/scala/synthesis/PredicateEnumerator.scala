@@ -112,6 +112,10 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       if (rule.functors.size > 1) {
         None
       }
+      else if (rule.body.exists(_.relation.name.startsWith("once"))) {
+        // skip those tracking relations
+        None
+      }
       else {
         val f = rule.functors.head
         val negated = Functor.negate(f)
