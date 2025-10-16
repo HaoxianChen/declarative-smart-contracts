@@ -27,6 +27,7 @@ negativeBalance(p,n) :- balances(p,n),n<0,p!=address(0).
 transfer(s,r,n) :- transferFrom(_,s,r,n).
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 evacuateAfterUpgrade() :- recv_evacuate(_),onceUpgrade(b),b==false.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(s,balances_x1_1),paused(b),b!=true,n>=0,n<balances_x1_1.
 burnTotal(s) :- s = sum n: burn(_,n).
 balances(p,s) :- totalOut(p,o),totalIn(p,i),s := i-o.
 negativeAllowance(s,p,n) :- allowed(s,p,n),n<0,s!=address(0),p!=address(0).
@@ -34,7 +35,6 @@ evacuate(p) :- recv_evacuate(p),dead(dead_b),dead_b==true.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
 pause() :- recv_pause().
 mint(p,n) :- recv_mint(p,n),n>=0.
-transfer(s,r,n) :- balances(s,balances_x1_1),paused(b),b!=true,n<balances_x1_1,recv_transfer(s,r,n),n>0.
 paused(false) :- unpause().
 totalSupply(n) :- initialSupply(i),burnTotal(b),n := i-b.
 decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_),m = sum n: decreaseAllowance(f,s,n).

@@ -1,2 +1,12 @@
-benchmark,relations,tx_interfaces,time_ms
-crowFunding.dl,27,4,3650
+benchmark,relations,tx_interfaces,synthesis_time_s,cegis_iterations,bmc_time_s,bmc_iterations
+wallet.dl,17,3,5.37,8,1.956,5
+erc20.dl,29,5,59.775,62,11.233,5
+matic.dl,38,8,45.235,43,9.573,5
+controllable.dl,35,6,39.783,36,9.435,5
+cappedCrowdSale.dl,38,7,8.609,7,0.59,5
+bnb.dl,39,8,44.649,44,11.904,5
+crowFunding.dl,27,4,3.244,5,1.701,5
+tether.dl,34,6,66.732,65,12.921,5
+brickBlockToken.dl,40,8,39.392,46,7.827,5
+shib.dl,29,6,54.39,51,13.038,5
+tokenPartition.dl,22,3,6.836,6,0.997,5

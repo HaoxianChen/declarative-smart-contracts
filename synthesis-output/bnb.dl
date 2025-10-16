@@ -28,10 +28,8 @@ Rules:
 freezeOf(p,n) :- totalFreeze(p,f),totalUnfreeze(p,u),n := f-u.
 balanceOf(p,s) :- s := (((n+i)-m)-o)-f,totalBurn(p,m),freezeOf(p,f),totalMint(p,n),totalOut(p,o),totalIn(p,i).
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
-unequalBalance(s,n) :- totalBalances(s),freezeSum(f),totalSupply(n),s+f>n.
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
 invalidTx() :- recv_burn(_,_),owner(o),msgSender(s),o!=s.
-transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
 totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).
 totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
@@ -42,6 +40,8 @@ negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
 totalUnfreeze(p,s) :- unfreeze(p,_),s = sum n: unfreeze(p,n).
+unequalBalance(s,n) :- totalBalances(s),freezeSum(f),totalSupply(n),s+f>n.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n>=0,n<=balanceOf_x1_2.
 owner(s) :- constructor(_),msgSender(s).
 negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
 allBurn(s) :- s = sum n: burn(_,n).

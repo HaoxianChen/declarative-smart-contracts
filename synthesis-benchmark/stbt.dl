@@ -1,0 +1,116 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: uint)
+.decl balanceOf(p: address, n: uint)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:uint)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: uint)
+.decl recv_mint(p: address, amount: uint)
+.decl burn(p: address, amount: uint)
+.decl recv_burn(p: address, amount: uint)
+.decl transfer(from: address, to: address, amount: uint)
+.decl recv_transfer(to: address, amount: uint)
+
+// ERC1400 interfaces
+// .decl shares(p: address, n: unit)[0]
+.decl permission(p: address, sendAllowed: bool, receiveAllowed: bool, expiryTime: uint)[0]
+.decl canSend(s:address)
+.decl canRecv(s:address)
+// Annotate that these two relations are implemented as functions (compute on
+// demand)
+.function canSend
+.function canRecv
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_approve(s: address, n:uint)
+
+.decl recv_distributeInterests(n: uint)
+.decl distributeInterests(n: uint, time: uint)
+.decl *distributeTotal(n: uint)
+
+.decl *lastDistributeTime(time: uint)
+.decl *minInterval(time:uint)
+
+distributeInterests(n, t) :- recv_distributeInterests(n), now(t),
+                             minInterval(i), lastDistributeTime(t1), t1 - t > i.
+lastDistributeTime(m) :- m = max t: distributeInterests(_,t).
+distributeTotal(s) :- s = sum n: distributeInterests(n,_).
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_distributeInterests
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+.public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+owner(s) :- constructor(), msgSender(s).
+totalSupply(0) :- constructor().
+
+mint(p,n) :- recv_mint(p,n), msgSender(s), owner(s), p!=0.
+burn(p,n) :- recv_burn(p,n), msgSender(s), owner(s), p!=0 ,balanceOf(p,m), n<=m.
+transfer(s,r,n) :- recv_transfer(r,n), msgSender(s), balanceOf(s,m), n<=m,
+                   canSend(s), canRecv(r).
+
+canSend(s) :- permission(s, true, _, expire), now(t), t<expire.
+canSend(s) :- permission(s, true, _, 0).
+canRecv(s) :- permission(s, _, true, expire), now(t), t<expire.
+canRecv(s) :- permission(s, _, true, 0).
+
+.decl totalMint(p: address, n: uint)[0]
+.decl totalBurn(p: address, n: uint)[0]
+.decl totalOut(p: address, n: uint)[0]
+.decl totalIn(p: address, n: uint)[0]
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
+totalBurn(p,s) :- burn(p,_), s = sum n: burn(p,n).
+balanceOf(p,s) :- totalMint(p,n), totalBurn(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
+
+.decl *allMint(n: uint)
+.decl *allBurn(n: uint)
+allMint(s) :- s = sum n: mint(_,n).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m), allBurn(b), distributeTotal(d), n := m - b - d.
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: uint)
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,n),
+                    balanceOf(o,m), m>=n,
+                    msgSender(s), allowance(o,s,k), k>=n,
+                    canSend(s), canRecv(r).
+
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+
+increaseAllowance(o,s,d) :- recv_approve(s,n), msgSender(o), allowance(o,s,m), d:=n-m.
+
+.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl spentTotal(o:address, s:address, m:uint)[0,1]
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+
+// Properties
+.decl *totalBalances(m: uint)
+.decl *unequalBalance(s: uint, n: uint)
+
+.violation unequalBalance
+
+totalBalances(0) :- constructor().
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
