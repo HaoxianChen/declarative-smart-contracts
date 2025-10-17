@@ -150,5 +150,5 @@ invalidTx() :- recv_unpause(), paused(b), b==false.
 invalidTx() :- recv_transferOwnership(_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_transferOwnership(p), p==0.
 invalidTx() :- recv_claimOwnership(p), p==0.
-invalidTx() :- recv_claimOwnership(s), pendingOwner(p), s==p.
+invalidTx() :- recv_claimOwnership(p), pendingOwner(s), s==p.
 
