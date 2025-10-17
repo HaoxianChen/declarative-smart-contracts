@@ -99,6 +99,16 @@ contract Controllable {
       int delta0 = int(n);
       updateAllowanceOnIncrementAllowanceTotal_r27(o,s,delta0);
   }
+  function updateControllerRedeemOnInsertRecv_controllerRedeem_r4(address p,int n) private   returns (bool) {
+      address c = controller.p;
+      int balanceOf_x1 = balanceOf[p].n;
+      if(p==c && n<balanceOf_x1) {
+        updateBurnOnInsertControllerRedeem_r29(p,n);
+        emit ControllerRedeem(p,n);
+        return true;
+      }
+      return false;
+  }
   function updateBurnOnInsertControllerRedeem_r29(address p,int n) private    {
       updateTotalBurnOnInsertBurn_r1(p,n);
       updateAllBurnOnInsertBurn_r13(n);
@@ -144,6 +154,16 @@ contract Controllable {
       }
       return false;
   }
+  function updateTransferOnInsertRecv_transfer_r8(address s,address r,int n) private   returns (bool) {
+      int balanceOf_x1_1 = balanceOf[s].n;
+      if(n>=0 && n<=balanceOf_x1_1) {
+        updateTotalInOnInsertTransfer_r11(r,n);
+        updateTotalOutOnInsertTransfer_r30(s,n);
+        emit Transfer(s,r,n);
+        return true;
+      }
+      return false;
+  }
   function updateTotalSupplyOnIncrementAllBurn_r14(int b) private    {
       totalSupply.n -= b;
   }
@@ -168,26 +188,6 @@ contract Controllable {
   function updateAllMintOnInsertMint_r0(int n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllMint_r14(delta0);
-  }
-  function updateTransferOnInsertRecv_transfer_r8(address s,address r,int n) private   returns (bool) {
-      int balanceOf_x1_1 = balanceOf[s].n;
-      if(n>0 && n<=balanceOf_x1_1) {
-        updateTotalInOnInsertTransfer_r11(r,n);
-        updateTotalOutOnInsertTransfer_r30(s,n);
-        emit Transfer(s,r,n);
-        return true;
-      }
-      return false;
-  }
-  function updateControllerRedeemOnInsertRecv_controllerRedeem_r4(address p,int n) private   returns (bool) {
-      address c = controller.p;
-      int balanceOf_x1 = balanceOf[p].n;
-      if(p==c && n<balanceOf_x1) {
-        updateBurnOnInsertControllerRedeem_r29(p,n);
-        emit ControllerRedeem(p,n);
-        return true;
-      }
-      return false;
   }
   function updateBurnOnInsertRecv_burn_r26(address p,int n) private   returns (bool) {
       address s = msg.sender;
