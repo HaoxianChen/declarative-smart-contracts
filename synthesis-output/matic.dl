@@ -26,19 +26,18 @@ SimpleRelation(totalIn,List(address, int),List(p, n)) -> List(0)
 SimpleRelation(negativeAllowance,List(address, address, int),List(s, p, n)) -> List(0, 1)
 SimpleRelation(totalBurn,List(address, int),List(p, n)) -> List(0)
 Rules:
-allMint(s) :- s = sum n: mint(_,n).
 totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
-decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n),allowance(o,s,allowance_x2),n<allowance_x2.
-transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),paused(b),b!=true,n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n>=0,n<balanceOf_x1_2.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),paused(b),b!=true,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,n<=allowance_x2_1,n>=0.
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
 paused(false) :- constructor(_).
 pause() :- recv_pause().
 paused(true) :- pause().
-transfer(s,r,n) :- balanceOf(s,balanceOf_x1_1),paused(b),b!=true,n<=balanceOf_x1_1,recv_transfer(s,r,n),n>0.
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
 unpause() :- recv_unpause().
+allMint(s) :- s = sum n: mint(_,n).
+decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
 invalidTx() :- paused(b),recv_transfer(_,_,_),b==true.
 owner(s) :- constructor(_),msgSender(s).
@@ -58,5 +57,6 @@ decreaseAllowanceTotal(o,s,m) :- decreaseAllowance(o,s,_),m = sum n: decreaseAll
 invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 invalidTx() :- paused(b),recv_transferFrom(_,_,_,_),b==true.
 totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),paused(b),b!=true,n<balanceOf_x1_1,n>=0.
 burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
 totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).

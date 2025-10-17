@@ -22,14 +22,14 @@ SimpleRelation(totalBurn,List(address, int),List(p, n)) -> List(0)
 Rules:
 allMint(s) :- s = sum n: mint(_,n).
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
-totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
+mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
 totalSupply(0) :- constructor().
 burn(p,n) :- burnFrom(_,p,n).
 invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 transferFrom(s,p,address(0),n) :- burnFrom(s,p,n).
 transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
-transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,n<=allowance_x2_1,n>=0.
-mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
+totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2,n<=allowance_x2_1,n>=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m),allBurn(b),n := m-b.

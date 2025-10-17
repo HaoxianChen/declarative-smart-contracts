@@ -40,7 +40,7 @@ paused(false) :- unpause().
 totalSupply(n) :- initialSupply(i),burnTotal(b),n := i-b.
 decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_),m = sum n: decreaseAllowance(f,s,n).
 unpause() :- recv_unpause().
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),n<=balances_x1_1,balances(f,balances_x1_1),allowed(s,f,allowed_x2_2),n<=allowed_x2_2,n>=0.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1_1),n<allowed_x2_2,allowed(s,f,allowed_x2_2),n>=0,n<balances_x1_1.
 onceUnpaused(true) :- unpause().
 onceUpgrade(false) :- constructor().
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).

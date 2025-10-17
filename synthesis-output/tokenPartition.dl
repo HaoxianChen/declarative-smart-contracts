@@ -18,20 +18,20 @@ SimpleRelation(totalMint,List(address, int, int),List(p, q, n)) -> List(0, 1)
 Rules:
 redeemTotalByPartition(q,s) :- redeemByPartition(_,q,_),s = sum n: redeemByPartition(_,q,n).
 totalSupplyByPartition(q,n) :- issueTotalByPartition(q,i),redeemTotalByPartition(q,r),n := i-r.
+invalidTx() :- recv_redeemByPartition(_,_,_),owner(o),msgSender(s),o!=s.
 totalSupply(0) :- constructor().
-totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
-redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),o==s,owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),n<=balanceOfByPartition_x2.
+allBurn(s) :- s = sum n: redeemByPartition(_,_,n).
 invalidTx() :- recv_issueByPartition(_,_,_),owner(o),msgSender(s),o!=s.
 issueTotalByPartition(q,s) :- issueByPartition(_,q,_),s = sum n: issueByPartition(_,q,n).
 totalIn(p,q,s) :- transferByPartition(_,p,q,_),s = sum n: transferByPartition(_,p,q,n).
 owner(s) :- constructor(),msgSender(s).
 negativeBalance(p,q,n) :- balanceOfByPartition(p,q,n),n<0,p!=address(0).
-totalOut(p,q,s) :- transferByPartition(p,_,q,_),s = sum n: transferByPartition(p,_,q,n).
 totalMint(p,q,s) :- issueByPartition(p,q,_),s = sum n: issueByPartition(p,q,n).
 allMint(s) :- s = sum n: issueByPartition(_,_,n).
 totalBurn(p,q,s) :- redeemByPartition(p,q,_),s = sum n: redeemByPartition(p,q,n).
 balanceOfByPartition(p,q,s) :- totalBurn(p,q,m),totalMint(p,q,n),s := ((n+i)-m)-o,totalIn(p,q,i),totalOut(p,q,o).
-invalidTx() :- recv_redeemByPartition(_,_,_),owner(o),msgSender(s),o!=s.
-transferByPartition(s,r,q,n) :- totalSupplyByPartition(n,totalSupplyByPartition_x1_1),balanceOfByPartition(s,q,balanceOfByPartition_x2_2),0!=balanceOfByPartition_x2_4,msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2_4),recv_transferByPartition(s,r,q,n),q>=balanceOfByPartition_x2_3,balanceOfByPartition(r,n,balanceOfByPartition_x2_0),balanceOfByPartition(msgSender,q,balanceOfByPartition_x2_3),0==balanceOfByPartition_x2_2,n<totalSupplyByPartition_x1_1,balanceOfByPartition_x2_0>0.
-issueByPartition(p,q,n) :- msgSender(s),recv_issueByPartition(p,q,n),o==s,owner(o),n>=0.
-allBurn(s) :- s = sum n: redeemByPartition(_,_,n).
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),0==n.
+totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),o==s,owner(o).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),o==s,owner(o),0==n.
+totalOut(p,q,s) :- transferByPartition(p,_,q,_),s = sum n: transferByPartition(p,_,q,n).

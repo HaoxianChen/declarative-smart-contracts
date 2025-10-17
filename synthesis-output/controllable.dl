@@ -31,8 +31,8 @@ controllerRedeem(p,n) :- n<balanceOf_x1,controller(c),p==c,balanceOf(p,balanceOf
 totalBalances(0) :- constructor(_).
 balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
-transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>=0,n<=balanceOf_x1_1.
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
 totalSupply(0) :- constructor(_).
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).

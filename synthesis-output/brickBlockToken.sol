@@ -118,6 +118,17 @@ contract BrickBlockToken {
   function updateBalancesOnIncrementTotalOut_r5(address p,int o) private    {
       balances[p].a -= o;
   }
+  function updateTransferFromOnInsertRecv_transferFrom_r17(address s,address f,address r,int n) private   returns (bool) {
+      int allowed_x2_2 = allowed[s][f].a;
+      int balances_x1_1 = balances[f].a;
+      if(n>=0 && n<balances_x1_1 && n<allowed_x2_2) {
+        updateTransferOnInsertTransferFrom_r1(f,r,n);
+        updateSpentTotalOnInsertTransferFrom_r31(s,f,n);
+        emit TransferFrom(s,f,r,n);
+        return true;
+      }
+      return false;
+  }
   function updateTotalOutOnInsertTransfer_r24(address p,int n) private    {
       int delta0 = int(n);
       updateBalancesOnIncrementTotalOut_r5(p,delta0);
@@ -176,6 +187,11 @@ contract BrickBlockToken {
       }
       return false;
   }
+  function updateTransferOnInsertMint_r28(address p,int n) private    {
+      updateTotalOutOnInsertTransfer_r24(address(0),n);
+      updateTotalInOnInsertTransfer_r2(p,n);
+      emit Transfer(address(0),p,n);
+  }
   function updateTransferOnInsertBurn_r21(address s,int n) private    {
       updateTotalOutOnInsertTransfer_r24(s,n);
       updateTotalInOnInsertTransfer_r2(address(0),n);
@@ -224,22 +240,6 @@ contract BrickBlockToken {
   }
   function updatePausedOnInsertConstructor_r34() private    {
       paused = PausedTuple(true,true);
-  }
-  function updateTransferOnInsertMint_r28(address p,int n) private    {
-      updateTotalOutOnInsertTransfer_r24(address(0),n);
-      updateTotalInOnInsertTransfer_r2(p,n);
-      emit Transfer(address(0),p,n);
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r17(address s,address f,address r,int n) private   returns (bool) {
-      int allowed_x2_2 = allowed[s][f].a;
-      int balances_x1_1 = balances[f].a;
-      if(n>=0 && n<=balances_x1_1 && n<=allowed_x2_2) {
-        updateTransferOnInsertTransferFrom_r1(f,r,n);
-        updateSpentTotalOnInsertTransferFrom_r31(s,f,n);
-        emit TransferFrom(s,f,r,n);
-        return true;
-      }
-      return false;
   }
   function updateOwnerOnInsertConstructor_r30() private    {
       address s = msg.sender;

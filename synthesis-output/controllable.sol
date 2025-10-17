@@ -39,12 +39,6 @@ contract Controllable {
     updateOwnerOnInsertConstructor_r21();
     updateControllerOnInsertConstructor_r16(p);
   }
-  function transfer(address from,address to,int amount) public    {
-      bool r8 = updateTransferOnInsertRecv_transfer_r8(from,to,amount);
-      if(r8==false) {
-        revert("Rule condition failed");
-      }
-  }
   function getController() public view  returns (address) {
       address p = controller.p;
       return p;
@@ -60,10 +54,6 @@ contract Controllable {
       if(r4==false) {
         revert("Rule condition failed");
       }
-  }
-  function getAllowance(address p,address s) public view  returns (int) {
-      int n = allowance[p][s].n;
-      return n;
   }
   function getBalanceOf(address p) public view  returns (int) {
       int n = balanceOf[p].n;
@@ -94,6 +84,16 @@ contract Controllable {
       if(r3==false) {
         revert("Rule condition failed");
       }
+  }
+  function transfer(address from,address to,int amount) public    {
+      bool r9 = updateTransferOnInsertRecv_transfer_r9(from,to,amount);
+      if(r9==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function getAllowance(address p,address s) public view  returns (int) {
+      int n = allowance[p][s].n;
+      return n;
   }
   function updateAllowanceTotalOnInsertIncreaseAllowance_r7(address o,address s,int n) private    {
       int delta0 = int(n);
@@ -154,9 +154,9 @@ contract Controllable {
       }
       return false;
   }
-  function updateTransferOnInsertRecv_transfer_r8(address s,address r,int n) private   returns (bool) {
+  function updateTransferOnInsertRecv_transfer_r9(address s,address r,int n) private   returns (bool) {
       int balanceOf_x1_1 = balanceOf[s].n;
-      if(n>=0 && n<=balanceOf_x1_1) {
+      if(n>0 && n<balanceOf_x1_1) {
         updateTotalInOnInsertTransfer_r11(r,n);
         updateTotalOutOnInsertTransfer_r30(s,n);
         emit Transfer(s,r,n);

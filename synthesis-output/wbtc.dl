@@ -28,7 +28,6 @@ Rules:
 allMint(s) :- s = sum n: mint(_,n).
 negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
 totalSupply(0) :- constructor().
-transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
 transferOwnership(p) :- o_1==s_1,p!=address(0),msgSender(s_1),owner(o_1),recv_transferOwnership(p).
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
 invalidTx() :- recv_unpause(),paused(b),b==false.
@@ -37,6 +36,7 @@ invalidTx() :- recv_pause(),paused(b),b==true.
 increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>=0.
 pendingOwner(address(0)) :- claimOwnership(_).
 totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2,n<=allowance_x2_1,n>=0.
 claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(s_1),p!=address(0),s_1!=p.
 invalidTx() :- recv_unpause(),owner(o),msgSender(s),o!=s.
 invalidTx() :- recv_transferOwnership(p),p==address(0).
