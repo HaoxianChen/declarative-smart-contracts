@@ -137,7 +137,7 @@ contract LtcSwapAsset {
   function updateBurnOnInsertRecv_burn_r34(address p,int n) private   returns (bool) {
       address s = msg.sender;
       int balanceOf_x1 = balanceOf[p].n;
-      if(o==s && 0!=balanceOf_x1 && owner(o)) {
+      if(0!=balanceOf_x1 && owner(s)) {
         updateAllBurnOnInsertBurn_r3(n);
         updateTotalBurnOnInsertBurn_r12(p,n);
         emit Burn(p,n);

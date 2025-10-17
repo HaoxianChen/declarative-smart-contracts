@@ -88,12 +88,12 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 .decl finalize()
 .decl *finalized(b:bool)
 
-// .decl *start(time: uint)
+.decl *start(time: uint)
 .decl *end(time: uint)
 
 .public finalized(0)
-// .public start(0)
-// .public end(0)
+.public start(0)
+.public end(0)
 
 .decl *rate(r: int)
 .decl recv_buyToken(p:address, amount: int)
@@ -144,3 +144,6 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 .violation invalidTx
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_buyToken(p,_), p==0.
+invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
+invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
