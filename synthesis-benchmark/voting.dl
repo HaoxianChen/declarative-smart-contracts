@@ -1,8 +1,3 @@
-.decl recv_vote(proposal: uint)
-.decl vote(p: address, proposal: uint)
-
-.public recv_vote
-
 .decl isVoter(v: address, b: bool)[0]
 .public isVoter(1)
 .decl votes(proposal: uint, c: uint)[0]
@@ -18,6 +13,20 @@
 .public hasWinner(0)
 
 .decl *quorumSize(q: uint)
+.decl recv_vote(proposal: uint)
+.decl vote(p: address, proposal: uint)
+.public recv_vote
+
+.decl constructor()
+.decl addVoter(v: address)
+.decl recv_addVoter(v: address)
+.public recv_addVoter
+.decl *owner(s: address)
+.public owner(0)
+
+owner(s) :- constructor(), msgSender(s).
+addVoter(v) :- recv_addVoter(v), msgSender(s), owner(s).
+isVoter(v,true) :- addVoter(v).
 
 vote(v,p) :- recv_vote(p). // msgSender(v), hasWinner(false), voted(v, false), isVoter(v, true).
 

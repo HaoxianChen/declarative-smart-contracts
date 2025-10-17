@@ -115,4 +115,4 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
 .decl invalidRecipient(p:address)
 .violation invalidRecipient
-invalidRecipient(p) :- recv_transfer(_,p,_), validRecipient(p).
+invalidRecipient(p) :- recv_transfer(_,p,_), !validRecipient(p).
