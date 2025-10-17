@@ -26,24 +26,26 @@ negativeBalance(p,n) :- balanceOf(p,n),n<0,p!=address(0).
 totalBurn(p,s) :- burn(p,_),s = sum n: burn(p,n).
 decreaseAllowanceTotal(o,s,m) :- decreaseApproval(o,s,_),m = sum n: decreaseApproval(o,s,n).
 allowanceTotal(o,s,m) :- increaseApproval(o,s,_),m = sum n: increaseApproval(o,s,n).
+mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
 decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),allowance(o,s,allowance_x2),n<allowance_x2.
-transfer(s,r,n) :- balanceOf(s,balanceOf_x1_1),r!=address(0),n<balanceOf_x1_1,r!=t_1,this(t_1),recv_transfer(s,r,n),n>0.
 totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),r!=address(0),n<balanceOf_x1_1,n>=0,r!=t_1,this(t_1).
+invalidTx() :- recv_mint(_,_),owner(o),msgSender(s),o!=s.
 increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>=0.
 totalMint(p,s) :- mint(p,_),s = sum n: mint(p,n).
-totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
-transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n>=0,n<=balanceOf_x1_2.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n>=0,n<balanceOf_x1_2.
+unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
+invalidTx() :- recv_transfer(_,r,_),this(t),r==t.
 owner(s) :- constructor(_),msgSender(s).
 negativeAllowance(s,p,n) :- allowance(s,p,n),n<0,s!=address(0),p!=address(0).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m),allBurn(b),n := m-b.
 spentTotal(o,s,m) :- transferFrom(o,_,s,_),m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m),spentTotal(o,s,l),decreaseAllowanceTotal(o,s,d),n := (m-l)-d.
+invalidTx() :- recv_burn(_,_),owner(o),msgSender(s),o!=s.
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 balanceOf(p,s) :- totalBurn(p,m),s := ((n+i)-m)-o,totalMint(p,n),totalOut(p,o),totalIn(p,i).
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 invalidTx() :- recv_transfer(_,r,_),r==address(0).
-unequalBalance(s,n) :- totalBalances(s),totalSupply(n),s!=n.
-mint(p,n) :- recv_mint(p,n),n>=0.
-burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
-invalidTx() :- recv_transfer(_,r,_),this(t),r==t.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
