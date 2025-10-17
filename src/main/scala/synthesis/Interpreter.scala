@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
 import synthesis.PredicateEnumerator.extractTxLiteral
 
 import scala.collection.mutable
@@ -166,6 +166,9 @@ case class Interpreter(interpreterContext: InterpreterContext) {
         (keyParams, valueParam)
       }
       case _: SingletonRelation => {
+        (Seq(), literal.fields.head)
+      }
+      case _: MsgSender => {
         (Seq(), literal.fields.head)
       }
       case _ => {

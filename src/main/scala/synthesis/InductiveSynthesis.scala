@@ -539,7 +539,7 @@ case class InductiveSynthesis(
           //   .collect { case (p: Predicate, true) => p }.toSet
           val selectedPreds = repr.getPredicates(txLit.relation)
           val newRule = makeRule(r, selectedPreds)
-          println(s"[makeProgram] selected predicates: $selectedPreds")
+          // println(s"[makeProgram] selected predicates: $selectedPreds")
           println(s"[makeProgram] new rule: $newRule")
           newRule
         }

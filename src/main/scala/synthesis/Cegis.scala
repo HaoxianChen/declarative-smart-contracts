@@ -5,6 +5,13 @@ import imp.SolidityStatement
 import imp.{ImperativeTranslator, Inliner}
 import imp.SolidityTranslator.transactionRelationPrefix
 
+case class SynthesisStat(
+  synthesisTimeMs: Long,
+  cegisIterations: Int,
+  bmcTimeMs: Long,
+  bmcBound: Int
+)
+
 case class Cegis(sketch: Program) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
@@ -26,17 +33,9 @@ case class Cegis(sketch: Program) {
    *  - Run the inductive synthesizer that generate new program that blocks such EvaluatedTrace
    *  - iterate until no counter example is found by the BMC.
   *  */
-  def run(maxBound: Int = 4, maxIters: Int = 100, maxSolutionsPerStep: Int = 20): Program = {
-    // Assumptions made:
-    // 1) We try to use the SolidityInterpreter whenever possible. We construct a
-    //    minimal `ReadValueFromMap` statement that performs a read using constant
-    //    keys so the interpreter's implementation path executes without requiring
-    //    a full program-to-solidity translation.
-    // 2) If no suitable SimpleRelation exists in the program, we fall back to the
-    //    conservative conversion (pair transactions with empty State snapshots).
-    // 3) The synthesis loop is bounded by `maxIters` and uses the provided
-    //    `maxBound` when invoking the BoundedModelChecker.
-
+  def run(maxBound: Int = 5, maxIters: Int = 120, maxSolutionsPerStep: Int = 20): (Program, SynthesisStat) = {
+    val startTime = System.currentTimeMillis()
+    var bmcTime: Long = 0
     var program: Program = sketch
     var traces: List[EvaluatedTrace] = List()
 
@@ -53,41 +52,53 @@ case class Cegis(sketch: Program) {
     program = augmented
 
     var iter = 0
-    while (iter < maxIters) {
+    var finished = false
+    var reason = ""
+
+    while (iter < maxIters && !finished) {
+      val bmcStart = System.currentTimeMillis()
       val bmc = BoundedModelChecker()
       println(s"[CEGIS] Iteration: $iter (BMC bound = $maxBound)")
 
       val (sat, optTrace) = bmc.check(program, program.violationRules, maxBound)
+      bmcTime += (System.currentTimeMillis() - bmcStart)
       if (sat) {
         println("[CEGIS] No counterexample found by BMC. Finished.")
-        return program
+        finished = true
+        reason = "sat"
+      } else {
+        optTrace match {
+          case None =>
+            println("[CEGIS] BMC reported violation but did not return a trace. Aborting.")
+            finished = true
+            reason = "abort"
+          case Some(trace) =>
+            println(s"[CEGIS] Counterexample trace found: $trace")
+
+            val evaluatedTrace = interpreter.interpret(txDefs, trace)
+
+            traces :+= evaluatedTrace
+            println("[CEGIS] Running inductive synthesis to block the counterexample...")
+            val newProgram = synthesizer.synthesize(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
+
+            if (newProgram == program) {
+              println("[CEGIS] Synthesizer produced no change. Stopping.")
+              finished = true
+              reason = "nochange"
+            } else {
+              println("[CEGIS] Program updated by synthesizer. Continuing next iteration.")
+              program = newProgram
+              iter += 1
+            }
+        }
       }
-
-      val trace = optTrace.getOrElse {
-        println("[CEGIS] BMC reported violation but did not return a trace. Aborting.")
-        return program
-      }
-
-      println(s"[CEGIS] Counterexample trace found: $trace")
-
-      val evaluatedTrace = interpreter.interpret(txDefs, trace)
-
-      traces :+= evaluatedTrace
-      println("[CEGIS] Running inductive synthesis to block the counterexample...")
-      val newProgram = synthesizer.synthesize(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
-
-      if (newProgram == program) {
-        println("[CEGIS] Synthesizer produced no change. Stopping.")
-        return program
-      }
-
-      println("[CEGIS] Program updated by synthesizer. Continuing next iteration.")
-      program = newProgram
-      iter += 1
     }
-
-    println(s"[CEGIS] Reached maximum iterations ($maxIters). Returning current program.")
-    program
+    if (iter >= maxIters) {
+      println(s"[CEGIS] Reached maximum iterations ($maxIters). Returning current program.")
+      reason = "maxiters"
+    }
+    val totalTime = System.currentTimeMillis() - startTime
+    (program, SynthesisStat(totalTime, iter, bmcTime, maxBound))
   }
 
   private def extractTransactionDefinition(program: Program): Map[String, SolidityStatement] = {

@@ -93,8 +93,11 @@ case class Disambiguator(sketch: Program,
       val lname = rel.name.toLowerCase
       if (lname.contains("mint")
         || lname.contains("increaseallowance")
+        || lname.contains("increaseapproval")
         || lname.contains("invest")
         || lname.contains("issue")
+        || lname.contains("issueByPartition")
+        || lname.contains("addVoter")
       ) {
         val symbolIndices = rel.sig.zipWithIndex.collect { case (SymbolType(_), idx) => idx }
         val addressCombos = List.fill(symbolIndices.size)(addresses).foldLeft(Seq(Seq.empty[String])) {

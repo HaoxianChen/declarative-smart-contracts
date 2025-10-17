@@ -243,7 +243,7 @@ object Main extends App {
   }
 
   else if (args(0) == "cegis") {
-    val synthesisBenchmarks = List(
+    val synthesisBenchmarks: List[String] = List(
       "wallet.dl",
       // "erc20.dl",
       // "matic.dl",
@@ -253,51 +253,62 @@ object Main extends App {
       // "crowFunding.dl",
       // "tether.dl",
       // "brickBlockToken.dl",
+      // "shib.dl"
+      // "tokenPartition.dl"
+      // "wbtc.dl"
+      //////////////////////
+      // "voting.dl"
+      // "linktoken.dl"
+      // "auction.dl"
     )
     val synthesisBenchmarkDir = "synthesis-benchmark"
     val datalogOutDir = "synthesis-output"
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
     createDirectory(datalogOutDir)
-    Misc.writeToFile("benchmark,relations,tx_interfaces,time_ms\n", statsFile) // CSV header
+    if (!isFileExists(statsFile)) {
+      Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile) // Updated CSV header and stat order
+    }
     for (p <- synthesisBenchmarks) {
         println(s"$p")
-        val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
-        val sketch = parseProgram(datalog_filepath)
-
-        /** Track stats. */
-        val relationCount = sketch.relations.size
-        val txInterfaceCount = sketch.interfaces.count(_.relation.name.startsWith("recv_"))
-        val startTime = System.currentTimeMillis()
-
-        val cegis = Cegis(sketch)
-        val program = cegis.run()
-
-        val endTime = System.currentTimeMillis()
-        val elapsed = endTime - startTime
-
-        println(s"Synthesis output:\n${program}")
-
-        // Write Datalog output
         val filenameNoExt = p.stripSuffix(".dl")
-        createDirectory(datalogOutDir)
         val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
-        Misc.writeToFile(program.toString, datalogOutfile)
+        if (!isFileExists(datalogOutfile)) {
+          val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
+          val sketch = parseProgram(datalog_filepath)
 
-        // Write associated Solidity file to disk
-        val impTranslator = new ImperativeTranslator(
-          program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
-          enableProjection = true
-        )
-        val imperative = impTranslator.translate()
-        val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
-          Set(), isInstrument = false, monitorViolation = false, enableProjection = true
-        ).translate()
-        val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
-        Misc.writeToFile(solidity.toString, solidityOutfile)
+          val interfaceCount = sketch.interfaces.size
+          val violationRules = sketch.violationRules.size
+          val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
+          val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-        // Record stats
-        val statsLine = s"$p,$relationCount,$txInterfaceCount,$elapsed\n"
-        Misc.appendToFile(statsLine, statsFile)
+          val cegis = Cegis(sketch)
+          val (program, stat) = cegis.run() // Capture both result and stats
+
+          println(s"Synthesis output:\n${program}")
+
+          createDirectory(datalogOutDir)
+          Misc.writeToFile(program.toString, datalogOutfile)
+
+          // Write associated Solidity file to disk
+          val impTranslator = new ImperativeTranslator(
+            program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
+            enableProjection = true
+          )
+          val imperative = impTranslator.translate()
+          val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
+            Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+          ).translate()
+          val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
+          Misc.writeToFile(solidity.toString, solidityOutfile)
+
+          // Record stats using SynthesisStat, convert ms to seconds
+          val synthesisTimeS = stat.synthesisTimeMs / 1000.0
+          val bmcTimeS = stat.bmcTimeMs / 1000.0
+          val statsLine = s"$p,$relationCount,$interfaceCount,$rulesMinusInterfaceAndViolation,$violationRules,$synthesisTimeS,$bmcTimeS,${stat.cegisIterations},${stat.bmcBound}\n"
+          Misc.appendToFile(statsLine, statsFile)
+        } else {
+          println(s"Output for $p exists, skipping.")
+        }
     }
   }
 
