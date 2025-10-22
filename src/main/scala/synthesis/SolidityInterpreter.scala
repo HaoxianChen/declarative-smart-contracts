@@ -186,7 +186,12 @@ case class SolidityInterpreter() {
           case Constant(_type, name) => name.toInt
           case v: Variable => state.lookup(v.name)
         }
-        val value = state.lookup(relation.name, keyIds)
+        val value = if (keyIds.nonEmpty) {
+          state.lookup(relation.name, keyIds)
+        }
+        else {
+          state.lookup(relation.name)
+        }
         state.updateInt(p.name,value)
       }
       case UpdateMap(name, keys, tupleTypeName, params) => {
