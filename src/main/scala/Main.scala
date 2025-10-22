@@ -261,6 +261,7 @@ object Main extends App {
       // "linktoken.dl"
       // "auction.dl"
     )
+    val test = true
     val synthesisBenchmarkDir = "synthesis-benchmark"
     val datalogOutDir = "synthesis-output"
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
@@ -272,7 +273,7 @@ object Main extends App {
         println(s"$p")
         val filenameNoExt = p.stripSuffix(".dl")
         val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
-        if (!isFileExists(datalogOutfile)) {
+        if (!isFileExists(datalogOutfile) || test) {
           val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
           val sketch = parseProgram(datalog_filepath)
 
@@ -299,13 +300,13 @@ object Main extends App {
             Set(), isInstrument = false, monitorViolation = false, enableProjection = true
           ).translate()
           val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
-          Misc.writeToFile(solidity.toString, solidityOutfile)
+          if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)
 
           // Record stats using SynthesisStat, convert ms to seconds
           val synthesisTimeS = stat.synthesisTimeMs / 1000.0
           val bmcTimeS = stat.bmcTimeMs / 1000.0
           val statsLine = s"$p,$relationCount,$interfaceCount,$rulesMinusInterfaceAndViolation,$violationRules,$synthesisTimeS,$bmcTimeS,${stat.cegisIterations},${stat.bmcBound}\n"
-          Misc.appendToFile(statsLine, statsFile)
+          if (!test) Misc.appendToFile(statsLine, statsFile)
         } else {
           println(s"Output for $p exists, skipping.")
         }
