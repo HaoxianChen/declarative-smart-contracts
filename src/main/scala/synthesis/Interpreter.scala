@@ -171,6 +171,12 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       case _: MsgSender => {
         (Seq(), literal.fields.head)
       }
+      case _: This => {
+        (Seq(), literal.fields.head)
+      }
+      case _: Now => {
+        (Seq(), literal.fields.head)
+      }
       case _ => {
         throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
       }
