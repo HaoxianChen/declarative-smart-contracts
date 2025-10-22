@@ -484,8 +484,10 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
                          initRule: Option[Rule],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = initRule match {
     case Some(rule) => {
-      val bodyConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
+      val literalConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
         map(lit=>literalToConst(ctx,lit,getIndices(lit.relation),""))
+      val functorConstraints = rule.functors.map(f=>functorToZ3(ctx,f,""))
+      val bodyConstraints = literalConstraints ++ functorConstraints
 
       relation match {
         case sr: SimpleRelation => {
@@ -510,7 +512,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
           val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
           val matchConstraint = ctx.mkEq(const,storeConstraint)
 
-          (ctx.mkAnd(defaultConstraints, matchConstraint),keyConstArray,_keyTypes)
+          (ctx.mkAnd((bodyConstraints + defaultConstraints+ matchConstraint).toSeq:_*),keyConstArray,_keyTypes)
         }
         case SingletonRelation(name, sig, memberNames) => {
           val assignExpr: BoolExpr = if (sig.size == 1) {
