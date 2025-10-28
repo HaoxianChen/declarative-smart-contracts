@@ -1,0 +1,1 @@
+inconsistency(p1,p2) :- wins(p1,true),wins(p2,true),p1!=p2.

@@ -1,0 +1,84 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: uint)
+.decl balanceOf(p: address, n: uint)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:uint)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: uint)
+.decl recv_mint(p: address, amount: uint)
+.decl burn(p: address, amount: uint)
+.decl recv_burn(p: address, amount: uint)
+.decl transfer(from: address, to: address, amount: uint)
+.decl recv_transfer(to: address, amount: uint)
+
+// ERC1400 interfaces
+// .decl shares(p: address, n: unit)[0]
+.decl permission(p: address, sendAllowed: bool, receiveAllowed: bool, expiryTime: uint)[0]
+.decl canSend(s:address)
+.decl canRecv(s:address)
+// Annotate that these two relations are implemented as functions (compute on
+// demand)
+.function canSend
+.function canRecv
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, amount: uint)
+.decl increaseAllowance(p: address, s: address, n:uint)
+.decl recv_approve(s: address, n:uint)
+
+.decl recv_distributeInterests(n: uint)
+.decl distributeInterests(n: uint, time: uint)
+.decl *distributeTotal(n: uint)
+
+.decl *lastDistributeTime(time: uint)
+.decl *minInterval(time:uint)
+
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_distributeInterests
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+.public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+
+
+
+.decl totalMint(p: address, n: uint)[0]
+.decl totalBurn(p: address, n: uint)[0]
+.decl totalOut(p: address, n: uint)[0]
+.decl totalIn(p: address, n: uint)[0]
+
+.decl *allMint(n: uint)
+.decl *allBurn(n: uint)
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: uint)
+                    balanceOf(o,m), m>=n,
+                    msgSender(s), allowance(o,s,k), k>=n,
+
+
+
+.decl allowanceTotal(o:address, s:address, m:uint)[0,1]
+.decl spentTotal(o:address, s:address, m:uint)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: uint)
+.decl *unequalBalance(s: uint, n: uint)
+
+.violation unequalBalance
+

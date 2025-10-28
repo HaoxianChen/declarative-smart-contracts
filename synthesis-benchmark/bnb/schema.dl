@@ -1,0 +1,99 @@
+// adopted from Etherscan: https://etherscan.io/token/0xB8c77482e45F1F44dE1745F52C74426C631bDD52#code.
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl freezeOf(p: address, n: int)[0]
+.decl constructor(n: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+// .decl recv_approve(p: address, s: address, n:int)
+.decl recv_increaseAllowance(o: address, s: address, n:int)
+.decl increaseAllowance(o: address, s: address, n:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_increaseAllowance
+.public recv_transferFrom
+.public allowance(2)
+
+.decl recv_freeze(p: address,n: int)
+.decl recv_unfreeze(p: address,n: int)
+.decl freeze(p: address, n: int)
+.decl unfreeze(p: address, n: int)
+
+.decl recv_withdrawEther(p: address, amount: int)
+.decl withdrawEther(p:address, amount: int)
+
+.public recv_freeze
+.public recv_unfreeze
+.public recv_withdrawEther
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalFreeze(p: address, n: int)[0]
+.decl totalUnfreeze(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// Rules
+
+
+
+
+
+
+
+// New rules
+                    // balanceOf(o,m), m>=n,
+                    // msgSender(s), allowance(o,s,k), k>=n,
+                    // n>0, r!=0, n+m>=m.
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *freezeSum(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+
+.decl invalidTx()
+.violation invalidTx

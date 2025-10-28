@@ -1,0 +1,70 @@
+// Relation declarations
+.decl *target(t: int)
+.decl *beneficiary(p: address)
+.decl *owner(p: address)
+.decl *raised(n: int)
+.decl constructor(t: int, b: address)
+
+// Transactions
+.decl recv_close()
+.decl close()
+.decl recv_invest(p: address, n: int)
+.decl invest(p: address, n: int)
+.decl recv_refund(p: address, n: int)
+.decl refund(p: address, n: int)
+.decl recv_withdraw(p: address, n:int)
+.decl withdraw(p: address, n:int)
+
+.decl *closed(b: bool)
+
+// Interfaces
+.public recv_close
+.public recv_invest
+.public recv_refund
+.public recv_withdraw
+.public closed(0)
+.public raised(0)
+.public target(0)
+
+
+// Views
+
+.decl investTotal(p: address, n: int)[0]
+.decl refundTotal(p: address, n: int)[0]
+.decl balanceOf(p: address, n: int)[0]
+.public balanceOf(1)
+
+// Transaction conditions
+//     msgSender(p), msgValue(n), closed(false),
+//     raised(s), target(t), s<t.
+
+// msgSender(s), owner(s).
+
+//                msgSender(p), closed(true),
+//             raised(r), target(t), r<t,
+//             balanceOf(p, n), n > 0.
+
+           //       msgSender(p), beneficiary(p),
+           //  raised(r), target(t), r>=t.
+
+
+// Properties
+.decl *missingFund(m:int, r:int)
+.violation missingFund
+.decl *totalBalance(m:int)
+
+.decl *onceWithdraw(b: bool)
+.decl *onceRefund(b: bool)
+
+.decl *refundAndWithdraw()
+.violation refundAndWithdraw
+
+.decl *illegalRefund()
+.violation illegalRefund
+// once(refund) ==> always(raised < target)
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl invalidTx()
+.violation invalidTx

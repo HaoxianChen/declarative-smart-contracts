@@ -1,0 +1,14 @@
+// total supply equals total balances
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// no negative balances / allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// no transfer / transferFrom after paused
+invalidTx() :- paused(b), b==true, recv_transfer(_,_,_).
+invalidTx() :- paused(b), b==true, recv_transferFrom(_,_,_,_).
+
+// only owner can mint / burn
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.

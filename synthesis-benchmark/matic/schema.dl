@@ -1,0 +1,102 @@
+// Adopted form Etherscan: https://etherscan.io/token/0xB8c77482e45F1F44dE1745F52C74426C631bDD52#code
+
+// parameters
+.decl *owner(p: address)
+.public owner(0)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(n: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+.decl *paused(b:bool)
+
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address, r: address, n: int)
+
+// New transactions
+.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl increaseAllowance(p: address, s: address, n:int)
+// .decl recv_approve(s: address, n:int)
+
+.decl isPauser(p: address, b: bool)[0]
+// .decl recv_addPauser(p:address)
+// .decl recv_renouncePauser()
+//
+//
+.decl recv_pause()
+.decl recv_unpause()
+.decl pause()
+.decl unpause()
+
+
+.public recv_pause
+.public recv_unpause
+// .public recv_addPauser
+// .public recv_renouncePauser
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+.public paused(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// Rules
+
+
+
+
+// New rules
+.decl transferFrom(o: address, r: address, s: address, n: int)
+
+.decl recv_increaseAllowance(p: address, s:address, n:int)
+.decl recv_decreaseAllowance(p: address, s:address, n:int)
+.decl decreaseAllowance(p: address, s: address, n:int)
+.public recv_increaseAllowance
+.public recv_decreaseAllowance
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl decreaseAllowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
+

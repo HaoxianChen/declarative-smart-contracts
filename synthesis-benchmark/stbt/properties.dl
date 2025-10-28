@@ -1,0 +1,1 @@
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.

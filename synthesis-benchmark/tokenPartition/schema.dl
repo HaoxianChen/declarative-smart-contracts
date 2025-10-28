@@ -1,0 +1,58 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl totalSupplyByPartition(q:int, n:int)[0]
+.decl balanceOfByPartition(p: address, q:int, n: int)[0,1]
+.decl constructor()
+
+
+// Transactions
+.decl issueByPartition(p: address, q:int, n: int)
+.decl recv_issueByPartition(p: address, q:int, n: int)
+.decl redeemByPartition(p: address, q:int, n: int)
+.decl recv_redeemByPartition(p: address, q:int, n: int)
+.decl transferByPartition(s: address, r: address, q:int, n: int)
+.decl recv_transferByPartition(s: address, r: address, q:int, n: int)
+
+// Interfaces
+.public recv_issueByPartition
+.public recv_redeemByPartition
+.public recv_transferByPartition
+.public balanceOfByPartition(2)
+.public totalSupply(0)
+.public totalSupplyByPartition(1)
+
+// Rules
+
+//                             msgSender(s), owner(s),
+//                           p!=0 ,balanceOfByPartition(p,q,m), n<=m.
+//                                msgSender(s), balanceOfByPartition(s,q,m), n<=m.
+
+.decl totalMint(p: address, q:int, n: int)[0,1]
+.decl totalBurn(p: address, q:int, n: int)[0,1]
+.decl totalOut(p: address, q:int, n: int)[0,1]
+.decl totalIn(p: address, q:int, n: int)[0,1]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+.decl issueTotalByPartition(q: int, n: int)[0]
+.decl redeemTotalByPartition(q: int, n: int)[0]
+
+
+// Properties
+// .decl totalBalancesByPartition(q:int, m: int)[0]
+// .decl unequalBalance(q:int, s: int, n: int)[0]
+//
+// .violation unequalBalance
+//
+//                          totalSupplyByPartition(q,n), s!=n.
+
+
+.decl negativeBalance(p:address,q:int,n:int)[0]
+.violation negativeBalance
+
+.decl invalidTx()
+.violation invalidTx

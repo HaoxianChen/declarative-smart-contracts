@@ -1,0 +1,3 @@
+negativeBalance(p,q,n) :- balanceOfByPartition(p,q,n), n<0, p!=0.
+invalidTx() :- recv_issueByPartition(_,_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_redeemByPartition(_,_,_), owner(o), msgSender(s), o!=s.

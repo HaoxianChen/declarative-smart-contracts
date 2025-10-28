@@ -1,0 +1,4 @@
+transferBeforeUnpause() :- recv_transfer(_,_,_), paused(b), b==true.
+evacuateAfterUpgrade() :- recv_evacuate(_), onceUpgrade(b), b==false.
+negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.

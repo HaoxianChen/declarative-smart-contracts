@@ -1,0 +1,86 @@
+// Adopted from: https://etherscan.io/token/0x514910771af9ca656af840dff83e8264ecf986ca#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(n: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address, r: address, n: int)
+
+// New transactions
+.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl transferFrom(o: address, r: address, s: address, n: int)
+.decl increaseApproval(o: address, s: address, n: int)
+.decl decreaseApproval(o: address, s: address, n: int)
+// .decl recv_approve(s: address, n:int)
+.decl recv_increaseApproval(o: address, s: address, n: int)
+.decl recv_decreaseApproval(o: address, s: address, n: int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_increaseApproval
+.public recv_decreaseApproval
+.public balanceOf(1)
+.public totalSupply(0)
+
+// .decl validRecipient(p:address)
+// .function validRecipient
+
+// New interfaces
+// .public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+// Rules
+
+
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// New rules
+                    // balanceOf(o,m), m>=n,
+                    // msgSender(s), allowance(o,s,k), k>=n,
+                    // validRecipient(r).
+
+//                             d:=n-m, validRecipient(s).
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl decreaseAllowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx

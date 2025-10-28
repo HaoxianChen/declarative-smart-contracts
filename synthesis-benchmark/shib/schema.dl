@@ -1,0 +1,85 @@
+// Adopted from: https://etherscan.io/token/0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address, r: address, n: int)
+
+// New transactions
+.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl transferFrom(o: address, r: address, s: address, n: int)
+.decl increaseAllowance(p: address, s: address, d:int)
+.decl recv_increaseAllowance(p: address, s: address, d:int)
+// .decl recv_approve(s: address, n:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// New rules
+                    // balanceOf(o,m), m>=n,
+                    // msgSender(s), allowance(o,s,k), k>=n.
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+.decl recv_burnFrom(p:address, from:address, n:int)
+.decl burnFrom(p:address, from:address, n:int)
+
+//                     msgSender(s), p!=0,
+//                    balanceOf(p,m), m >= n,
+//                    allowance(p,s,k), k >= m.
+
+.public recv_burnFrom
+.public recv_increaseAllowance
+
+// Properties
+// .decl *totalBalances(m: int)
+// .decl *unequalBalance(s: int, n: int)
+//
+// .violation unequalBalance
+//
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx

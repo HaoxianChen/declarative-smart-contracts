@@ -1,0 +1,16 @@
+owner(s) :- constructor(), msgSender(s).
+
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+
+// Inference rules
+transfer(0,p,n) :- mint(p,n).
+transfer(p,0,n) :- burn(p,n).
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+balanceOf(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
+allMint(s) :- s = sum n: mint(_,n).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+

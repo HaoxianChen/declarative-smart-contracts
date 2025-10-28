@@ -1,0 +1,5 @@
+repeatWithdraw(p,c) :- withdrawCount(p,c), c>1.
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+invalidTx() :- recv_withdraw(_), ended(b), b==false.
+invalidTx() :- recv_withdrawWin(_), ended(b), b==false.
+insufficientBalance(p,n) :- balance(p,n), highestBid(p,m), n<m.

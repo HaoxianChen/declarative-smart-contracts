@@ -1,0 +1,104 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(c: int, r: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_increaseAllowance(o: address, s: address, n:int)
+.decl increaseAllowance(o: address, s: address, n:int)
+// .decl recv_approve(o: address, s: address, n:int)
+// .decl approve(o: address, s:address, n:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public allowance(2)
+
+// Rules
+
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n.
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+///////////////////////////////////////////////////////////
+.decl recv_finalize()
+.public recv_finalize
+.decl finalize()
+.decl *finalized(b:bool)
+
+.decl *start(time: uint)
+.decl *end(time: uint)
+
+.public finalized(0)
+.public start(0)
+.public end(0)
+
+.decl *rate(r: int)
+.decl recv_buyToken(p:address, amount: int)
+.decl buyToken(p:address, amount: int)
+.public recv_buyToken
+
+// finalized(f), f==false, p!=0, m!=0, now(t), start(s), end(e), t>s, t<e.
+
+.decl *raised(n: int)
+.decl *cap(n: int)
+.public raised(0)
+.public cap(0)
+
+
+
+//property
+.decl *onceFinalize(b:bool)
+
+.decl illegalFinalization()
+.violation illegalFinalization
+
+.decl buyAfterFinalize()
+.violation buyAfterFinalize
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx

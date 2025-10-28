@@ -1,0 +1,104 @@
+// Adopted from Etherscan: https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(n: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+.decl isBlackListed(p: address, b:bool)[0]
+.public isBlackListed(1)
+
+// Fees
+// .decl *rate(r: int)
+// .decl *maxFee(m: int)
+// .decl transferWithFee(from:address, to:address, fee:int, amount: int)
+// .decl transferFromWithFee(from:address, to:address, spender:address, fee:int, amount: int)
+
+// Transactions
+.decl issue(p: address, amount: int)
+.decl recv_issue(p: address, amount: int)
+.decl redeem(p: address, amount: int)
+.decl recv_redeem(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address,to: address, amount: int)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int)
+.public recv_increaseAllowance
+// .decl recv_approve(s: address, n:int)
+
+.decl destroyBlackFund(p:address,n:int)
+.decl recv_destroyBlackFund(p:address, n:int)
+
+//                          ,msgSender(s),owner(s),
+//                         isBlackListed(p,true),
+//                         balanceOf(p,n), p!=0, n>0.
+
+// Interfaces
+.public recv_issue
+.public recv_redeem
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+
+
+//                  isBlackListed(s,false),
+//                 rate(rt), maxFee(mf),
+//                 f := min(rt*n/10000, mf).
+
+
+.decl recv_addBlackList(p:address)
+.decl addBlackList(p:address)
+.public recv_addBlackList
+
+.decl totalIssue(p: address, n: int)[0]
+.decl totalRedeem(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allIssue(n: int)
+.decl *allRedeem(n: int)
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+//                     balanceOf(o,m), m>=n,
+//                     msgSender(s), allowance(o,s,k), k>=n,
+//                     isBlackListed(o,false),
+//                     rate(rt), maxFee(mf),
+//                     f := min(rt*n/10000, mf).
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx

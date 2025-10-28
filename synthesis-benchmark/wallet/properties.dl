@@ -1,0 +1,6 @@
+// Property specifications for wallet contract.
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+
+// Only owner can mint or burn
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
