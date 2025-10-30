@@ -1,4 +1,9 @@
+// cannot transfer after pause
 transferBeforeUnpause() :- recv_transfer(_,_,_), paused(b), b==true.
+
+// cannot evacuate after upgrade
 evacuateAfterUpgrade() :- recv_evacuate(_), onceUpgrade(b), b==false.
+
+// should not have negative balance or allowance
 negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.

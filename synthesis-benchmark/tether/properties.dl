@@ -1,5 +1,10 @@
+// balances should add up to totalSupply
 unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can perform restricted actions
 invalidTx() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_issue(_,_), owner(o), msgSender(s), o!=s.

@@ -1,5 +1,10 @@
+// total balance and sum of frozen amounts should equal total supply
 unequalBalance(s,n) :- totalBalances(s), freezeSum(f), totalSupply(n), s+f > n.
+
+// no account should have a negative balance or negative allowance
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can mint or burn tokens
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
