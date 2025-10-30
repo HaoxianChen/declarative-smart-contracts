@@ -13,12 +13,6 @@
 .decl isBlackListed(p: address, b:bool)[0]
 .public isBlackListed(1)
 
-// Fees
-// .decl *rate(r: int)
-// .decl *maxFee(m: int)
-// .decl transferWithFee(from:address, to:address, fee:int, amount: int)
-// .decl transferFromWithFee(from:address, to:address, spender:address, fee:int, amount: int)
-
 // Transactions
 .decl issue(p: address, amount: int)
 .decl recv_issue(p: address, amount: int)
@@ -32,14 +26,9 @@
 .decl increaseAllowance(p: address, s: address, n:int)
 .decl recv_increaseAllowance(p: address, s: address, n:int)
 .public recv_increaseAllowance
-// .decl recv_approve(s: address, n:int)
 
 .decl destroyBlackFund(p:address,n:int)
 .decl recv_destroyBlackFund(p:address, n:int)
-
-//                          ,msgSender(s),owner(s),
-//                         isBlackListed(p,true),
-//                         balanceOf(p,n), p!=0, n>0.
 
 // Interfaces
 .public recv_issue
@@ -49,16 +38,8 @@
 .public totalSupply(0)
 
 // New interfaces
-// .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
-
-// Rules
-
-
-//                  isBlackListed(s,false),
-//                 rate(rt), maxFee(mf),
-//                 f := min(rt*n/10000, mf).
 
 
 .decl recv_addBlackList(p:address)
@@ -75,11 +56,6 @@
 
 // New rules
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
-//                     balanceOf(o,m), m>=n,
-//                     msgSender(s), allowance(o,s,k), k>=n,
-//                     isBlackListed(o,false),
-//                     rate(rt), maxFee(mf),
-//                     f := min(rt*n/10000, mf).
 
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
@@ -91,8 +67,6 @@
 .decl *unequalBalance(s: int, n: int)
 
 .violation unequalBalance
-
-
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance

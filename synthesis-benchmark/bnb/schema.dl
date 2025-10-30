@@ -23,7 +23,6 @@
 // New transactions
 .decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
-// .decl recv_approve(p: address, s: address, n:int)
 .decl recv_increaseAllowance(o: address, s: address, n:int)
 .decl increaseAllowance(o: address, s: address, n:int)
 
@@ -35,7 +34,6 @@
 .public totalSupply(0)
 
 // New interfaces
-// .public recv_approve
 .public recv_increaseAllowance
 .public recv_transferFrom
 .public allowance(2)
@@ -61,20 +59,6 @@
 
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
-
-// Rules
-
-
-
-
-
-
-
-// New rules
-                    // balanceOf(o,m), m>=n,
-                    // msgSender(s), allowance(o,s,k), k>=n,
-                    // n>0, r!=0, n+m>=m.
-
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]

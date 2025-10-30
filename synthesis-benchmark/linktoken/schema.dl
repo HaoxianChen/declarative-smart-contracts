@@ -24,7 +24,6 @@
 .decl transferFrom(o: address, r: address, s: address, n: int)
 .decl increaseApproval(o: address, s: address, n: int)
 .decl decreaseApproval(o: address, s: address, n: int)
-// .decl recv_approve(s: address, n:int)
 .decl recv_increaseApproval(o: address, s: address, n: int)
 .decl recv_decreaseApproval(o: address, s: address, n: int)
 
@@ -37,11 +36,7 @@
 .public balanceOf(1)
 .public totalSupply(0)
 
-// .decl validRecipient(p:address)
-// .function validRecipient
-
 // New interfaces
-// .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
 
@@ -50,19 +45,10 @@
 .decl totalOut(p: address, n: int)[0]
 .decl totalIn(p: address, n: int)[0]
 
-// Rules
-
-
-
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
 
 // New rules
-                    // balanceOf(o,m), m>=n,
-                    // msgSender(s), allowance(o,s,k), k>=n,
-                    // validRecipient(r).
-
-//                             d:=n-m, validRecipient(s).
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl decreaseAllowanceTotal(o:address, s:address, m:int)[0,1]

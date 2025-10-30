@@ -1,21 +1,26 @@
 beneficiary(p) :- constructor(_, p).
+totalBalance(0) :- constructor(_,_).
 target(t) :- constructor(t,_).
 owner(p) :- constructor(_,_), msgSender(p).
 raised(0) :- constructor(_,_).
+onceWithdraw(false) :- constructor(_,_).
+onceRefund(false) :- constructor(_,_).
+
 raised(s) :- s = sum m: invest(_, m).
 investTotal(p,s) :- invest(p, _), s = sum m: invest(p,m).
 refundTotal(p,s) :- refund(p, _), s = sum m: refund(p,m).
 balanceOf(p,s) :- investTotal(p,i), refundTotal(p,r), s := i-r.
+
+closed(true) :- close().
+send(p,n) :- refund(p,n).
+send(p,r) :- withdraw(p,r).
+totalBalance(m) :- m = sum n: balanceOf(_,n).
+
+onceWithdraw(true) :- withdraw(_,_).
+onceRefund(true) :- refund(_,_).
+
+// Transaction placeholder rules
 invest(p,n) :- recv_invest(p,n).
 close() :- recv_close().
-closed(true) :- close().
 refund(p,n) :- recv_refund(p,n).
-send(p,n) :- refund(p,n).
 withdraw(p,r) :- recv_withdraw(p,r).
-send(p,r) :- withdraw(p,r).
-totalBalance(0) :- constructor(_,_).
-totalBalance(m) :- m = sum n: balanceOf(_,n).
-onceWithdraw(false) :- constructor(_,_).
-onceWithdraw(true) :- withdraw(_,_).
-onceRefund(false) :- constructor(_,_).
-onceRefund(true) :- refund(_,_).

@@ -49,11 +49,6 @@
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
 
-// New rules
-                    // balanceOf(o,m), m>=n,
-                    // msgSender(s), allowance(o,s,k), k>=n.
-
-
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
 
@@ -61,20 +56,10 @@
 .decl recv_burnFrom(p:address, from:address, n:int)
 .decl burnFrom(p:address, from:address, n:int)
 
-//                     msgSender(s), p!=0,
-//                    balanceOf(p,m), m >= n,
-//                    allowance(p,s,k), k >= m.
-
 .public recv_burnFrom
 .public recv_increaseAllowance
 
 // Properties
-// .decl *totalBalances(m: int)
-// .decl *unequalBalance(s: int, n: int)
-//
-// .violation unequalBalance
-//
-
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
 

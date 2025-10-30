@@ -34,20 +34,6 @@
 .decl balanceOf(p: address, n: int)[0]
 .public balanceOf(1)
 
-// Transaction conditions
-//     msgSender(p), msgValue(n), closed(false),
-//     raised(s), target(t), s<t.
-
-// msgSender(s), owner(s).
-
-//                msgSender(p), closed(true),
-//             raised(r), target(t), r<t,
-//             balanceOf(p, n), n > 0.
-
-           //       msgSender(p), beneficiary(p),
-           //  raised(r), target(t), r>=t.
-
-
 // Properties
 .decl *missingFund(m:int, r:int)
 .violation missingFund
@@ -61,7 +47,6 @@
 
 .decl *illegalRefund()
 .violation illegalRefund
-// once(refund) ==> always(raised < target)
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance

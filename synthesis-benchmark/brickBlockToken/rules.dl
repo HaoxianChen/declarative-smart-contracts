@@ -1,60 +1,44 @@
+// Init rules
 owner(s) :- constructor(), msgSender(s).
 paused(true) :- constructor().
-// transferOwnership(s,_new) :- recv_transferownership(s, _new).
-// owner(_new) :- transferOwnership(_,_new).
-pause() :- recv_pause(). // msgSender(s), owner(s), paused(a), a!=true.
+onceUpgrade(false) :- constructor().
+onceUnpaused(false) :- constructor().
+
 paused(a) :- pause(), a:=true.
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+
 transfer(s,r,n) :- transferFrom(_,s,r,n).
 transfer(s,0,n) :- burn(s,n).
 transfer(0,p,n) :- mint(p,n).
 totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 balances(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
-mint(p,n) :- recv_mint(p,n).
+
 spentTotal(f,s,m) :- transferFrom(f,s,_,_), m = sum n: transferFrom(f,s,_,n).
-// approve(s,o,n) :- recv_approve(o,n), msgSender(s).
-// increaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n>m, d:=n-m.
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d). // msgSender(o).
-// decreaseAllowance(o,s,d) :- recv_approve(o,n), msgSender(s), allowed(o,s,m), n<m, d:=m-n.
-decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d). // , msgSender(o),
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
 decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_), m = sum n: decreaseAllowance(f,s,n).
 allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d), m := n-l-d.
-// // initialSupply(a) :- BrickblockToken(), a:= 500 * (10 ** 6) * (10 ** uint256(decimals)).
-// initialSupply(a) :- BrickblockToken(), a:= 500 * 1000000.
-// dead(b) :- BrickblockToken(), b:=false.
-// tokenSaleActive(b) :- BrickblockToken(), b:=true.
+
 burnTotal(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- initialSupply(i), burnTotal(b), n:=i-b.
-unpause() :- recv_unpause().// , msgSender(s), owner(s), paused(b), b==true, dead(false).
+
 paused(false) :- unpause().
-// bonusDistributionAddress(a) :- recv_changeBonusDistributionAddress(a),
-// fountainContractAddress(a):- recv_changeFountainContractAddress(a),
-// distributeTokens(a, n) :- recv_distributeTokens(a,n), msgSender(s), owner(s),
-// transfer(s,p,n) :- distributeTokens(p,n), this(s).
-// finalizeTokenSale() :- recv_finalizeTokenSale().
-// transfer(p,bda,n) :- finalizeTokenSale(), this(p), bonusDistributionAddress(bda), bonusShare(bs),
-// tokenSaleActive(false) :- finalizeTokenSale().
-upgrade(p) :- recv_upgrade(p). //, msgSender(s), owner(s), p!=0.
+
 dead(true) :- upgrade(_).
 paused(true):- upgrade(_).
-evacuate(p) :- recv_evacuate(p). //, dead(true), msgSender(s), successorAddress(s).
 burn(p,n) :- evacuate(p), balances(p,n).
-// burn(p,n) :- recv_evacuate(p), dead(true), msgSender(s), successorAddress(s), balances(p,n).
-// noEtherTransfer() :- dead(true), paused(false).
-// onceEndSale(false) :- constructor().
-// onceEndSale(true) :- finalizeTokenSale().
-// // transferAfterEndSale() :- transaction(recv_distributeTokens), onceEndSale(true).
-onceUnpaused(false) :- constructor().
+
 onceUnpaused(true) :- unpause().
-// transferBeforeUnpause() :- transaction(recv_transfer), onceUnpaused(false).
-onceUpgrade(false) :- constructor().
+
 onceUpgrade(true) :- upgrade(_).
-// distributedTokens(dt) :- initialSupply(s), this(p), balances(p,n), dt := s - n.
-// companyTokens(ct) :- companyShare(cs),initialSupply(s), ct := s * cs / 100.
-// bonusTokens(bt) :- bonusShare(bs),initialSupply(s), bt := s * bs / 100.
-// newTotalSupply(nts) :- distributedTokens(dt), bonusTokens(bt), companyTokens(ct), nts := dt+bt+ct.
-// transfer(p,0,n) :- finalizeTokenSale(),this(p), totalSupply(m), n := m - newTotalSupply().
-// approve(p,fa,ct) :- finalizeTokenSale(),this(p), fountainContractAddress(fa), companyTokens(ct).
+
+
+// Transaction placeholder rules
+pause() :- recv_pause().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+mint(p,n) :- recv_mint(p,n).
+evacuate(p) :- recv_evacuate(p).
+upgrade(p) :- recv_upgrade(p).
+unpause() :- recv_unpause().
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).

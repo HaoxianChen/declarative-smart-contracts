@@ -4,16 +4,6 @@ owner(s) :- constructor(_), msgSender(s).
 paused(false) :- constructor(_).
 isPauser(s,true) :- constructor(_),msgSender(s).
 
-// Transaction rule interfaces
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-pause() :- recv_pause().
-unpause() :- recv_unpause().
-increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
-decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n).
-
 // Inference rules
 paused(true) :- pause().
 paused(false) :- unpause().
@@ -36,3 +26,14 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
 totalBalances(s) :- s = sum n: balanceOf(_,n).
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+pause() :- recv_pause().
+unpause() :- recv_unpause().
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n).
+
