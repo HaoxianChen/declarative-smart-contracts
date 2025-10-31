@@ -32,8 +32,8 @@ The [synthesis-benchmark](synthesis-benchmark) directory contains declarative sm
 
 - `schema.dl`: Defines the schema for the contract,
   including transaction records and contract states.
-- `rules.dl`: Contains the rules governing the contract's behavior.
-- `properties.dl`: Specifies the temporal properties and validation rules for the contract.
+- `rules.dl`: Inference rules.
+- `properties.dl`: Safety properties.
 
 
 Run the following command to synthesize all benchmarks in the directory.
