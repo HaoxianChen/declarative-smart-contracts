@@ -1,61 +1,13 @@
-> **Warning:** Always run regression tests before submitting pull requests.  
-> See [Running Regression Test](#running-regression-test) for instructions.
-
-# Declarative smart contracts
-
-A compiler that translates Declarative smart contracts
-into Solidity programs.
+# Smart Contract Synthesis via Multi-modal Specifications
 
 # Install dependencies
 
 Build tool: [SBT](https://www.scala-sbt.org/1.x/docs/Setup.html)
 
-# Compile single smart contract
-
-```
-sbt "run compile benchmarks/[contract_name].dl"
-```
-The complete list of benchmark smart contracts are in [here](benchmarks/).
-
-Other options: 
-```compile [--arg n] file-path
---fuse                   consolidate updates into one function
---materialize <filename> materialize the set of relations specified in file
---out <directory>        output directory
-```
-
-The view materialization file is organized as a csv file,
-where the names of the materialized relations are separated by comma.
-See an [example](view-materialization/Wallet.csv).
-Other examples are located in [view-materialization](view-materialization/).
-
-# Run
-
-1. Generate Solidity programs: ``sbt "run test"``
-2. Generate Solidity programs with instrumentations for run-time verification: ``sbt "run test-instrument"``
-
-The generated programs are located at ``solidity/dsc`` and ``solidity/dsc-instrument``.
-
-# Run in Docker
-Alternatively, one could run it in docker.
-
-First install Docker from [here](https://docs.docker.com/engine/install/).
-
-1. Pull the docker image: ``docker pull hxchen/fse22-artifact``
-2. Generate Solidity programs: `` docker run hxchen/fse22-artifact  sh -c "sbt 'run test'; cat solidity/dsc/*.sol"``
-3. Generate Solidity programs with instrumentations for run-time verification: `` docker run hxchen/fse22-artifact  sh -c "sbt 'run test-instrument'; cat solidity/dsc-instrument/*.sol"``
-
-
-# Example contracts
-
-Examples of declarative smart contrats are located in [benchmarks](benchmarks/).
-
-# Verification
-
-## Setup Z3 
+## Setup Z3
 
 1. Download z3 [source](https://github.com/Z3Prover/z3).
-2. Build z3 and generate Java binding: 
+2. Build z3 and generate Java binding:
     ```
     cd z3
     python scripts/mk_make.py --java
@@ -73,29 +25,22 @@ Examples of declarative smart contrats are located in [benchmarks](benchmarks/).
     ```
 5. In sbt configuration, set working directory as the project directory, so that Java runtime can locate the two dylib file.
 
-## Running Synthesis
 
-To run synthesis (fill in transaction validation rules based on temporal properties), use:
-```bash
-sbt "run synthesis benchmarks/[contract_name].dl"
+## Running Synthesis Benchmarks
+
+The [synthesis-benchmark](synthesis-benchmark) directory contains declarative smart contract examples and their corresponding benchmarks. Each subdirectory represents a specific contract and includes the following files:
+
+- `schema.dl`: Defines the schema for the contract,
+  including transaction records and contract states.
+- `rules.dl`: Contains the rules governing the contract's behavior.
+- `properties.dl`: Specifies the temporal properties and validation rules for the contract.
+
+
+Run the following command to synthesize all benchmarks in the directory.
+```shell
+sbt run synthesis-split
 ```
-This will enumerate candidate predicates and synthesize validation conditions for the input Datalog file.
 
-## Running BMC Test
-
-To run the Bounded Model Checker (BMC) test:
-```bash
-sbt "run bmc benchmarks/[contract_name].dl [bound]"
-```
-- `[contract_name]` is the name of your contract file.
-- `[bound]` (optional) is the number of steps to check; default is 10 if omitted.
-
-This will perform bounded model checking on the contract to verify violation rules.
-
-## Running Regression Test
-
-To run regression tests on all benchmark contracts, use:
-```bash
-sbt "run test-verification"
-```
-This will compile all benchmark contracts and generate the corresponding Solidity programs for validation.
+## Output
+The output is written to [synthesis-output](synthesis-output) directory.
+Look for file with `*.sol` suffix.
