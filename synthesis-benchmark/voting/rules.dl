@@ -1,9 +1,0 @@
-owner(s) :- constructor(), msgSender(s).
-addVoter(v) :- recv_addVoter(v), msgSender(s), owner(s).
-isVoter(v,true) :- addVoter(v).
-vote(v,p) :- recv_vote(p). // msgSender(v), hasWinner(false), voted(v, false), isVoter(v, true).
-votes(p,c) :- vote(_,p), c = count: vote(_,p).
-wins(p, true) :- votes(p,c), quorumSize(q), c >= q.
-hasWinner(true) :- wins(_,b), b==true.
-winningProposal(p) :- wins(p,b), b==true.
-voted(v,true) :- vote(v,_).
