@@ -8,15 +8,6 @@
 .decl allowed(p: address, p2: address, a: int)[0,1]
 .public allowed(2)
 
-// Constructor
-
-// ownable
-// .decl recv_transferownership(old: address, _new: address)
-// .decl transferOwnership(old: address, _new: address)
-//
-//                         // msgSender(s), owner(s), _new!=0.
-
-// pausable
 .decl recv_pause()
 .decl pause()
 
@@ -29,22 +20,16 @@
 .decl recv_transfer(from: address, to: address, a: int)
 .decl transfer(from: address, to: address, a:int)
 
-// , paused(false), msgSender(s), r!=0, balances(s,m), n<=m.
-
 // standardToken
 .decl recv_transferFrom(operator: address, from: address, to: address, a: int)
-// .decl recv_approve(s: address, n: int)
 .decl recv_increaseAllowance(o: address, s: address, d: int)
 .decl recv_decreaseAllowance(o: address, s: address, d: int)
 .public recv_transfer
 .public recv_transferFrom
-// .public recv_approve
 .public recv_increaseAllowance
 .public recv_decreaseAllowance
 
 .decl transferFrom(operator: address, from: address, to: address, a: int)
-//                          , r!=0, balances(f,m), n<=m,
-//                     msgSender(s), allowed(f,s,a), n<=a.
 
 .decl burn(p:address, n:int)
 .decl mint(p:address, n:int)
@@ -57,12 +42,9 @@
 .decl spentTotal(o:address, s:address, m:int)[0,1]
 
 
-// .decl approve(owner: address, operator:address, n: int)
-
 .decl increaseAllowance(o: address, s: address, d: int)
 
 .decl decreaseAllowance(o: address, s:address, d:int)[0,1]
-                        // allowed(o,s,n), n>=m, d:=n-m.
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl decreaseTotal(o:address, s:address, m:int)[0,1]
@@ -70,43 +52,15 @@
 
 
 // BrickblockToken
-// .decl *predecessorAddress(p:address)
-// .decl *bonusDistributionAddress(p:address)
-// .decl *fountainContractAddress(p:address)
-// .decl *successorAddress(p:address)
-// .decl *tokenSaleActive(b:bool)
 .decl *dead(b:bool)
 .public dead(0)
 .decl *initialSupply(a:int)
-//
-// .decl BrickblockToken()
 
 .decl *burnTotal(n:int)
 
 .decl unpause()
 .decl recv_unpause()
 .public recv_unpause
-
-// .decl recv_changeBonusDistributionAddress(p:address)
-//                                         msgSender(s), owner(s), this(thisAddr), thisAddr!=a.
-//
-// .decl recv_changeFountainContractAddress(p:address)
-// .public recv_changeFountainContractAddress
-//                                 msgSender(s), owner(s), a!=s, this(thisAddr), thisAddr!=a.
-//
-// .decl recv_distributeTokens(p:address, v:int)
-// .public recv_distributeTokens
-// .decl distributeTokens(p:address, v:int)
-//                                     tokenSaleActive(b), b==true, a!=0, a!=s.
-
-// .decl finalizeTokenSale()
-// .decl recv_finalizeTokenSale()
-// .public recv_finalizeTokenSale
-// .decl *bonusShare(n: int)
-// .decl *companyShare(n: int)
-// //                 , msgSender(s), owner(s), tokenSaleActive(true),
-// //                 bonusDistributionAddress(a), a!=0, fountainContractAddress(fa), fa!=0.
-//                 initialSupply(s), n := s * bs / 100.
 
 .decl recv_upgrade(p: address)
 .public recv_upgrade
@@ -115,14 +69,6 @@
 .decl recv_evacuate(p:address)
 .public recv_evacuate
 .decl evacuate(p:address)
-
-// .decl *noEtherTransfer()
-// .violation noEtherTransfer
-//
-// .decl *onceEndSale(b: bool)
-//
-// // .decl *transferAfterEndSale()
-// // .violation transferAfterEndSale
 
 .decl *transferBeforeUnpause()
 .violation transferBeforeUnpause
@@ -138,23 +84,13 @@
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
 
-// .decl distributedTokens(n: int)
-// .decl companyTokens(n: int)
-// .decl bonusTokens(n: int)
-// .decl newTotalSupply(n: int)
-// .function distributedTokens
-// .function companyTokens
-// .function newTotalSupply
-// {
-//     function bonusToken(): int = {
-//     }
-//     function distributedTokens(): int = {
-//         int s = initialSupply.n;
-//         return s - balances[this].n;
-//     }
-//     function newTotalSupply(): int = {
-//         return distributedTokens() + bonusTokens() + companyTokens();
-//     }
-// }
-//
-//
+// Transaction placeholder rules
+pause() :- recv_pause().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+mint(p,n) :- recv_mint(p,n).
+evacuate(p) :- recv_evacuate(p).
+upgrade(p) :- recv_upgrade(p).
+unpause() :- recv_unpause().
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).

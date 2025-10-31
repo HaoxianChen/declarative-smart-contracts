@@ -22,9 +22,3 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 transferFrom(s,p,0,n) :- burnFrom(s,p,n).
 burn(p,n) :- burnFrom(_,p,n).
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-burnFrom(s,p,n) :- recv_burnFrom(s,p,n).

@@ -38,13 +38,11 @@
 .public totalSupply(0)
 
 // New interfaces
-// .public recv_approve
 .public recv_transferFrom
 .public allowance(2)
 
 .decl *paused(b: bool)
 .decl *pendingOwner(p: address)
-// .decl *mintingFinished(b: bool)
 
 .decl recv_pause()
 .decl recv_unpause()
@@ -54,20 +52,10 @@
 .decl recv_claimOwnership(p:address)
 .decl claimOwnership(p:address)
 
-// .decl recv_reclaimToken()
-// .decl reclaimToken(t:address, s:address,n: int)
-//                     this(t), balanceOf(t,n).
-
 .public recv_pause
 .public recv_unpause
 .public recv_transferOwnership
 .public recv_claimOwnership
-// .public recv_reclaimToken
-
-// Rules
-
-                  //  msgSender(s), balanceOf(s,m), n<=m,
-                  // paused(false).
 
 .decl totalMint(p: address, n: int)[0]
 .decl totalBurn(p: address, n: int)[0]
@@ -77,23 +65,10 @@
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
 
-// New rules
-//                     balanceOf(o,m), m>=n,
-//                     msgSender(s), allowance(o,s,k), k>=n,
-//                     paused(false).
-
 
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl decreaseAllowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
-
-
-// Properties
-// .decl *totalBalances(m: int)
-// .decl *unequalBalance(s: int, n: int)
-//
-// .violation unequalBalance
-//
 
 
 .decl negativeBalance(p:address,n:int)[0]
@@ -105,3 +80,12 @@
 .decl invalidTx()
 .violation invalidTx
 
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(true) :- recv_pause().
+paused(false) :- recv_unpause().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+transferOwnership(p) :- recv_transferOwnership(p).
+claimOwnership(p) :- recv_claimOwnership(p).

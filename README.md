@@ -38,7 +38,7 @@ The [synthesis-benchmark](synthesis-benchmark) directory contains declarative sm
 
 Run the following command to synthesize all benchmarks in the directory.
 ```shell
-sbt run synthesis-split
+sbt run synthesis-all
 ```
 
 ## Output

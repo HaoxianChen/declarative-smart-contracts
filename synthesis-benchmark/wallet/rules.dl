@@ -10,8 +10,4 @@ allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
 

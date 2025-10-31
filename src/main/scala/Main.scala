@@ -335,7 +335,7 @@ object Main extends App {
   }
 
   // New: run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
-  else if (args(0) == "cegis-split") {
+  else if (args(0) == "synthesis-all") {
     val test = true
     val synthesisBenchmarkDir = "synthesis-benchmark"
     val datalogOutDir = "synthesis-output"
@@ -376,10 +376,11 @@ object Main extends App {
         val cegis = Cegis(sketch)
         val (program, stat) = cegis.run()
 
-        println(s"Synthesis output:\n${program}")
+        /** here, only write transaction rules to file. */
+        println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
 
         createDirectory(datalogOutDir)
-        Misc.writeToFile(program.toString, datalogOutfile)
+        Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
         val impTranslator = new ImperativeTranslator(
           program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,

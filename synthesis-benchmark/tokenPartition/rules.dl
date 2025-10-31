@@ -21,7 +21,3 @@ redeemTotalByPartition(q,s) :- redeemByPartition(_,q,_),
 totalSupplyByPartition(q,n) :- issueTotalByPartition(q,i),
                                redeemTotalByPartition(q,r), n := i-r.
 
-// Transaction placeholder rules
-issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n).
-redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n).
-transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).

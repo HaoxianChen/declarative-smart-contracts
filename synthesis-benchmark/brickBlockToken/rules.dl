@@ -32,13 +32,3 @@ onceUnpaused(true) :- unpause().
 onceUpgrade(true) :- upgrade(_).
 
 
-// Transaction placeholder rules
-pause() :- recv_pause().
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
-mint(p,n) :- recv_mint(p,n).
-evacuate(p) :- recv_evacuate(p).
-upgrade(p) :- recv_upgrade(p).
-unpause() :- recv_unpause().
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
-decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).

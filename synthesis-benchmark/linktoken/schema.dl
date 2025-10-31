@@ -70,3 +70,11 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseApproval(o, s, n) :- recv_increaseApproval(o, s, n). // , msgSender(o), validRecipient(s).
+decreaseApproval(o, s, n) :- recv_decreaseApproval(o, s, n). //, msgSender(o), validRecipient(s), allowance(o,s,m), m>=n.

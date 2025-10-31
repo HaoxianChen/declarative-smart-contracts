@@ -53,3 +53,9 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// Transaction placeholder rules
+invest(p,n) :- recv_invest(p,n).
+close() :- recv_close().
+refund(p,n) :- recv_refund(p,n).
+withdraw(p,r) :- recv_withdraw(p,r).

@@ -31,3 +31,8 @@
 .violation negativeBalance
 .decl invalidTx()
 .violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).

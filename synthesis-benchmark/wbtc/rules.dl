@@ -28,12 +28,3 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-paused(true) :- recv_pause().
-paused(false) :- recv_unpause().
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-transferOwnership(p) :- recv_transferOwnership(p).
-claimOwnership(p) :- recv_claimOwnership(p).

@@ -86,3 +86,11 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+swapOwnerTx(p,q,d) :- recv_swapOwnerTx(p,q,d).

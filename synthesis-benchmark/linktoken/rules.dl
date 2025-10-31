@@ -19,8 +19,6 @@ totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
 
 transfer(o,r,n) :- transferFrom(o,r,_,n).
 
-increaseApproval(o, s, n) :- recv_increaseApproval(o, s, n). // , msgSender(o), validRecipient(s).
-decreaseApproval(o, s, n) :- recv_decreaseApproval(o, s, n). //, msgSender(o), validRecipient(s), allowance(o,s,m), m>=n.
 allowanceTotal(o,s,m) :- increaseApproval(o, s, _), m = sum n: increaseApproval(o, s, n).
 decreaseAllowanceTotal(o,s,m) :- decreaseApproval(o, s, _), m = sum n: decreaseApproval(o, s, n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
@@ -28,8 +26,3 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceT
 
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).

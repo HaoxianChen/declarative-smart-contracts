@@ -23,12 +23,3 @@ totalBalances(s) :- s = sum n: balanceOf(_,n).
 transfer(s,r,n) :- controllerTransfer(s,r,n).
 burn(p,n) :- controllerRedeem(p,n).
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n).
-controllerRedeem(p,n) :- recv_controllerRedeem(p,n).
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
-

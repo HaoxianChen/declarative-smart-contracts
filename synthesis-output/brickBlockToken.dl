@@ -1,61 +1,9 @@
-Interfaces:
-recv_transfer(address,address,int)
-balances(address): int
-recv_decreaseAllowance(address,address,int)
-recv_evacuate(address)
-paused(): bool
-allowed(address,address): int
-dead(): bool
-recv_transferFrom(address,address,address,int)
-recv_unpause()
-recv_upgrade(address)
-recv_mint(address,int)
-recv_increaseAllowance(address,address,int)
-Indices:
-SimpleRelation(allowanceTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
-SimpleRelation(spentTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
-SimpleRelation(allowed,List(address, address, int),List(p, p2, a)) -> List(0, 1)
-SimpleRelation(decreaseAllowance,List(address, address, int),List(o, s, d)) -> List(0, 1)
-SimpleRelation(decreaseTotal,List(address, address, int),List(o, s, m)) -> List(0, 1)
-SimpleRelation(negativeAllowance,List(address, address, int),List(s, p, n)) -> List(0, 1)
-SimpleRelation(balances,List(address, int),List(p, a)) -> List(0)
-SimpleRelation(negativeBalance,List(address, int),List(p, n)) -> List(0)
-SimpleRelation(totalOut,List(address, int),List(p, n)) -> List(0)
-SimpleRelation(totalIn,List(address, int),List(p, n)) -> List(0)
-Rules:
-negativeBalance(p,n) :- balances(p,n),n<0,p!=address(0).
-transfer(s,r,n) :- transferFrom(_,s,r,n).
-totalIn(p,s) :- transfer(_,p,_),s = sum n: transfer(_,p,n).
-evacuateAfterUpgrade() :- recv_evacuate(_),onceUpgrade(b),b==false.
-burnTotal(s) :- s = sum n: burn(_,n).
-balances(p,s) :- totalOut(p,o),totalIn(p,i),s := i-o.
-negativeAllowance(s,p,n) :- allowed(s,p,n),n<0,s!=address(0),p!=address(0).
+transferFrom(s,f,r,n) :- n<=balances_x1_1,balances(f,balances_x1_1),n<allowed_x2_2,allowed(s,f,allowed_x2_2),recv_transferFrom(s,f,r,n),n>0.
 evacuate(p) :- recv_evacuate(p),dead(dead_b),dead_b==true.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
 pause() :- recv_pause().
 mint(p,n) :- recv_mint(p,n),n>=0.
 transfer(s,r,n) :- balances(s,balances_x1_1),paused(b),b!=true,n<balances_x1_1,recv_transfer(s,r,n),n>0.
-upgrade(p) :- recv_upgrade(p).
-paused(false) :- unpause().
-totalSupply(n) :- initialSupply(i),burnTotal(b),n := i-b.
-decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_),m = sum n: decreaseAllowance(f,s,n).
-unpause() :- recv_unpause().
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1_1),n<allowed_x2_2,allowed(s,f,allowed_x2_2),n>=0,n<balances_x1_1.
-onceUnpaused(true) :- unpause().
-onceUpgrade(false) :- constructor().
-allowanceTotal(o,s,m) :- increaseAllowance(o,s,_),m = sum n: increaseAllowance(o,s,n).
-transfer(s,address(0),n) :- burn(s,n).
-burn(p,n) :- evacuate(p),balances(p,n).
-paused(true) :- upgrade(_).
-totalOut(p,s) :- transfer(p,_,_),s = sum n: transfer(p,_,n).
 decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),allowed(o,s,allowed_x2),d<=allowed_x2.
-transferBeforeUnpause() :- recv_transfer(_,_,_),paused(b),b==true.
-onceUpgrade(true) :- upgrade(_).
-transfer(address(0),p,n) :- mint(p,n).
-onceUnpaused(false) :- constructor().
-owner(s) :- constructor(),msgSender(s).
-spentTotal(f,s,m) :- transferFrom(f,s,_,_),m = sum n: transferFrom(f,s,_,n).
-dead(true) :- upgrade(_).
-paused(a) :- pause(),a := true.
-paused(true) :- constructor().
-allowed(f,s,m) :- allowanceTotal(f,s,n),spentTotal(f,s,l),decreaseTotal(f,s,d),m := (n-l)-d.
+upgrade(p) :- recv_upgrade(p).
+unpause() :- recv_unpause().

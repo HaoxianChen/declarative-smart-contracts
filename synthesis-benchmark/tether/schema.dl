@@ -76,3 +76,12 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// Transaction placeholder rules
+destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+addBlackList(p) :- recv_addBlackList(p).
+issue(p,n) :- recv_issue(p,n).
+redeem(p,n) :- recv_redeem(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).

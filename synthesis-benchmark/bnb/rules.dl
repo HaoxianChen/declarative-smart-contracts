@@ -27,12 +27,3 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 freezeSum(s) :- s = sum n: freezeOf(_,n).
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-freeze(p,n) :- recv_freeze(p,n).
-unfreeze(p,n) :- recv_unfreeze(p,n).
-withdrawEther(p,n) :- recv_withdrawEther(p,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

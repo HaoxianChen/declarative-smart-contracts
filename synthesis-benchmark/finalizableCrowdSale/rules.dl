@@ -22,11 +22,3 @@ mint(p,n) :- buyToken(p,m), rate(r), n:=m*r.
 
 finalized(false) :- finalize().
 
-// Transaction placeholder rules
-mint(p,n) :- recv_mint(p,n).
-burn(p,n) :- recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
-finalize() :- recv_finalize().
-buyToken(p,n) :- recv_buyToken(p,m).
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

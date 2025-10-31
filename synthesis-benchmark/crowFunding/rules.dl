@@ -19,8 +19,3 @@ totalBalance(m) :- m = sum n: balanceOf(_,n).
 onceWithdraw(true) :- withdraw(_,_).
 onceRefund(true) :- refund(_,_).
 
-// Transaction placeholder rules
-invest(p,n) :- recv_invest(p,n).
-close() :- recv_close().
-refund(p,n) :- recv_refund(p,n).
-withdraw(p,r) :- recv_withdraw(p,r).
