@@ -1,0 +1,29 @@
+// A bidder must not withdraw more than once
+repeatWithdraw(p,c) :-
+    withdrawCount(p,c),
+    c > 1.
+
+// Cannot bid after auction ended
+invalidTx() :- recv_bid(_,_), end(b), b==true.
+
+// Bid must be higher than current highest bid
+invalidTx() :- recv_bid(_,n), highestBidAmount(m), n<=m.
+
+// Cannot withdraw before auction ended
+invalidTx() :- recv_withdraw(_,_), end(b), b==false.
+
+// Withdraw basic sanity:
+// - bidder must be non-zero
+// - amount must be > 0
+// - must have positive balance
+// - cannot withdraw more than current balance
+invalidTx() :- recv_withdraw(p,_), p==0.
+invalidTx() :- recv_withdraw(_,n), n<=0.
+invalidTx() :- recv_withdraw(p,_), balance(p,b), b==0.
+invalidTx() :- recv_withdraw(p,n), balance(p,b), n>b.
+// To prevent repeatWithdraw without relying on synthesis tricks:
+// require withdrawing the entire remaining balance in one shot.
+invalidTx() :- recv_withdraw(p,n), balance(p,b), n!=b.
+
+// Only owner can end the auction
+invalidTx() :- recv_endAuction(), owner(o), msgSender(s), o!=s.

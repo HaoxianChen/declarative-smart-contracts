@@ -1,0 +1,73 @@
+////////////////////
+// Safety properties
+////////////////////
+
+// always (_weiRaised <= _cap)
+moreThanCap(true) :-
+    _weiRaised(n),
+    _cap(m),
+    n > m.
+
+// wallet must equal beneficiary
+notSame(true) :-
+    _wallet(p),
+    _beneficiary(p2),
+    p != p2.
+
+////////////////////
+// Transaction validity 
+////////////////////
+
+// --- ERC20 ---
+invalidTx() :- recv_mint(p,_), p==0.
+
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+
+invalidTx() :- recv_transfer(s,r,_), s==0.
+invalidTx() :- recv_transfer(s,r,_), r==0.
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+
+invalidTx() :- recv_transferFrom(o,r,sp,_), o==0.
+invalidTx() :- recv_transferFrom(o,r,sp,_), r==0.
+invalidTx() :- recv_transferFrom(o,r,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
+
+invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
+
+// --- Escrow ownership/phase ---
+invalidTx() :- recv_transferPrimary(p), p==0.
+invalidTx() :- recv_transferPrimary(_), msgSender(s), _primary(p), s!=p.
+
+invalidTx() :- recv_deposit(p,_), p==0.
+invalidTx() :- recv_deposit(_,a), a==0.
+invalidTx() :- recv_deposit(_,_), state(h), h!=0.
+invalidTx() :- recv_deposit(_,_), msgSender(s), _primary(p), s!=p.
+
+invalidTx() :- recv_withdraw(_), msgSender(s), _primary(p), s!=p.
+
+// --- Crowdsale ---
+invalidTx() :- recv_buyToken(p,_), p==0.
+invalidTx() :- recv_buyToken(_,v), v==0.
+invalidTx() :- recv_buyToken(_,v), _weiRaised(r), _cap(c), r+v>c.
+
+// BuyToken: must be within [openingTime, closingTime] and before finalization/state transition
+invalidTx() :- recv_buyToken(_,_), now(t), _openingTime(o), t<o.
+invalidTx() :- recv_buyToken(_,_), now(t), _closingTime(c), t>c.
+invalidTx() :- recv_buyToken(_,_), _finalized(b), b==true.
+invalidTx() :- recv_buyToken(_,_), state(h), h!=0.
+
+// --- Finalization ---
+// NOTE: avoid functor-less tx violation rules (PredicateEnumerator assumes exactly one functor)
+invalidTx() :- recv_finalize(), _finalized(b), b==true.
+invalidTx() :- recv_finalize(), msgSender(s), _primary(p), s!=p.
+invalidTx() :- recv_finalize(), state(h), h!=0.
+invalidTx() :- recv_finalize(), now(t), _closingTime(c), t<c.
+
+// --- Refund claim ---
+// NOTE: avoid functor-less tx violation rules
+invalidTx() :- recv_claimRefund(_), _finalized(b), b==false.
+invalidTx() :- recv_claimRefund(_), _weiRaised(s), _goal(g), s>=g.
+invalidTx() :- recv_claimRefund(_), state(h), h!=1.
+invalidTx() :- recv_claimRefund(p), _deposits(p,a), a==0.

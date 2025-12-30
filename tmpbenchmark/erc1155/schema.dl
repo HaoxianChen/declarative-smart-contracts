@@ -1,0 +1,64 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl totalSupply(tokenId: int, n: int)[0]
+.decl balanceOf(tokenId: int, p: address, n: int)[0,1]
+.decl constructor()
+
+// views (allowance)
+.decl allowance(tokenId: int, o: address, s: address, n:int)[0,1,2]
+
+// Transactions
+.decl mint(tokenId: int, p: address, amount: int)
+.decl recv_mint(tokenId: int, p: address, amount: int)
+.decl burn(tokenId: int, p: address, amount: int)
+.decl recv_burn(tokenId: int, p: address, amount: int)
+.decl transfer(tokenId: int, from: address, to: address, amount: int)
+.decl recv_transfer(tokenId: int, from: address, to: address, amount: int)
+
+// New transactions (B-style explicit spender)
+.decl recv_transferFrom(tokenId: int, from: address, to: address, spender: address, amount: int)
+.decl transferFrom(tokenId: int,from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(tokenId: int, o: address, s: address, d: int)
+.decl recv_increaseAllowance(tokenId: int, o: address, s: address, d: int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(2)
+.public totalSupply(1)
+
+// New interfaces
+.public recv_increaseAllowance
+.public recv_transferFrom
+.public allowance(3)
+
+// Helpers
+.decl totalMint(tokenId: int, p: address, n: int)[0,1]
+.decl totalBurn(tokenId: int, p: address, n: int)[0,1]
+.decl totalOut(tokenId: int, p: address, n: int)[0,1]
+.decl totalIn(tokenId: int, p: address, n: int)[0,1]
+
+.decl allMint(tokenId: int, n: int)[0]
+.decl allBurn(tokenId: int, n: int)[0]
+
+.decl allowanceTotal(tokenId: int, o:address, s:address, m:int)[0,1,2]
+.decl spentTotal(tokenId: int, o:address, s:address, m:int)[0,1,2]
+
+// Properties (preserve original)
+.decl totalBalances(tokenId: int, m: int)[0]
+.decl unequalBalance(tokenId: int, s: int, n: int)[0]
+.violation unequalBalance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(t,p,n) :- recv_mint(t,p,n).
+burn(t,p,n) :- recv_burn(t,p,n).
+transfer(t,s,r,n) :- recv_transfer(t,s,r,n).
+transferFrom(t,o,r,sp,n) :- recv_transferFrom(t,o,r,sp,n).
+increaseAllowance(t,o,s,d) :- recv_increaseAllowance(t,o,s,d).
+

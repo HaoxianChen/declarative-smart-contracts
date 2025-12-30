@@ -1,0 +1,78 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n:int)[0,1]
+.decl constructor()
+
+// ERC1400 permissioning
+// NOTE: split multi-value map into 3 single-value maps to match toolchain limitation
+// (Interpreter.extractKeyValueVar assumes each SimpleRelation map has exactly one value field).
+.decl permissionSendAllowed(p: address, b: bool)[0]
+.decl permissionReceiveAllowed(p: address, b: bool)[0]
+.decl permissionExpiryTime(p: address, t: uint)[0]
+.decl canSend(s:address)
+.decl canRecv(s:address)
+.function canSend
+.function canRecv
+
+// Transactions (B-style explicit params)
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+
+.decl increaseAllowance(p: address, s: address, d: int)
+.decl recv_increaseAllowance(p: address, s: address, d: int)
+
+// Interest distribution
+.decl recv_distributeInterests(n: int, t: uint)
+.decl distributeInterests(n: int, t: uint)
+.decl *distributeTotal(n: int)
+.decl *lastDistributeTime(time: uint)
+.decl *minInterval(time:uint)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public recv_distributeInterests
+.public balanceOf(1)
+.public totalSupply(0)
+.public allowance(2)
+
+// Helpers
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+// Properties (preserve original)
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+.violation unequalBalance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+distributeInterests(n,t) :- recv_distributeInterests(n,t).
+

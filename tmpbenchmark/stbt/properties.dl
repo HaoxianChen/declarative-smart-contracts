@@ -1,0 +1,45 @@
+// Preserve original property: total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+////////////////////
+// Transaction validity
+////////////////////
+
+// mint/burn: only owner and non-zero address; burn needs enough balance
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_mint(p,_), p==0.
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+
+// transfer: endpoints non-zero, enough balance, and permissioning
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+// if permission explicitly disallows sending/receiving, or permission expired
+invalidTx() :- recv_transfer(s,_,_), permissionSendAllowed(s, sendOk), sendOk==false.
+invalidTx() :- recv_transfer(_,r,_), permissionReceiveAllowed(r, recvOk), recvOk==false.
+invalidTx() :- recv_transfer(s,_,_), permissionSendAllowed(s, b), b==true,
+    permissionExpiryTime(s, expire), expire!=0, now(t), t>=expire.
+invalidTx() :- recv_transfer(_,r,_), permissionReceiveAllowed(r, b), b==true,
+    permissionExpiryTime(r, expire), expire!=0, now(t), t>=expire.
+
+// transferFrom: endpoints non-zero, enough balance/allowance, and permissioning
+invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
+invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
+invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
+invalidTx() :- recv_transferFrom(o,_,_,_), permissionSendAllowed(o, sendOk), sendOk==false.
+invalidTx() :- recv_transferFrom(_,r,_,_), permissionReceiveAllowed(r, recvOk), recvOk==false.
+invalidTx() :- recv_transferFrom(o,_,_,_), permissionSendAllowed(o, b), b==true,
+    permissionExpiryTime(o, expire), expire!=0, now(t), t>=expire.
+invalidTx() :- recv_transferFrom(_,r,_,_), permissionReceiveAllowed(r, b), b==true,
+    permissionExpiryTime(r, expire), expire!=0, now(t), t>=expire.
+
+// increaseAllowance: delta must be non-negative
+invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
+
+// distributeInterests: must respect minInterval (legacy uses lastDistributeTime - t > i)
+invalidTx() :- recv_distributeInterests(_,t), minInterval(i), lastDistributeTime(t1), t1 - t <= i.
+

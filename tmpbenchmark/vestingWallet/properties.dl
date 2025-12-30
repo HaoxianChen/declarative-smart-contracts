@@ -1,0 +1,10 @@
+// Preserve original property: early release is not allowed
+earlyRelease(e) :- released(e), now(t), start(a), t<a, e > 0.
+
+////////////////////
+// Transaction validity
+////////////////////
+
+// disallow calling release before start
+invalidTx() :- recv_release(), now(t), start(a), t<a.
+
