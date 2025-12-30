@@ -1,0 +1,102 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n:int)[0,1]
+.decl constructor()
+
+////////////////////
+// ERC20-like transactions
+////////////////////
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+
+.decl increaseAllowance(p: address, s: address, d: int)
+.decl recv_increaseAllowance(p: address, s: address, d: int)
+
+////////////////////
+// ERC777 operator state/transactions
+////////////////////
+.decl operators(p:address , o:address, b: bool)[0,1]
+.decl revokedDefaultOperator(p:address , o:address, b: bool)[0,1]
+.decl defaultOperator(o:address, b:bool)[0]
+
+.decl approveOperator(p: address, o: address)
+.decl recv_approveOperator(p: address, o: address)
+
+.decl revokeDefaultOperator(p: address, o: address)
+.decl recv_revokeDefaultOperator(p: address, o: address)
+
+.decl operatorSend(o:address,r:address,s:address,n:int,data:int,operatorData:int)
+.decl recv_operatorSend(o:address,r:address,s:address,n:int,data:int,operatorData:int)
+
+.decl operatorBurn(p:address,s:address,n:int,data:int,operatorData:int)
+.decl recv_operatorBurn(p:address,s:address,n:int,data:int,operatorData:int)
+
+////////////////////
+// Interfaces
+////////////////////
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public balanceOf(1)
+.public totalSupply(0)
+.public allowance(2)
+
+.public recv_revokeDefaultOperator
+.public recv_approveOperator
+.public recv_operatorSend
+.public recv_operatorBurn
+.public operators(2)
+.public revokedDefaultOperator(2)
+.public defaultOperator(1)
+
+////////////////////
+// Helpers
+////////////////////
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+////////////////////
+// Properties (preserve original)
+////////////////////
+.decl inconsistentOperator(p:address, o:address)[0,1]
+.violation inconsistentOperator
+
+.decl invalidTx()
+.violation invalidTx
+
+////////////////////
+// Transaction placeholder rules
+////////////////////
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+
+approveOperator(p,o) :- recv_approveOperator(p,o).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+

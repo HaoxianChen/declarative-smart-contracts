@@ -1,0 +1,47 @@
+// ===== Parameters (singleton state) =====
+.decl *owner(p: address)
+.decl *beneficiary(p: address)
+.decl *endTime(t: int)
+.decl constructor(beneficiary: address, biddingTime: int)
+
+// ===== Transactions =====
+.decl recv_bid(bidder: address, amount: uint)
+.decl bid(bidder: address, amount: uint)
+
+.decl recv_withdraw(bidder: address, amount: uint)
+.decl withdraw(bidder: address, amount: uint)
+
+.decl recv_endAuction()
+.decl endAuction()
+
+// ===== Views / States =====
+// NOTE: split multi-field singleton into two single-field singletons to match toolchain limitation.
+.decl *highestBidder(p: address)
+.decl *highestBidAmount(n: uint)
+.decl balance(p: address, n: uint)[0]
+
+// ===== Accounting helpers =====
+.decl bidTotal(p: address, n: uint)[0]
+.decl withdrawTotal(p: address, n: uint)[0]
+.decl withdrawUnit(p: address, one: int)[0]
+.decl withdrawCount(p: address, c: int)[0]
+
+// ===== Lifecycle flags =====
+.decl *end(b: bool)
+
+// ===== Public interfaces =====
+.public recv_bid
+.public recv_withdraw
+.public recv_endAuction
+.public balance(1)
+
+// ===== Violations =====
+.decl repeatWithdraw(p: address, c: int)[0]
+.violation repeatWithdraw
+.decl invalidTx()
+.violation invalidTx
+
+// ===== Transaction placeholder rules  =====
+bid(p,n) :- recv_bid(p,n).
+withdraw(p,n) :- recv_withdraw(p,n).
+endAuction() :- recv_endAuction().

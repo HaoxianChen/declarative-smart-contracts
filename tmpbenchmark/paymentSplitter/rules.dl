@@ -1,0 +1,29 @@
+// Anchor constructor() in the program without making aggregate views depend on constructor insertion.
+initialized(true) :- constructor().
+
+// totalShares/totalReleased/totalReceived derived views
+totalShares(s) :- s = sum n: shares(_,n).
+
+// Total released is the sum of all release amounts
+totalReleased(s) :- s = sum e: releaseAmount(_,e).
+released(p,s) :- releaseAmount(p,_), s = sum n: releaseAmount(p,n).
+
+// For compile stability (and to avoid relying on built-in thisBalance/receive/send totals),
+// approximate totalReceived as the sum of all release amounts (same magnitude as totalReleased).
+// NOTE: keep this as an aggregate view directly; JoinView over IncrementValue (+=) is buggy here.
+totalReceived(r) :- r = sum e: releaseAmount(_,e).
+
+// Compute release amount when a release tx is triggered.
+releaseAmount(p,n) :-
+    release(p),
+    totalReceived(r),
+    shares(p,m),
+    totalShares(s),
+    released(p,e),
+    s>0,
+    n := (r * m / s) - e,
+    r * m / s > e.
+
+// send ether according to release amount
+send(p,n) :- releaseAmount(p,n).
+

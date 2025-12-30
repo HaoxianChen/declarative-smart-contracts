@@ -1,0 +1,137 @@
+////////////////////
+// Global variables
+////////////////////
+.decl *_wallet(p:address)
+.decl *_weiRaised(a:int)
+.decl *_openingTime(a:uint)
+.decl *_closingTime(a:uint)
+.decl *_finalized(b:bool)
+
+.decl *_primary(p:address)
+.decl _deposits(p:address, a:int)[0]
+.public _deposits(1)
+
+.decl *state(a:int)
+.decl *_beneficiary(p:address)
+.decl *_goal(a:int)
+.decl *_cap(a:int)
+
+////////////////////
+// ERC20 state
+////////////////////
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+////////////////////
+// Constructor
+////////////////////
+.decl constructor(t1:uint, t2:uint, p:address, cap:int, goal:int)
+
+////////////////////
+// ERC20 transactions
+////////////////////
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+
+.decl increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int)
+
+////////////////////
+// ERC20 helpers
+////////////////////
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+////////////////////
+// RefundEscrow
+////////////////////
+.decl recv_transferPrimary(p:address)
+.decl transferPrimary(p:address)
+
+.decl recv_deposit(p:address, a:int)
+.decl deposit(p:address, a:int)
+
+.decl recv_withdraw(p:address)
+.decl withdraw(p:address)
+
+////////////////////
+// Crowdsale
+////////////////////
+.decl recv_buyToken(p:address, v:int)
+.decl buyToken(p:address, v:int)
+
+.decl raised(a:int)
+
+.decl recv_finalize()
+.decl finalize()
+
+.decl finalization()
+.decl closeEscrow()
+.decl enableRefunds()
+
+.decl recv_claimRefund(p:address)
+.decl claimRefund(p:address)
+
+////////////////////
+// Public interfaces
+////////////////////
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+
+.public balanceOf(1)
+.public totalSupply(0)
+.public allowance(2)
+
+.public recv_transferPrimary
+.public recv_deposit
+.public recv_withdraw
+
+.public recv_buyToken
+.public recv_finalize
+.public recv_claimRefund
+
+////////////////////
+// Properties
+////////////////////
+.decl *moreThanCap(b:bool)
+.violation moreThanCap
+
+.decl *notSame(b:bool)
+.violation notSame
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transferPrimary(p) :- recv_transferPrimary(p).
+deposit(p,a) :- recv_deposit(p,a).
+withdraw(p) :- recv_withdraw(p).
+buyToken(p,v) :- recv_buyToken(p,v).
+finalize() :- recv_finalize().
+claimRefund(p) :- recv_claimRefund(p).

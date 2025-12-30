@@ -1,0 +1,33 @@
+// Preserve original property: total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+////////////////////
+// Transaction validity
+////////////////////
+
+// allow/disallow precirculation: only owner
+invalidTx() :- recv_allowPrecirculation(_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_disallowPrecirculation(_), owner(o), msgSender(s), o!=s.
+
+// mint/burn: only owner, p!=0, and burn has enough balance
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_mint(p,_), p==0.
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+
+// transfer: endpoints non-zero and enough balance
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+
+// transferFrom: endpoints non-zero, enough balance/allowance
+invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
+invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
+invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
+
+// increaseAllowance: delta must be non-negative
+invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
+

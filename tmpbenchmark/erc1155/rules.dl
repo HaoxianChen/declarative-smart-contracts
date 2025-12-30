@@ -1,0 +1,23 @@
+// Initialization
+owner(s) :- constructor(), msgSender(s).
+
+// ERC1155 core accounting
+totalOut(t,p,s) :- transfer(t,p,_,_), s = sum n: transfer(t,p,_,n).
+totalIn(t,p,s) :- transfer(t,_,p,_), s = sum n: transfer(t,_,p,n).
+totalMint(t,p,s) :- mint(t,p,_), s = sum n: mint(t,p,n).
+totalBurn(t,p,s) :- burn(t,p,_), s = sum n: burn(t,p,n).
+balanceOf(t,p,s) :- totalMint(t,p,n), totalBurn(t,p,m), totalOut(t,p,o), totalIn(t,p,i), s:=n+i-m-o.
+
+allMint(t,s) :- s = sum n: mint(t,_,n).
+allBurn(t,s) :- s = sum n: burn(t,_,n).
+totalSupply(t,n) :- allMint(t,m), allBurn(t,b), n := m - b.
+
+// Allowance
+transfer(t,o,r,n) :- transferFrom(t,o,r,_,n).
+allowanceTotal(t,o,s,m) :- increaseAllowance(t,o,s,_), m = sum n: increaseAllowance(t,o,s,n).
+spentTotal(t,o,s,m) :- transferFrom(t,o,_,s,_), m = sum n: transferFrom(t,o,_,s,n).
+allowance(t,o,s,n) :- allowanceTotal(t,o,s,m), spentTotal(t,o,s,l), n := m-l.
+
+// Properties helper
+totalBalances(t,s) :- s = sum n: balanceOf(t,_,n).
+

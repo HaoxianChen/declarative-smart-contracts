@@ -1,0 +1,28 @@
+// Preserve original property: cannot have two different winning proposals
+inconsistency(p1,p2) :-
+    wins(p1,b1), b1==true,
+    wins(p2,b2), b2==true,
+    p1!=p2.
+
+////////////////////
+// Transaction validity (B-style via invalidTx)
+////////////////////
+
+// cannot vote after a winner exists
+invalidTx() :- recv_vote(_,_), hasWinner(b), b==true.
+
+// must be a voter and must not have voted before
+invalidTx() :- recv_vote(v,_), isVoter(v,b), b==false.
+invalidTx() :- recv_vote(v,_), voted(v,b), b==true.
+
+// ===== finalize validity (B2) =====
+// cannot finalize after winner exists
+invalidTx() :- recv_finalize(_), hasWinner(b), b==true.
+
+// only allow finalize when chosen proposal has reached quorum
+invalidTx() :-
+    recv_finalize(p),
+    votes(p,c),
+    quorumSize(q),
+    c < q.
+

@@ -1,0 +1,78 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+.decl precirculated(p:address, b:bool)[0]
+.decl canTransfer(p:address,q:address)
+.function canTransfer
+.decl *unlockTime(t: uint)
+
+// constructor
+.decl constructor(t:uint)
+
+// precirculation control (B-style explicit caller not needed; use msgSender for ownership)
+.decl recv_allowPrecirculation(p:address)
+.decl allowPrecirculation(p:address)
+.public recv_allowPrecirculation
+
+.decl recv_disallowPrecirculation(p:address)
+.decl disallowPrecirculation(p:address)
+.public recv_disallowPrecirculation
+
+// Transactions (B-style explicit params)
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+
+.decl increaseAllowance(p: address, s: address, d:int)
+.decl recv_increaseAllowance(p: address, s: address, d:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+.public recv_increaseAllowance
+.public recv_transferFrom
+.public allowance(2)
+
+// Helpers
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+// Properties (preserve original)
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+.violation unequalBalance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+allowPrecirculation(p) :- recv_allowPrecirculation(p).
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p).
+
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+

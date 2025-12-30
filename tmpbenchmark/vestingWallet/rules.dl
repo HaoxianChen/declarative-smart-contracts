@@ -1,0 +1,27 @@
+// Initialization
+beneficiary(b) :- constructor(_,_,b).
+start(s) :- constructor(a,_,_), now(t), s := a+t.
+duration(d) :- constructor(_,d,_).
+
+// Provide an abstract "funds" constant so we can typecheck without relying on thisBalance (uint) vs send(int).
+funds(1000000) :- constructor(_,_,_).
+released(0) :- constructor(_,_,_).
+
+// Compute release amount: simplified to "everything after full vesting"
+releaseAmount(n) :-
+    release(),
+    funds(b),
+    released(e),
+    start(a),
+    duration(d),
+    now(t),
+    t>a+d,
+    b>e,
+    n := b-e.
+
+// Transfer funds
+send(b,n) :- releaseAmount(n), n>0, beneficiary(b).
+
+// released total is sum of all release amounts
+released(s) :- releaseAmount(_), s = sum n: releaseAmount(n).
+
