@@ -1,0 +1,7 @@
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
+burn(p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),o==s.
+transfer(s,r,n) :- recv_transfer(s,r,n),s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1).
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),o==s.
+mint(p,n) :- o_1==s_1,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
+transferFrom(o,r,sp,n) :- allowance(o,sp,k_2),r!=address(0),n<=m_0,sp!=address(0),recv_transferFrom(o,r,sp,n),balanceOf(o,m_0),n<=k_2,o!=address(0).

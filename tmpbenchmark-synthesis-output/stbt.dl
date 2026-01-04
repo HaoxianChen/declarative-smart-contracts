@@ -1,0 +1,6 @@
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
+burn(p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
+transfer(s,r,n) :- sendOk_2!=false,recv_transfer(s,r,n),s!=address(0),recvOk_1!=false,r!=address(0),balanceOf(s,m_3),permissionSendAllowed(s,sendOk_2),n<=m_3,permissionReceiveAllowed(r,recvOk_1).
+distributeInterests(n,t) :- recv_distributeInterests(n,t),minInterval(i),lastDistributeTime(t1),t1-t>i.
+transferFrom(o,r,sp,n) :- n<=m_2,allowance(o,sp,k_4),recvOk_0!=false,balanceOf(o,m_2),permissionReceiveAllowed(r,recvOk_0),permissionSendAllowed(o,sendOk_1),r!=address(0),sp!=address(0),recv_transferFrom(o,r,sp,n),sendOk_1!=false,o!=address(0),n<=k_4.
+mint(p,n) :- o_1==s_1,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
