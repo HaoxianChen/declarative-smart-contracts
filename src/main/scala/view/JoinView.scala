@@ -72,16 +72,42 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
   private def getNewRowDerivationStatements(insert: Literal, updateStatement: Statement): Statement = {
 
-    /** Generate assign statements for functors */
-    val assignStatements = rule.functors.foldLeft[Statement](Empty())(
-      (stmt, f) => f match {
-        case datalog.Assign(p, a) => Statement.makeSeq(stmt,imp.Assign(p,a))
-        case _ => stmt
+    /** Generate assign statements for functors.
+      *
+      * IMPORTANT (codegen correctness):
+      * Some synthesized programs introduce an `Assign` functor that defines a variable used
+      * in a non-Assign condition functor (e.g., `b := 1000000, b > e`). Since Assign functors
+      * are not part of the condition (they map to True()), we must emit such assignments BEFORE
+      * the `if (condition)` so the condition can reference the variable.
+      */
+    val conditionParams: Set[Parameter] = {
+      def functorParamsLocal(f: Functor): Set[Parameter] = f match {
+        case datalog.Greater(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case datalog.Lesser(a, b)  => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case datalog.Geq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case datalog.Leq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case datalog.Unequal(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case datalog.Equal(a, b)   => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+        case _ => Set.empty
       }
-    )
+      val condFunctors = rule.functors.collect {
+        case f @ (_: datalog.Greater | _: datalog.Lesser | _: datalog.Geq | _: datalog.Leq | _: datalog.Unequal | _: datalog.Equal) => f
+      }
+      condFunctors.flatMap(functorParamsLocal)
+    }
+
+    val (preIfAssigns, inIfAssigns): (List[Statement], List[Statement]) = {
+      val assigns = rule.functors.collect { case a: datalog.Assign => a }.toList
+      val (pre, in) = assigns.partition(a => conditionParams.contains(a.a.p))
+      (
+        pre.map(a => imp.Assign(Param(a.a.p), a.b)),
+        in.map(a => imp.Assign(Param(a.a.p), a.b))
+      )
+    }
 
     val condition = _getConditions()
-    val IfStatement: If = If(condition, Statement.makeSeq(assignStatements,updateStatement))
+    val IfStatement: If = If(condition, Statement.makeSeq(Statement.makeSeq(inIfAssigns: _*), updateStatement))
+    val withPreAssigns: Statement = Statement.makeSeq(Statement.makeSeq(preIfAssigns: _*), IfStatement)
 
     // Join
     val groundedParams: Set[Parameter] = insert.fields.toSet
@@ -89,7 +115,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
       sortJoinLiterals(rest)
     }
-    val updates = _getJoinStatements(groundedParams, sortedLiteral, IfStatement)
+    val updates = _getJoinStatements(groundedParams, sortedLiteral, withPreAssigns)
     // OnInsert(insert, rule.head.relation, updates)
     updates
   }

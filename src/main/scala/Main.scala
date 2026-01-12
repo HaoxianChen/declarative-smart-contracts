@@ -6,6 +6,7 @@ import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, rea
 import verification.{Prove, TransitionSystem, Verifier}
 import java.nio.file.Paths
 import scala.sys.exit
+import java.io.File
 
 object Main extends App {
   val outDir = "solidity/dsc"
@@ -44,23 +45,7 @@ object Main extends App {
 
   // List of split-directory names (subdirectories of `synthesis-benchmark`) to run in split-mode.
   // If empty -> run on all subdirectories (default). Modify this list to control which directories run.
-  val synthesisSplitDirs: List[String] = List(
-    "wallet",
-    "erc20",
-    "matic",
-    "controllable",
-    "cappedCrowdSale",
-    "bnb",
-    "crowFunding",
-    "tether",
-    "brickBlockToken",
-    "shib",
-    "tokenPartition",
-    "wbtc",
-    "linktoken",
-    "finalizableCrowdSale",
-    "ltcSwapAsset",
-  )
+  val synthesisSplitDirs: List[String] = List()
 
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
@@ -334,33 +319,100 @@ object Main extends App {
     }
   }
 
-  // New: run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
+  // Run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
   else if (args(0) == "synthesis-all") {
-    val test = true
-    val synthesisBenchmarkDir = "synthesis-benchmark"
-    val datalogOutDir = "synthesis-output"
+    /** Optional flags:
+      *   --bench-dir <dir>  (default: synthesis-benchmark)
+      *   --out-dir   <dir>  (default: synthesis-output)
+      *
+      * Notes:
+      * - When bench-dir is not the default, we run over all subdirectories under bench-dir.
+      * - For ad-hoc dirs (e.g., tmpbenchmark) that may contain incomplete benchmarks, we skip
+      *   subdirectories that cannot be parsed (e.g., empty schema/rules).
+      * - If bench-dir itself contains schema.dl + rules.dl, treat it as a single benchmark.
+      */
+    def parseSynthesisAllArgs(list: List[String]): Map[String, String] = list match {
+      case Nil => Map.empty
+      case "--bench-dir" :: value :: tail => parseSynthesisAllArgs(tail) + ("bench-dir" -> value)
+      case "--out-dir" :: value :: tail   => parseSynthesisAllArgs(tail) + ("out-dir" -> value)
+      case unknown :: _ =>
+        println(s"Unknown option for synthesis-all: $unknown")
+        exit(1)
+    }
+
+    def isNonEmptyFile(path: String): Boolean = {
+      val f = new File(path)
+      f.exists() && f.isFile && f.length() > 0
+    }
+
+    def isSplitBenchmarkDir(dir: String): Boolean = {
+      val schemaPath = Paths.get(dir, "schema.dl").toString
+      val rulesPath = Paths.get(dir, "rules.dl").toString
+      isNonEmptyFile(schemaPath) && isNonEmptyFile(rulesPath)
+    }
+
+    def parseProgramsFromSplitParentSafe(parentDir: String): Seq[(String, Program)] = {
+      val parent = new File(parentDir)
+      if (!parent.exists() || !parent.isDirectory) return Seq.empty
+
+      val subdirs = parent.listFiles().filter(_.isDirectory).map(_.getName).sorted
+      subdirs.flatMap { name =>
+        val dir = Paths.get(parentDir, name).toString
+        val schemaPath = Paths.get(dir, "schema.dl").toString
+        val rulesPath = Paths.get(dir, "rules.dl").toString
+
+        if (!isNonEmptyFile(schemaPath) || !isNonEmptyFile(rulesPath)) {
+          println(s"Skipping incomplete split-dir (missing/empty schema or rules): ${dir}")
+          None
+        } else {
+          try {
+            Some((name, parseProgramFromSplitDir(dir)))
+          } catch {
+            case e: Throwable =>
+              println(s"Skipping split-dir due to parse/type error: ${dir}")
+              println(s"  ${e.getClass.getName}: ${e.getMessage}")
+              None
+          }
+        }
+      }
+    }
+
+    val test = false
+    val opts = parseSynthesisAllArgs(args.tail.toList)
+    val synthesisBenchmarkDir = opts.getOrElse("bench-dir", "synthesis-benchmark")
+    val datalogOutDir = opts.getOrElse("out-dir", "synthesis-output")
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
     createDirectory(datalogOutDir)
     if (!isFileExists(statsFile)) {
       Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
     }
 
-    // parse all split-program subdirectories under parent into (name, Program)
-    val programsByName: Seq[(String, Program)] = if (synthesisSplitDirs.nonEmpty) {
-      // Build (name, Program) for each requested split-dir (skip missing)
-      synthesisSplitDirs.flatMap { name =>
-        val dir = Paths.get(synthesisBenchmarkDir, name).toString
-        val f = new java.io.File(dir)
-        if (f.exists() && f.isDirectory) {
-          Some((name, parseProgramFromSplitDir(dir)))
-        } else {
-          println(s"Skipping missing split-dir: ${dir}")
-          None
+    val programsByName: Seq[(String, Program)] =
+      if (isSplitBenchmarkDir(synthesisBenchmarkDir)) {
+        val name = new File(synthesisBenchmarkDir).getName
+        try Seq((name, parseProgramFromSplitDir(synthesisBenchmarkDir)))
+        catch {
+          case e: Throwable =>
+            println(s"Skipping split-dir due to parse/type error: ${synthesisBenchmarkDir}")
+            println(s"  ${e.getClass.getName}: ${e.getMessage}")
+            Seq.empty
         }
+      } else if (synthesisBenchmarkDir == "synthesis-benchmark") {
+        if (synthesisSplitDirs.nonEmpty) {
+          synthesisSplitDirs.flatMap { name =>
+            val dir = Paths.get(synthesisBenchmarkDir, name).toString
+            val f = new java.io.File(dir)
+            if (f.exists() && f.isDirectory) Some((name, parseProgramFromSplitDir(dir)))
+            else { println(s"Skipping missing split-dir: ${dir}"); None }
+          }
+        } else {
+          // Be robust to individual benchmark parse/type errors (esp. after merging ad-hoc dirs).
+          // We want synthesis-all to complete and report skips rather than crash the whole run.
+          parseProgramsFromSplitParentSafe(synthesisBenchmarkDir)
+        }
+      } else {
+        parseProgramsFromSplitParentSafe(synthesisBenchmarkDir)
       }
-    } else {
-      parseAllProgramsFromSplitParent(synthesisBenchmarkDir)
-    }
 
     for ((name, sketch) <- programsByName) {
       val displayName = if (name.endsWith(".dl")) name else s"${name}.dl"
@@ -376,12 +428,12 @@ object Main extends App {
         val cegis = Cegis(sketch)
         val (program, stat) = cegis.run()
 
-        /** here, only write transaction rules to file. */
         println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
 
         createDirectory(datalogOutDir)
         Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
+        // Write associated Solidity file to disk
         val impTranslator = new ImperativeTranslator(
           program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
           enableProjection = true

@@ -1,0 +1,41 @@
+// Anchor constructor(...) in the program.
+initialized(true) :- constructor(p1,p2,s1,s2).
+
+// totalShares is fixed at deployment time (mirrors the source contract where shares are set in constructor
+// and never updated). Keeping it constructor-derived avoids relying on aggregate maintenance for mappings.
+//
+// Domain tightening: bound shares/totalShares to keep Z3 arithmetic easier (reduce UNKNOWN).
+// NOTE: values here are abstract, not wei; tune if needed.
+totalShares(s) :- constructor(p1,p2,s1,s2), s := s1+s2, s>0, s<=1000.
+
+// Total released is the sum of all release amounts
+totalReleased(s) :- s = sum e: releaseAmount(_,e).
+released(p,s) :- releaseAmount(p,_), s = sum n: releaseAmount(p,n).
+
+// Initialize shares + released in constructor, similar to how other benchmarks seed key state at deploy time.
+// (This avoids totalShares staying at 0 forever, which makes release(...) always revert.)
+shares(p1,s1) :- constructor(p1,p2,s1,s2), s1>0, s1<=1000.
+shares(p2,s2) :- constructor(p1,p2,s1,s2), s2>0, s2<=1000, p2!=p1.
+released(p1,0) :- constructor(p1,p2,s1,s2).
+released(p2,0) :- constructor(p1,p2,s1,s2).
+
+// totalReceived is driven by explicit fund(...) transactions (avoids circular dependency with releaseAmount).
+totalReceived(r) :- r = sum n: fund(n).
+// Domain tightening for fund: keep amounts small and non-negative to reduce solver blowups.
+// We also enforce this at the tx-validity layer (see properties.dl) so recv_fund out-of-range is rejected.
+fund(n) :- recv_fund(n), n>=0, n<=1000.
+
+// Compute release amount when a release tx is triggered.
+releaseAmount(p,n) :-
+    release(p),
+    totalReceived(r),
+    shares(p,m),
+    totalShares(s),
+    released(p,e),
+    s>0,
+    n := (r * m / s) - e,
+    r * m / s > e.
+
+// send ether according to release amount
+send(p,n) :- releaseAmount(p,n).
+

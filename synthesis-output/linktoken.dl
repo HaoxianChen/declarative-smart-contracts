@@ -1,6 +1,6 @@
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
+transferFrom(o,r,s,n) :- n>0,allowance(s,o,allowance_x2_1),allowance(r,s,allowance_x2_3),n<allowance_x2_2,n<allowance_x2_1,allowance_x2_3>0,recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2_2).
 decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),allowance(o,s,allowance_x2),n<allowance_x2.
-transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
-transfer(s,r,n) :- balanceOf(s,balanceOf_x1_1),r!=address(0),n<balanceOf_x1_1,r!=t_1,this(t_1),recv_transfer(s,r,n),n>0.
-increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>=0.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
 burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+transfer(s,r,n) :- allowance(r,s,allowance_x2_3),balanceOf(s,balanceOf_x1_2),r!=address(0),balanceOf_x1_2>0,balanceOf(r,balanceOf_x1_1),balanceOf_x1_1>0,r!=t_1,this(t_1),recv_transfer(s,r,n),n<allowance_x2_3,n>0.

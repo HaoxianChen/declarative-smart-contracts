@@ -12,7 +12,10 @@ object Z3Helper {
     case "address" => ctx.mkIntSort()
     case "int"|"uint" => ctx.mkIntSort()
     case "bool" => ctx.mkBoolSort()
-    case _ => ???
+    // Be permissive for Any: treat as IntSort to avoid crashing on untyped numeric constants
+    // produced by the arithmetic parser (they should be type-refined later when possible).
+    case "Any" => ctx.mkIntSort()
+    case _ => ctx.mkIntSort()
   }
 
   def makeTupleSort(ctx: Context, relation: Relation, types: Array[Type], fieldNames: Array[String]): TupleSort = {
@@ -34,7 +37,8 @@ object Z3Helper {
             case "true" => ctx.mkTrue()
             case "false" => ctx.mkFalse()
           }
-          case _ => ???
+          case "Any" => ctx.mkInt(name.toInt)
+          case _ => ctx.mkInt(name.toInt)
         }
       }
       case Variable(_,name) => {

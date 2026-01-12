@@ -53,16 +53,25 @@ case class FunctionHelper(onStatement: OnStatement) {
     else {
       None
     }
-    Call(functionName, keyIndices.map(i=>params(i)), returnVar)
+    // For tx trigger relations (`recv_*`), always pass the full tx parameter list.
+    // Otherwise, synthesized update function bodies may reference tx parameters that were
+    // projected away in the trigger literal (represented as `_`), causing Solidity
+    // "Undeclared identifier" compile errors.
+    val callParams = if (isTransaction) params else keyIndices.map(i => params(i))
+    Call(functionName, callParams, returnVar)
   }
   def getFunctionDeclaration(): DeclFunction = {
     val (funcName,params, newStatement) = onStatement match {
       case OnInsert(literal, updateTarget, statement,_) => {
-        val params = literal.fields.filterNot(_.name == "_")
+        val params =
+          if (isTransaction) inRel.paramList
+          else literal.fields.filterNot(_.name == "_")
         (functionName, params, statement)
       }
       case OnDelete(literal, updateTarget, statement,_) => {
-        val params = literal.fields.filterNot(_.name == "_")
+        val params =
+          if (isTransaction) inRel.paramList
+          else literal.fields.filterNot(_.name == "_")
         (functionName, params, statement)
       }
       case onIncrement: OnIncrement => {

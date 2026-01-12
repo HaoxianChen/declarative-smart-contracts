@@ -288,15 +288,29 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     literal.fields.collect {
       case v: Variable =>
         v._type match {
-          case datalog.NumberType(_) =>
-            Set(
-              Equal(Constant(v._type, "0"), v),
-              Unequal(Constant(v._type, "0"), v),
-              Greater(Param(v), Param(Constant(v._type, "0"))),
-              Geq(Param(v), Param(Constant(v._type, "0"))),
-              Lesser(Param(v), Param(Constant(v._type, "0"))),
-              Leq(Param(v), Param(Constant(v._type, "0")))
-            )
+          case datalog.NumberType(name) =>
+            // IMPORTANT:
+            // For Solidity `uint`, predicates like `x < 0` are impossible and lead to guards that
+            // permanently disable transactions (e.g., `released_n < 0`).
+            // So we do NOT generate `< 0` candidates for uint.
+            if (name == "uint") {
+              Set(
+                Unequal(Constant(v._type, "0"), v),
+                Greater(Param(v), Param(Constant(v._type, "0"))),
+                Geq(Param(v), Param(Constant(v._type, "0")))
+                // For uint, omit both `< 0` and `<= 0` candidates.
+                // (<=0 is redundant with ==0, and can be abused to disable transactions.)
+              )
+            } else {
+              Set(
+                Equal(Constant(v._type, "0"), v),
+                Unequal(Constant(v._type, "0"), v),
+                Greater(Param(v), Param(Constant(v._type, "0"))),
+                Geq(Param(v), Param(Constant(v._type, "0"))),
+                Lesser(Param(v), Param(Constant(v._type, "0"))),
+                Leq(Param(v), Param(Constant(v._type, "0")))
+              )
+            }
           case datalog.BooleanType() => Set(
             Equal(v, Constant.CTrue),
             Equal(v, Constant.CFalse),

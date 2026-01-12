@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, Now, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, This, Type, Unequal, UnitType, Variable, Zero}
 import synthesis.PredicateEnumerator.extractTxLiteral
 
 import scala.collection.mutable

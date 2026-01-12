@@ -124,7 +124,11 @@ class ArithmeticParser extends JavaTokenParsers {
   private def constant: Parser[Constant] = (wholeNumber | "true" | "false") ^^ {
     case "true" => Constant(BooleanType(), "true")
     case "false" => Constant(BooleanType(), "false")
-    case x => Constant(AnyType(), x)
+    // IMPORTANT:
+    // Numeric constants inside arithmetic expressions should not default to AnyType(),
+    // otherwise Solidity codegen can emit invalid types like `Any`.
+    // Use `int` as a safe default; later type refinement can adjust arithmetic types.
+    case x => Constant(Type.integerType, x)
   }
   private def parameter: Parser[Param] = (constant | variable ) ^^ { p => Param(p)}
 

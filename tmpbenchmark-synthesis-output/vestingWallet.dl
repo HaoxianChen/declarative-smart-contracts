@@ -1,1 +1,0 @@
-release() :- released(released_n),recv_release(),start(a),t>=a,released_n<0,now(t).
