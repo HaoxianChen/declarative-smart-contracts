@@ -27,15 +27,15 @@ contract VestingWallet {
   event InvalidTx();
   event Release();
   constructor(uint s,uint d,address b) public {
-    updateReleasedOnInsertConstructor_r2();
-    updateStartOnInsertConstructor_r1(s);
     updateDurationOnInsertConstructor_r6(d);
     updateBeneficiaryOnInsertConstructor_r5(b);
     updateFundsOnInsertConstructor_r7();
+    updateStartOnInsertConstructor_r2(s);
+    updateReleasedOnInsertConstructor_r3();
   }
   function release() public    {
-      bool r4 = updateReleaseOnInsertRecv_release_r4();
-      if(r4==false) {
+      bool r1 = updateReleaseOnInsertRecv_release_r1();
+      if(r1==false) {
         revert("Rule condition failed");
       }
   }
@@ -43,14 +43,14 @@ contract VestingWallet {
       uint n = released.n;
       return n;
   }
+  function updateSendOnInsertReleaseAmount_r8(uint n) private    {
+      address b = beneficiary.p;
+      if(n>0) {
+        payable(b).send(n);
+      }
+  }
   function updateDurationOnInsertConstructor_r6(uint d) private    {
       duration = DurationTuple(d,true);
-  }
-  function updateuintByint(uint x,int delta) private   returns (uint) {
-      int convertedX = int(x);
-      int value = convertedX+delta;
-      uint convertedValue = uint(value);
-      return convertedValue;
   }
   function updateBeneficiaryOnInsertConstructor_r5(address b) private    {
       beneficiary = BeneficiaryTuple(b,true);
@@ -58,10 +58,8 @@ contract VestingWallet {
   function updateFundsOnInsertConstructor_r7() private    {
       funds = FundsTuple(1000000,true);
   }
-  function updateStartOnInsertConstructor_r1(uint a) private    {
-      uint t = block.timestamp;
-      uint s = a+t;
-      start = StartTuple(s,true);
+  function updateReleasedOnInsertReleaseAmount_r11(uint n) private    {
+      released.n += n;
   }
   function updateReleaseAmountOnInsertRelease_r10() private    {
       uint d = duration.t;
@@ -75,13 +73,15 @@ contract VestingWallet {
         updateReleasedOnInsertReleaseAmount_r11(n);
       }
   }
-  function updateSendOnInsertReleaseAmount_r8(uint n) private    {
-      address b = beneficiary.p;
-      if(n>0) {
-        payable(b).send(n);
-      }
+  function updateReleasedOnInsertConstructor_r3() private    {
+      released = ReleasedTuple(0,true);
   }
-  function updateReleaseOnInsertRecv_release_r4() private   returns (bool) {
+  function updateStartOnInsertConstructor_r2(uint a) private    {
+      uint t = block.timestamp;
+      uint s = a+t;
+      start = StartTuple(s,true);
+  }
+  function updateReleaseOnInsertRecv_release_r1() private   returns (bool) {
       uint released_n = released.n;
       uint b = funds.b;
       uint d = duration.t;
@@ -91,17 +91,17 @@ contract VestingWallet {
       uint t_1 = block.timestamp;
       uint a = start.t;
       uint t = block.timestamp;
-      if(e_0>=0 && 0!=released_n && b>e && t_1>=a_1 && t>a+d) {
+      if(e_0>=0 && released_n>0 && b>e && t_1>=a_1 && t>a+d) {
         updateReleaseAmountOnInsertRelease_r10();
         emit Release();
         return true;
       }
       return false;
   }
-  function updateReleasedOnInsertReleaseAmount_r11(uint n) private    {
-      released.n += n;
-  }
-  function updateReleasedOnInsertConstructor_r2() private    {
-      released = ReleasedTuple(0,true);
+  function updateuintByint(uint x,int delta) private   returns (uint) {
+      int convertedX = int(x);
+      int value = convertedX+delta;
+      uint convertedValue = uint(value);
+      return convertedValue;
   }
 }

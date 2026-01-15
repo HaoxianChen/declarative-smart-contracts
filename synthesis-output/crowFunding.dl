@@ -1,0 +1,4 @@
+withdraw(p,r) :- beneficiary(b_0),recv_withdraw(p,r),p==b_0,target(t_1),r_1>=t_1,raised(r_1).
+invest(p,n) :- recv_invest(p,n),closed(closed_b),closed_b==false.
+refund(p,n) :- recv_refund(p,n),r_0<t_0,closed(closed_b),target(t_0),closed_b==false,raised(r_0),closed(b_1),b_1!=false.
+close() :- recv_close(),owner(o),msgSender(s),o==s.
