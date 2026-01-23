@@ -1,0 +1,42 @@
+////////////////////////////
+// SheepFarm (register-only) rules
+// Time: now(t) is modeled as block.timestamp (seconds).
+////////////////////////////
+
+// Constructor (ensure non-empty constructor body)
+initialized(true) :- constructor().
+
+// Transaction placeholder rule
+// GEM_BONUS is 10 in the original contract; we use the constant 10 directly.
+register(user, neighbor, 10, time) :-
+  recv_register(neighbor),
+  msgSender(user),
+  now(time).
+
+////////////////////
+// State updates / views
+////////////////////
+
+// Record the registration timestamp (the "fix" is enforced by synthesized guards).
+villageTimestamp(user, time) :-
+  register(user, _, _, time).
+
+// Record neighbor chosen at registration.
+villageNeighbor(user, neighbor) :-
+  register(user, neighbor, _, _).
+
+// Gems earned from registration bonus (accumulates if register is repeated; the fix prevents that).
+villageGems(user, s) :-
+  register(user, _, _, _),
+  s = sum b: register(user, _, b, _).
+
+// Neighbor count (models villages[neighbor].neighbors++).
+neighborCount(neighbor, n) :-
+  register(_, neighbor, _, _),
+  n = count: register(_, neighbor, _, _).
+
+// Total villages (models totalVillages++).
+totalVillages(n) :-
+  register(_, _, _, _),
+  n = count: register(_, _, _, _).
+

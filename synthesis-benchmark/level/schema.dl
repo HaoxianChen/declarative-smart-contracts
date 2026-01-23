@@ -1,0 +1,47 @@
+////////////////////////////
+// LevelReferralControllerV2 (claimMultiple-only, vulnerability-focused)
+//
+// Focus: claimMultiple uses `claimed = reward` (bug) instead of `claimed += reward` (fix).
+// We model the FIXED semantics: claimed is the cumulative claimed amount per (epoch,user),
+// and each claimMultiple claims exactly the remaining amount (claimable).
+//
+// Simplifications (per user decisions):
+// - claimMultiple simplified to a single-epoch tx: recv_claimMultiple(epoch,to)
+// - totalReward is abstracted and provided via recv_allocate(epoch,user,amount)
+// - ignore oracle/tier/referral/vesting and actual token transfers
+////////////////////////////
+
+// Initialization
+.decl constructor()
+.decl *currentEpoch(e: uint)
+.public currentEpoch(0)
+
+// Transactions
+.decl recv_allocate(epoch: uint, user: address, amount: uint)
+.public recv_allocate
+
+.decl recv_claimMultiple(epoch: uint, to: address)
+.public recv_claimMultiple
+
+// Derived transaction relations
+.decl allocate(epoch: uint, user: address, amount: uint)
+.decl claimMultiple(epoch: uint, user: address, to: address, reward: uint)
+
+// Base event relations (used for aggregation)
+.decl allocateEvent(epoch: uint, user: address, amount: uint)
+.decl claimEvent(epoch: uint, user: address, amount: uint)
+
+// State (1-value indexed maps; required by synthesis engine)
+.decl totalReward(epoch: uint, user: address, amount: uint)[0,1]
+.decl claimed(epoch: uint, user: address, amount: uint)[0,1]
+.decl claimable(epoch: uint, user: address, amount: uint)[0,1]
+
+// Interfaces (optional inspection)
+.public totalReward(2)
+.public claimed(2)
+.public claimable(2)
+
+// Properties / validity
+.decl invalidTx()
+.violation invalidTx
+

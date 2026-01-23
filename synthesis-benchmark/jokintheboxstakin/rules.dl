@@ -1,0 +1,44 @@
+////////////////////////////
+// Jok In The Box Staking (rules)
+// Day-based time: `now(t)` is interpreted as day counter (see your choice A).
+////////////////////////////
+
+// Initialization state (ensures constructor is present in generated Solidity)
+initialized(true) :- constructor().
+
+// Transaction placeholder rules
+// Derive semantic tx relations from recv_* and implicit context.
+stake(p, stakeId, amount, lockPeriod, day) :-
+  recv_stake(stakeId, amount, lockPeriod),
+  msgSender(p),
+  now(day).
+
+// Unstake is only meaningful if the stake exists (matches Solidity bounds check).
+unstake(p, stakeId, day) :-
+  recv_unstake(stakeId),
+  msgSender(p),
+  stakeStakedDay(p, stakeId, _),
+  now(day).
+
+// State updates
+// Stake fields are written on stake (split into 1-value maps for synthesis compatibility).
+stakeAmount(p, stakeId, amount) :-
+  stake(p, stakeId, amount, _, _).
+
+stakeLockPeriod(p, stakeId, lockPeriod) :-
+  stake(p, stakeId, _, lockPeriod, _).
+
+stakeStakedDay(p, stakeId, day) :-
+  stake(p, stakeId, _, _, day).
+
+// stakeStatus starts as false on stake, and becomes true on unstake.
+stakeStatus(p, stakeId, false) :-
+  stake(p, stakeId, _, _, _).
+
+stakeStatus(p, stakeId, true) :-
+  unstake(p, stakeId, _).
+
+// Record unstaked day
+unstakedDay(p, stakeId, day) :-
+  unstake(p, stakeId, day).
+

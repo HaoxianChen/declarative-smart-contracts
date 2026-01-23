@@ -1,0 +1,18 @@
+////////////////////////////
+// metadragon rules (fixed-by-synthesis guards)
+////////////////////////////
+
+initialized(true) :- constructor().
+
+// Transaction placeholder rule:
+// This represents the internal `_update(to,value)` attempting to trigger transform.
+// Guards will be synthesized from properties.dl.
+update(user, to, value) :-
+  recv_update(to, value),
+  msgSender(user).
+
+// Observable state: count how many times each user triggered update/transform.
+transformCount(user, n) :-
+  update(user, _, _),
+  n = count: update(user, _, _).
+

@@ -1,0 +1,2 @@
+unstake(p,stakeId,day) :- stakeStatus(p_1,stakeId,u_1),msgSender(p_1),msgSender(p),stakeStakedDay(p_0,stakeId,staked_0),u_1!=true,now(day),stakeStakedDay(p,stakeId,_),msgSender(p_0),now(t_0),t_0>staked_0+lock_0,stakeLockPeriod(p_0,stakeId,lock_0),recv_unstake(stakeId).
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day).

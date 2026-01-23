@@ -1,0 +1,24 @@
+////////////////////////////
+// Jok In The Box Staking (properties)
+// We encode "require" checks as invalidTx() violations.
+////////////////////////////
+
+// 1) Fix the vulnerability: cannot unstake twice.
+// If a stake is already marked as unstaked, a new recv_unstake is invalid.
+invalidTx() :-
+  recv_unstake(stakeId),
+  msgSender(p),
+  stakeStatus(p, stakeId, u),
+  u == true.
+
+// 2) Lock period check (day-based), matching Solidity:
+// require(currentDay > stakedDay + lockPeriod)
+// Therefore invalid when currentDay <= stakedDay + lockPeriod.
+invalidTx() :-
+  recv_unstake(stakeId),
+  msgSender(p),
+  stakeLockPeriod(p, stakeId, lock),
+  stakeStakedDay(p, stakeId, staked),
+  now(t),
+  t <= staked + lock.
+
