@@ -75,7 +75,11 @@ case class Inliner(solidityProgram: Statement,
   private def inlineCall(functionName: String, params: List[Parameter], optReturnVar: Option[Variable]): Statement = {
     // 1. Locate the function definition
     val funcOpt = functionDefs.get(functionName)
-    require(funcOpt.isDefined, s"Function $functionName not found for inlining.")
+    // Some calls may refer to imported/inherited helper functions (e.g., UDF).
+    // If we cannot find a definition locally, keep the call as-is.
+    if (funcOpt.isEmpty) {
+      return Call(functionName, params, optReturnVar)
+    }
     val func = funcOpt.get
     // 2. Substitute parameters
     /** todo: also need to rename all local variable in the body

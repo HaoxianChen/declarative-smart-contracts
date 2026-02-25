@@ -51,6 +51,7 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
 
   protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
     case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
+      udfs = program.udfs,
       arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection))
   }.toMap
 

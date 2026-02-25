@@ -161,6 +161,9 @@ object FunctionMetaData {
     modifiers=Set())
 }
 sealed abstract class SolidityStatement extends Statement
+case class Import(path: String) extends SolidityStatement {
+  override def toString: String = s"""import "$path";"""
+}
 case class Constructor(params: List[Parameter], statement: Statement) extends SolidityStatement {
   override def toString: String = {
     val paramStr = params.map(p => s"${p._type} ${p.name}").mkString(",")

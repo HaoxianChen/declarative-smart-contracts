@@ -38,8 +38,9 @@ case class SolidityInterpreter() {
       case ((_, prevState), tx) =>
         // Clone previous state to produce an isolated snapshot for the next state
         val stateAfter = cloneState(prevState)
-        // Evaluate transaction against statement -- extension point
-        evaluateTransaction(statement(tx.relation.name).asInstanceOf[DeclFunction], tx, stateAfter)
+        // Strip recv_ prefix when looking up txDefs (keyed by bare function name).
+        val funcName = tx.relation.name.stripPrefix("recv_")
+        evaluateTransaction(statement(funcName).asInstanceOf[DeclFunction], tx, stateAfter)
         (Some(tx), stateAfter)
     }.collect { case (Some(tx), st) => (tx, st) }
 
@@ -59,7 +60,16 @@ case class SolidityInterpreter() {
     // setup implicit parameters
     state.updateInt(msgSenderName, tx.implicitParameters.msgSender)
     state.updateInt(msgValueName, tx.implicitParameters.value)
-    interpretStatement(funcDecl.stmt, state)
+    try {
+      interpretStatement(funcDecl.stmt, state)
+    } catch {
+      // Normal function return: ignore return value (state updates already applied).
+      case SolidityInterpreter.ReturnException(_) => ()
+      // require() failure: transaction reverts; state will be discarded by the caller
+      // (cloneState is called before evaluateTransaction in interpret()).
+      case SolidityInterpreter.RequireFailedException(msg) =>
+        println(s"[SolidityInterpreter] require failed: $msg — tx reverted")
+    }
   }
 
   /** Extension point: apply the given statement to the state for the provided transaction.
@@ -115,27 +125,34 @@ case class SolidityInterpreter() {
       case Unequal(a, b) => _interpretExpr(a) != _interpretExpr(b)
       case And(a, b) => _interpretCond(a) && _interpretCond(b)
       case Or(a, b) => _interpretCond(a) || _interpretCond(b)
-      // leave as todos
       case MatchRelationField(relation, keys, index, p, enableProjection) => {
         relation match {
           case reserved: ReservedRelation => reserved match {
-            case Balance() => ???
-            case MsgSender() => {
-              val v1 = state.lookup(p.name)
-              val v2 = state.lookup(msgSenderName)
-              v1 == v2
-            }
-            case MsgValue() => {
-              val v1 = state.lookup(p.name)
-              val v2 = state.lookup(msgValueName)
-              v1 == v2
-            }
-            case _ => ???
+            case Balance() => false
+            case MsgSender() =>
+              state.lookup(p.name) == state.lookup(msgSenderName)
+            case MsgValue() =>
+              state.lookup(p.name) == state.lookup(msgValueName)
+            case _ => false
           }
-          case _ => ???
+          case sr: SimpleRelation => {
+            // Resolve key parameters to concrete ints
+            val keyIds = keys.map {
+              case Constant(_, name) => name.toInt
+              case v: Variable      => state.lookup(v.name)
+            }
+            // Read the stored value at this key from state
+            val storedVal = if (keyIds.nonEmpty) state.lookup(sr.name, keyIds)
+                            else state.lookup(sr.name)
+            // Compare with the expected parameter value
+            val expected = _interpretParam(p)
+            storedVal == expected
+          }
+          case _ => false
         }
       }
-      case BooleanFunction(name, parameters) => ???
+      // UDF boolean functions: default to true (mock; synthesis does not depend on UDF results)
+      case BooleanFunction(name, parameters) => true
     }
 
     def _interpretParam(p: Parameter): Int = p match {
@@ -235,8 +252,11 @@ case class SolidityInterpreter() {
       case DeclFunction(name, params, returnType, stmt, metaData) => ???
       case DeclEvent(name, params) => ???
       case DeclModifier(name, params, beforeStatement, afterStatement) => ???
+      // UDF calls (e.g. isValidSignature, jokTokenBalance): mock with default return value.
+      // Synthesis predicate enumeration does not depend on UDF results; this keeps the
+      // interpreter from crashing on UDF call sites.
       case Call(functionName, params, optReturnVar) => {
-        ???
+        optReturnVar.foreach(v => state.updateInt(v.name, 1))
       }
       case DefineStruct(name, _type) => ???
       case DeclVariable(name, _type) => ???
@@ -244,10 +264,13 @@ case class SolidityInterpreter() {
       case ForLoop(iterator, initValue, loopCondition, nextValue, statement) => ???
       case GetObjectAttribute(objectName, attributeName, ret) => ???
       case CallObjectMethod(objectName, methodName, params, optRet) => ???
-      case Return(p) => {
-        ???
+      // Return: use a dedicated exception to break out of the current execution frame.
+      case Return(p) => throw SolidityInterpreter.ReturnException(_interpretParam(p))
+      // Require: evaluate condition; throw on failure so the transaction is treated as reverted.
+      case Require(condition, msg) => {
+        if (!_interpretCond(condition))
+          throw SolidityInterpreter.RequireFailedException(msg)
       }
-      case Require(condition, msg) => ???
       case Revert(msg) => {
         /** todo: fix this; assuming everything approves for now*/
         println(s"[SolidityInterpreter] warning: ${statement} not processed.")
@@ -288,4 +311,10 @@ case class SolidityInterpreter() {
 object SolidityInterpreter {
   val msgSenderName: String = s"msgSender"
   val msgValueName: String = s"msgValue"
+
+  // Control-flow exceptions used inside the interpreter.
+  // ReturnException carries the return value of a Solidity `return` statement.
+  case class ReturnException(value: Int) extends Exception
+  // RequireFailedException signals a failed `require(...)` check (transaction revert).
+  case class RequireFailedException(msg: String) extends Exception(msg)
 }

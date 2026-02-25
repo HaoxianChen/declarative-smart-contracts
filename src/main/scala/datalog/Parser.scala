@@ -11,13 +11,15 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          /** An event relation is interpreted as an unique update trigger to a rule.
                           *   That is, the rule is only triggered by this event relation. */
                           events: Set[Relation],
+                          /** Relations declared as user-defined functions via `.udf`. */
+                          udfs: Set[Relation],
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
                           relationIndices: Map[SimpleRelation, List[Int]]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
-  def getProgram(): Program = Program(rules, interfaces, relationIndices, functions, violations)
+  def getProgram(): Program = Program(rules, interfaces, relationIndices, functions, violations, udfs)
   private def getTypes(schema: List[(String, String)]) :(List[String], List[Type]) = {
     val memberNames = schema.map(_._1)
     val types = schema.map ( s => s._2 match {
@@ -75,6 +77,11 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     this.copy(events=events+relation)
   }
 
+  def addUdf(name: String): ParsingContext = {
+    val relation = relsByName(name)
+    this.copy(udfs = udfs + relation)
+  }
+
   def addRule(rule: Rule) = this.copy(rules=rules+rule)
   def getLiteral(relName: String, fieldNames: List[String]): Literal = {
     val relation = relsByName(relName)
@@ -110,7 +117,8 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Set(), Map())
+  def apply(): ParsingContext =
+    ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Set(), Set(), Map())
 }
 
 class ArithmeticParser extends JavaTokenParsers {
@@ -202,6 +210,13 @@ class Parser extends ArithmeticParser {
       }
     }
 
+  def udfDecl: Parser[ParsingContext => ParsingContext] =
+    (".udf" ~> ident) ^^ {
+      case name => {
+        pc => pc.addUdf(name)
+      }
+    }
+
   def violationDecl: Parser[ParsingContext => ParsingContext] =
     (".violation" ~> ident) ^^ {
       case name => {
@@ -258,6 +273,7 @@ class Parser extends ArithmeticParser {
   def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | violationDecl
     | eventDecl
     | functionDecl
+    | udfDecl
     | ruleDecl ).* ^^ {
     fs => {
       val parsingContext = fs.foldLeft(ParsingContext()) {case (pc, f) => f(pc)}

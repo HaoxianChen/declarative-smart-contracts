@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{ArithOperator, Arithmetic, Assign, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Unequal, Variable}
+import datalog.{ArithOperator, Arithmetic, Assign, BooleanType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Unequal, Variable}
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
@@ -54,7 +54,8 @@ case class Predicate(context: Context, functor: Functor) {
 }
 
 case class InterpreterContext(relationIndices: Map[SimpleRelation, List[Int]],
-                              materializedRelations: Set[Relation])
+                              materializedRelations: Set[Relation],
+                              udfs: Set[Relation] = Set())
 
 object InterpreterContext {
   def makeContext(program: Program): InterpreterContext = {
@@ -69,7 +70,7 @@ object InterpreterContext {
     val materializedRelations = baseViewMaterializer.getMaterializedRelations(
       imperative, program.interfaces).toSet
 
-    InterpreterContext(relationIndices, materializedRelations)
+    InterpreterContext(relationIndices, materializedRelations, program.udfs)
   }
 }
 
@@ -109,7 +110,10 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       val bindingLiterals: Set[Literal] =
         rule.body.collect { case l: Literal if l != txLiteral => l }.toSet
 
-      if (rule.functors.size > 1) {
+      // Assign functors are temp-variable definitions (e.g. total := earnings + affiliateEarnings),
+      // not real guard conditions; ignore them when checking for "single condition" rules.
+      val condFunctors = rule.functors.filterNot(_.isInstanceOf[Assign])
+      if (condFunctors.size != 1) {
         None
       }
       else if (rule.body.exists(_.relation.name.startsWith("once"))) {
@@ -117,7 +121,7 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
         None
       }
       else {
-        val f = rule.functors.head
+        val f = condFunctors.head
         val negated = Functor.negate(f)
         Some(rule -> Predicate(Context(txLiteral, bindingLiterals), negated))
       }
@@ -150,9 +154,67 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       /** 4. todo: Bind two singleton relation, and add a binary operator that compares the two. */
       val withTwoSingleton = withTwoSingletonBindings(txLiteral, singletonRelations)
 
-      predicates.update(txRule, singles ++ withBindings ++ withOneSingleton ++ withTwoSingleton)
+      /** 5. Bind UDF relations: generate predicates checking the UDF return value.
+       *  This allows CEGIS to synthesize guards like require(isValidSignature(...)). */
+      val udfRelations = program.udfs.collect { case sr: SimpleRelation => sr }
+      val withUdf: Set[Predicate] = udfRelations.flatMap(udfRel => makeUdfBinding(txLiteral, udfRel))
+
+      predicates.update(txRule, singles ++ withBindings ++ withOneSingleton ++ withTwoSingleton ++ withUdf)
     }
     predicates.toMap
+  }
+
+  /** Generate predicates that bind one UDF literal and check its boolean return value.
+   *
+   *  For a UDF `udf(in1, in2, ..., retVal: bool)`:
+   *  - Map each input field to a type-compatible parameter from txLiteral/msgSender/msgValue.
+   *  - Produce two predicates per valid binding: retVal == true and retVal == false.
+   *  - Only boolean return UDFs are handled (UDFs whose last field is BooleanType).
+   *
+   *  At evaluate-time the Interpreter mocks the UDF return as 0 (false), so CEGIS
+   *  will select the `retVal == true` predicate to block counterexample traces.
+   */
+  private def makeUdfBinding(txLiteral: Literal, udfRel: SimpleRelation): Set[Predicate] = {
+    // Only handle UDFs whose last signature field is BooleanType (return value)
+    val returnType = udfRel.sig.lastOption.getOrElse(return Set.empty)
+    if (!returnType.isInstanceOf[BooleanType]) return Set.empty
+
+    val returnIdx    = udfRel.sig.size - 1
+    val inputIndices = udfRel.sig.indices.dropRight(1).toList
+
+    // Gather non-wildcard candidates from the tx literal, msgSender, and msgValue
+    val candidates = (txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields).filter {
+      case v: Variable => v.name != "_" && !v.name.startsWith("_")
+      case _: Constant => true
+    }
+
+    // For each input position find type-consistent candidates
+    val allParams: List[List[Parameter]] = inputIndices.map { idx =>
+      val relType = udfRel.sig(idx)
+      candidates.collect { case p if p._type == relType => p }.toList
+    }
+
+    // If any input position has no candidates, no binding can be produced
+    if (allParams.exists(_.isEmpty)) return Set.empty
+
+    // Cartesian product of all input candidates; keep only fully-distinct combos
+    val combos = allParams.foldLeft(Seq(Seq.empty[Parameter])) { (acc, params) =>
+      for (a <- acc; p <- params) yield a :+ p
+    }
+    val uniqueCombos = combos.filter(ps => ps.distinct.size == ps.size)
+
+    uniqueCombos.flatMap { inputParams =>
+      val retVar = Variable(returnType, s"${udfRel.name}_ret")
+      val fields: List[Parameter] = inputIndices.map(i => inputParams(i)) :+ retVar
+      val bindingLiteral = Literal(udfRel, fields)
+      val context = Context(txLiteral, Set(bindingLiteral))
+
+      // Two guards: the UDF must succeed (true) / must fail (false)
+      Set(
+        Predicate(context, Equal(retVar, Constant(returnType, "true"))),
+        Predicate(context, Equal(retVar, Constant(returnType, "false")))
+      )
+    }.toSet
   }
 
   private def singlePredicate(txLiteral: Literal): Set[Predicate] = {
@@ -221,8 +283,17 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
    *  type consistent parameter in txLiteral, msgSender, or msgValue. */
   private def makeOneBinding(txLiteral: Literal, indexedRelation: Relation,
                              indices: List[Int]): Set[Literal] = {
-    // Step 1: Gather candidate parameters from txLiteral, msgSender, and msgValue
-    val candidates = txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields
+    // Step 1: Gather candidate parameters from txLiteral, msgSender, and msgValue.
+    // Exclude anonymous/wildcard variables (name == "_" or starts with "_") so that
+    // key positions in the binding literal are always concretely bound. Without this
+    // filter, wildcard fields in the tx literal (e.g. the `_` placeholders in
+    // `recv_withdraw(earnings, affiliateEarnings, _, _, _, _, _)`) would be used as
+    // key parameters, producing literals like `stakeLockPeriod(msgSender, _, x)` that
+    // the SolidityTranslator cannot compile ("all keys must be in search conditions").
+    val candidates = (txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields).filter {
+      case v: Variable => v.name != "_" && !v.name.startsWith("_")
+      case _: Constant => true
+    }
     // Step 2: For each index, find all type-consistent candidates
     val bindings = indices.flatMap { idx =>
       val relType = indexedRelation.sig(idx)

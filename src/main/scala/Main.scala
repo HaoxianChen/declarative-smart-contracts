@@ -3,10 +3,12 @@ import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner,
 import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames, combineSplitFilesToFile, parseProgramFromSplitDir, parseAllProgramsFromSplitParent}
+import util.SolcAst
 import verification.{Prove, TransitionSystem, Verifier}
 import java.nio.file.Paths
 import scala.sys.exit
 import java.io.File
+import java.nio.file.{Files, StandardCopyOption}
 
 object Main extends App {
   val outDir = "solidity/dsc"
@@ -62,12 +64,55 @@ object Main extends App {
     }
   }
 
+  private def resolveUdfPath(filepath: String, f: File, program: Program): String = {
+    val candidate = if (f.exists() && f.isDirectory) {
+      Paths.get(filepath, "udf.sol").toString
+    } else {
+      val parent = Paths.get(filepath).getParent
+      if (parent == null) Paths.get("udf.sol").toString else parent.resolve("udf.sol").toString
+    }
+    if (isFileExists(candidate)) {
+      candidate
+    } else {
+      // Fallback for combined single-file verification inputs (e.g., tmp/*.dl):
+      // try benchmark-dir/<ProgramName>/udf.sol
+      val fallback = Paths.get("synthesis-benchmark", program.name.toLowerCase, "udf.sol").toString
+      if (isFileExists(fallback)) fallback else candidate
+    }
+  }
+
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
           consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
           arithmeticOptimization: Boolean = true): Unit = {
     createDirectory(outDir)
+    val f = new File(filepath)
     val filename = Misc.getFileNameFromPath(filepath)
-    val dl = parseProgram(filepath)
+    // Support both single-file programs (*.dl) and split benchmark directories (schema/rules/properties).
+    val dl: Program = if (f.exists() && f.isDirectory) {
+      parseProgramFromSplitDir(filepath)
+    } else {
+      parseProgram(filepath)
+    }
+
+    // --- Optional UDF integration for `compile`/`compile-all-*` paths ---
+    val udfInfoOpt: Option[(String, String)] = {
+      if (dl.udfs.nonEmpty) {
+        val udfPath = resolveUdfPath(filepath, f, dl)
+        if (!isFileExists(udfPath)) {
+          throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+        }
+        val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+        if (errors.nonEmpty) {
+          val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+          throw new Exception(s"udf.sol AST check failed:$msg")
+        }
+        val outUdfFileName = s"${filename}_udf.sol"
+        val outUdfPath = Paths.get(outDir, outUdfFileName).toString
+        Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
+        Some((s"./$outUdfFileName", baseContractName))
+      } else None
+    }
+
     val materializedRelations: Set[Relation] = if (materializePath.nonEmpty) {
       getMaterializedRelations(dl, materializePath)
     }
@@ -84,7 +129,8 @@ object Main extends App {
     }
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
-      isInstrument,monitorViolations, enableProjection).translate()
+      isInstrument,monitorViolations, enableProjection,
+      udfInfoOpt = udfInfoOpt).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -203,8 +249,19 @@ object Main extends App {
 
   else if (args(0) == "verify") {
     val filepath = args(1)
-
-    val dl = parseProgram(filepath)
+    val f = new File(filepath)
+    val dl = if (f.exists() && f.isDirectory) parseProgramFromSplitDir(filepath) else parseProgram(filepath)
+    if (dl.udfs.nonEmpty) {
+      val udfPath = resolveUdfPath(filepath, f, dl)
+      if (!isFileExists(udfPath)) {
+        throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+      }
+      val (_, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+      if (errors.nonEmpty) {
+        val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+        throw new Exception(s"udf.sol AST check failed:$msg")
+      }
+    }
     val materializedRelations: Set[Relation] = Set()
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
       monitorViolations = false, arithmeticOptimization = true)
@@ -433,6 +490,30 @@ object Main extends App {
         createDirectory(datalogOutDir)
         Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
+        // --- UDF integration (split benchmarks): check udf.sol and prepare import ---
+        val udfInfoOpt: Option[(String, String)] = {
+          if (program.udfs.nonEmpty) {
+            // Determine benchmark directory that produced this program
+            val benchDir =
+              if (isSplitBenchmarkDir(synthesisBenchmarkDir)) synthesisBenchmarkDir
+              else Paths.get(synthesisBenchmarkDir, filenameNoExt).toString
+            val udfPath = Paths.get(benchDir, "udf.sol").toString
+            if (!isFileExists(udfPath)) {
+              throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+            }
+            val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
+            if (errors.nonEmpty) {
+              val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+              throw new Exception(s"udf.sol AST check failed:$msg")
+            }
+            // Copy udf.sol to output directory with a stable name
+            val outUdfFileName = s"${filenameNoExt}_udf.sol"
+            val outUdfPath = Paths.get(datalogOutDir, outUdfFileName).toString
+            Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
+            Some((s"./$outUdfFileName", baseContractName))
+          } else None
+        }
+
         // Write associated Solidity file to disk
         val impTranslator = new ImperativeTranslator(
           program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
@@ -440,7 +521,8 @@ object Main extends App {
         )
         val imperative = impTranslator.translate()
         val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
-          Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+          Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+          udfInfoOpt = udfInfoOpt
         ).translate()
         val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
         if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)

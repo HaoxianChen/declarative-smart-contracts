@@ -10,11 +10,33 @@ import verification.Z3Helper.{fieldsToConst, functorToZ3, getArraySort, getSort,
 
 case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
                     functions: Set[Relation],
+                    udfs: Set[Relation],
                     arithmeticOptimization: Boolean,
                     enableProjection: Boolean) extends View {
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
   val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
+  // UDF literals are treated as Solidity function calls (with last field as return variable)
+  private val udfLiterals: List[Literal] = rule.body.toList.filter(lit => udfs.contains(lit.relation)).sortBy(_.relation.name)
+
+  private def udfCalls(): List[Statement] = {
+    udfLiterals.map { lit =>
+      require(lit.fields.nonEmpty, s"UDF literal must have at least 1 field: $lit")
+      val out = lit.fields.last match {
+        case v: Variable =>
+          require(v.name != "_", s"UDF output variable cannot be _: $lit")
+          v
+        case other => throw new Exception(s"UDF output (last) field must be a variable: $lit, got $other")
+      }
+      val inputs = lit.fields.dropRight(1)
+      // Disallow `_` in UDF call inputs for now: they would generate undeclared identifiers.
+      inputs.foreach {
+        case v: Variable => require(v.name != "_", s"UDF input cannot be _: $lit")
+        case _ => ()
+      }
+      imp.Call(lit.relation.name, inputs, optReturnVar = Some(out))
+    }
+  }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = {
     val delete = getInsertedLiteral(deleteTuple.relation)
@@ -107,12 +129,17 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
     val condition = _getConditions()
     val IfStatement: If = If(condition, Statement.makeSeq(Statement.makeSeq(inIfAssigns: _*), updateStatement))
-    val withPreAssigns: Statement = Statement.makeSeq(Statement.makeSeq(preIfAssigns: _*), IfStatement)
+    // Ensure UDF calls (which define return vars) happen before the if-condition that may use them.
+    val withPreAssigns: Statement = Statement.makeSeq(
+      Statement.makeSeq(preIfAssigns: _*),
+      Statement.makeSeq(udfCalls(): _*),
+      IfStatement
+    )
 
     // Join
     val groundedParams: Set[Parameter] = insert.fields.toSet
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
+      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals).diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
     val updates = _getJoinStatements(groundedParams, sortedLiteral, withPreAssigns)
@@ -121,10 +148,13 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   def getQueryStatement(): Statement = {
-    val innerStatement = If(condition = _getConditions(), Return(Constant.CTrue))
+    val innerStatement = Statement.makeSeq(
+      Statement.makeSeq(udfCalls(): _*),
+      If(condition = _getConditions(), Return(Constant.CTrue))
+    )
     val groundedParams: Set[Parameter] = rule.head.fields.toSet
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.diff(functionLiterals)
+      val rest = rule.body.diff(functionLiterals).diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
     _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
@@ -278,7 +308,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   val insert = getInsertedLiteral(insertTuple.relation)
 
     val sortedLiteral: List[Literal] = {
-      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals)
+      val rest = rule.body.filterNot(_.relation==insert.relation).diff(functionLiterals).diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
 
@@ -350,7 +380,9 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         ???
       }
     }
-    Array(Tuple3(v_in, v_out, newValueExpr))
+    val keys = primaryKeyIndices.map(i=> head.fields(i))
+    val existsResets = updateExistsOnKey(ctx, keys, z3Prefix, existsValue = false)
+    Array(Tuple3(v_in, v_out, newValueExpr)) ++ existsResets
   }
 
   def deleteRowZ3(ctx: Context, deleteTuple: DeleteTuple, isMaterialized: Boolean, z3Prefix: String) = {
@@ -382,6 +414,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
     val sortedLiteral: List[Literal] = {
       val rest = rule.body.filterNot(_.relation==deletedLiteral.relation)
+        .diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
 
@@ -432,7 +465,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
 
   def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr = {
     val sortedLiteral = {
-      val rest = rule.body.diff(functionLiterals)
+      val rest = rule.body.diff(functionLiterals).diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
     val exprs = sortedLiteral.map(lit => literalToConst(ctx,lit,allIndices(lit.relation),z3Prefix)).toArray

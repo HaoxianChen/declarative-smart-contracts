@@ -1,4 +1,4 @@
-contract LevelClaimMultiple {
+contract Level {
   struct CurrentEpochTuple {
     uint e;
     bool _valid;

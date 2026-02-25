@@ -1,4 +1,4 @@
-contract SheepFarmRegister {
+contract SheepFarm {
   struct VillageNeighborTuple {
     address neighbor;
     bool _valid;

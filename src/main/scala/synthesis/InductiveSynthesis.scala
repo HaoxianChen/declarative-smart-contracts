@@ -114,8 +114,10 @@ case class InductiveSynthesis(
   private def renameTxRelationInTrace(old: EvaluatedTrace): EvaluatedTrace = {
 
     def toTxTriggerRelation(relation: Relation): Relation = {
-      require(!relation.name.startsWith(transactionRelationPrefix), "Assuming non tx relation")
-      relation match {
+      // If BMC already returned a recv_* relation (the interface relation itself),
+      // no renaming is needed. Only rename bare semantic relations (e.g. stake, unstake).
+      if (relation.name.startsWith(transactionRelationPrefix)) relation
+      else relation match {
         case SimpleRelation(name, sig, memberNames) =>
           SimpleRelation(s"$transactionRelationPrefix$name", sig, memberNames)
         case SingletonRelation(name, sig, memberNames) => ???

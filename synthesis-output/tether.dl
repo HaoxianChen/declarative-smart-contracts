@@ -1,7 +1,7 @@
 destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).
 addBlackList(p) :- recv_addBlackList(p),owner(o),msgSender(s),o==s.
-transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1),balanceOf_x1>0.
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
 issue(p,n) :- msgSender(s),n>0,recv_issue(p,n),o==s,owner(o).
-redeem(p,n) :- recv_redeem(p,n),balanceOf(p,balanceOf_x1),balanceOf_x1>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1),n<=balanceOf_x1.
+redeem(p,n) :- recv_redeem(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.

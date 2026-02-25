@@ -45,31 +45,36 @@ sealed abstract class BinaryOperator extends Arithmetic {
   def getParameters(): Set[Parameter] = a.getParameters() ++ b.getParameters()
 }
 case class Add(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
-  require(a._type == b._type)
+  require(Arithmetic.numericCompat(a._type, b._type), s"Type mismatch in +: ${a._type} vs ${b._type}")
   val _type = a._type
   override def toString: String = s"${_paren(a)}+${_paren(b)}"
 }
 case class Sub(a: Arithmetic, b:Arithmetic) extends BinaryOperator {
-  require(a._type == b._type)
+  require(Arithmetic.numericCompat(a._type, b._type), s"Type mismatch in -: ${a._type} vs ${b._type}")
   val _type = a._type
   override def toString: String = s"${_paren(a)}-${_paren(b)}"
 }
 case class Mul(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
-  require(a._type == b._type, s"$a,$b")
+  require(Arithmetic.numericCompat(a._type, b._type), s"Type mismatch in *: ${a._type} vs ${b._type}")
   val _type = a._type
   override def toString: String = s"${_paren(a)}*${_paren(b)}"
 }
 case class Div(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
-  require(a._type == b._type, s"$a,$b")
+  require(Arithmetic.numericCompat(a._type, b._type), s"Type mismatch in /: ${a._type} vs ${b._type}")
   val _type = a._type
   override def toString: String = s"${_paren(a)}/${_paren(b)}"
 }
 case class Min(a: Arithmetic, b: Arithmetic) extends BinaryOperator {
-  require(a._type==b._type)
+  require(Arithmetic.numericCompat(a._type, b._type), s"Type mismatch in min: ${a._type} vs ${b._type}")
   def _type: Type = a._type
   override def toString: String = s"$a < $b ? $a : $b"
 }
 object Arithmetic {
+  // int, uint, and Any all map to Z3 IntSort, so mixed arithmetic is safe.
+  private val numericTypeNames: Set[String] = Set("int", "uint", "Any")
+  def numericCompat(t1: Type, t2: Type): Boolean =
+    t1 == t2 || (numericTypeNames.contains(t1.name) && numericTypeNames.contains(t2.name))
+
   def derivativeOf(e: Arithmetic, x: Param): Arithmetic = e match {
     case Zero(t) => Zero(t)
     case One(t) => Zero(t)

@@ -6,7 +6,7 @@ import datalog._
 import imp._
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
-import verification.Z3Helper.{fieldsToConst, functorExprToZ3, getSort, literalToConst, matchFieldstoTuple, paramToConst, typeToSort}
+import verification.Z3Helper.{fieldsToConst, functorExprToZ3, getExistsRelationName, getExistsSort, getSort, literalToConst, matchFieldstoTuple, paramToConst, typeToSort}
 import verification.Z3Helper.mkTupleKey
 
 abstract class View {
@@ -139,7 +139,10 @@ abstract class View {
       ctx.mkAdd(v_in.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
     }
 
-    if (isMaterialized) (diffEq, Array(Tuple3(v_in, v_out, updateExpr)))
+    val existsUpdates: Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])] =
+      updateExistsOnKey(ctx, keys, z3Prefix, existsValue = true)
+
+    if (isMaterialized) (diffEq, Array(Tuple3(v_in, v_out, updateExpr)) ++ existsUpdates)
     else (diffEq, Array())
   }
 
@@ -175,16 +178,40 @@ abstract class View {
         ???
       }
     }
-    Array(Tuple3(v_in, v_out,newValueExpr))
+    val keys = primaryKeyIndices.map(i=>head.fields(i))
+    val existsUpdates = updateExistsOnKey(ctx, keys, z3Prefix, existsValue = true)
+    Array(Tuple3(v_in, v_out,newValueExpr)) ++ existsUpdates
+  }
+
+  protected def updateExistsOnKey(ctx: Context, keyParams: List[Parameter], z3Prefix: String, existsValue: Boolean):
+  Array[(Expr[Sort], Expr[Sort], Expr[_ <: Sort])] = {
+    relation match {
+      case sr: SimpleRelation if keyParams.nonEmpty =>
+        val existsSort = getExistsSort(ctx, sr, primaryKeyIndices)
+        val (existsIn, existsOut) = makeStateVar(ctx, getExistsRelationName(sr.name), existsSort)
+        val keyConst: Expr[Sort] = mkTupleKey(
+          ctx,
+          existsSort,
+          keyParams.toArray.map(p => paramToConst(ctx, p, z3Prefix)._1)
+        )
+        val boolValue = if (existsValue) ctx.mkTrue() else ctx.mkFalse()
+        val existsNext = ctx.mkStore(
+          existsIn.asInstanceOf[Expr[ArraySort[Sort, Sort]]],
+          keyConst,
+          boolValue.asInstanceOf[Expr[Sort]]
+        )
+        Array(Tuple3(existsIn, existsOut, existsNext))
+      case _ => Array()
+    }
   }
 
 }
 object View {
   def apply(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIndices: Map[Relation, List[Int]],
-            functions: Set[Relation], arithmeticOptimization: Boolean, enableProjection: Boolean): View = {
+            functions: Set[Relation], udfs: Set[Relation], arithmeticOptimization: Boolean, enableProjection: Boolean): View = {
     require(rule.aggregators.size <= 1)
     if (rule.aggregators.isEmpty) {
-      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, arithmeticOptimization,
+      JoinView(rule, primaryKeyIndices, ruleId, allIndices, functions, udfs, arithmeticOptimization,
         enableProjection=enableProjection)
     }
     else {

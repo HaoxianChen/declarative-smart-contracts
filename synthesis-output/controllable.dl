@@ -1,7 +1,7 @@
 controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),p==c,0==n.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),owner(owner_p),r==owner_p,s==owner_p.
+burn(p,n) :- msgSender(s),o==s,owner(o),0==n,recv_burn(p,n).
 controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n).
 transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),0==n.
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
-transfer(s,r,n) :- recv_transfer(s,r,n),owner(owner_p),r==owner_p,s==owner_p.
-burn(p,n) :- msgSender(s),o==s,n<=0,owner(o),recv_burn(p,n).

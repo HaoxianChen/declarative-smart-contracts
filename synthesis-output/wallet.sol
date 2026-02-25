@@ -47,9 +47,24 @@ contract Wallet {
         revert("Rule condition failed");
       }
   }
+  function updateTotalOutOnInsertTransfer_r14(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalOut_r2(p,delta0);
+  }
   function updateAllBurnOnInsertBurn_r11(int n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllBurn_r12(delta0);
+  }
+  function updateBurnOnInsertRecv_burn_r6(address p,int amount) private   returns (bool) {
+      address s = msg.sender;
+      address o = owner.p;
+      if(o==s && n<0) {
+        updateTransferOnInsertBurn_r7(p,n);
+        updateAllBurnOnInsertBurn_r11(n);
+        emit Burn(p,n);
+        return true;
+      }
+      return false;
   }
   function updateOwnerOnInsertConstructor_r5() private    {
       address s = msg.sender;
@@ -95,21 +110,6 @@ contract Wallet {
   }
   function updateBalanceOfOnIncrementTotalOut_r2(address p,int o) private    {
       balanceOf[p].n -= o;
-  }
-  function updateBurnOnInsertRecv_burn_r6(address p,int amount) private   returns (bool) {
-      address s = msg.sender;
-      address o = owner.p;
-      if(o==s && 0==n) {
-        updateTransferOnInsertBurn_r7(p,n);
-        updateAllBurnOnInsertBurn_r11(n);
-        emit Burn(p,n);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalOutOnInsertTransfer_r14(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalOut_r2(p,delta0);
   }
   function updateTransferOnInsertBurn_r7(address p,int n) private    {
       updateTotalOutOnInsertTransfer_r14(p,n);
