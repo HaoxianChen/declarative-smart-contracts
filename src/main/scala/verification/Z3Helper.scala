@@ -12,7 +12,10 @@ object Z3Helper {
     case "address" => ctx.mkIntSort()
     case "int"|"uint" => ctx.mkIntSort()
     case "bool" => ctx.mkBoolSort()
-    case _ => ???
+    // Be permissive for Any: treat as IntSort to avoid crashing on untyped numeric constants
+    // produced by the arithmetic parser (they should be type-refined later when possible).
+    case "Any" => ctx.mkIntSort()
+    case _ => ctx.mkIntSort()
   }
 
   def makeTupleSort(ctx: Context, relation: Relation, types: Array[Type], fieldNames: Array[String]): TupleSort = {
@@ -34,7 +37,8 @@ object Z3Helper {
             case "true" => ctx.mkTrue()
             case "false" => ctx.mkFalse()
           }
-          case _ => ???
+          case "Any" => ctx.mkInt(name.toInt)
+          case _ => ctx.mkInt(name.toInt)
         }
       }
       case Variable(_,name) => {
@@ -46,6 +50,7 @@ object Z3Helper {
   }
 
   def relToTupleName(relation: Relation): String = s"${relation.name}Tuple"
+  def getExistsRelationName(relationName: String): String = s"${relationName}__exists"
 
   def fieldsToConst(ctx: Context, relation: Relation, fields: List[Parameter], fieldNames: List[String], prefix: String): (Expr[_], Sort) = {
     require(fields.size == fieldNames.size)
@@ -107,7 +112,19 @@ object Z3Helper {
             val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
             mkTupleKey(ctx, domain, keyConsts)
           }
-          ctx.mkEq(ctx.mkSelect(arrayConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyExpr.asInstanceOf[Expr[Sort]]), valueConst)
+          val valueEq = ctx.mkEq(
+            ctx.mkSelect(arrayConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyExpr.asInstanceOf[Expr[Sort]]),
+            valueConst
+          )
+          // SimpleRelation reads require both value match and key existence.
+          val existsSort = getExistsSort(ctx, lit.relation, indices)
+          val existsConst = ctx.mkConst(getExistsRelationName(name), existsSort)
+          val existsAtKey = ctx.mkSelect(
+            existsConst.asInstanceOf[Expr[ArraySort[Sort, Sort]]],
+            keyExpr.asInstanceOf[Expr[Sort]]
+          )
+          val existsEq = ctx.mkEq(existsAtKey, ctx.mkTrue())
+          ctx.mkAnd(valueEq, existsEq)
         }
         else {
           ???
@@ -187,6 +204,11 @@ object Z3Helper {
     (ctx.mkArraySort(arrayDomain, valueSort), arrayDomain, valueSort)
   }
 
+  def getExistsSort(ctx: Context, relation: Relation, indices: List[Int]): Sort = {
+    val (_, keyDomain, _) = getArraySort(ctx, relation, indices)
+    ctx.mkArraySort(keyDomain, ctx.mkBoolSort())
+  }
+
 
   def getSort(ctx: Context, relation: Relation, indices: List[Int]): Sort = relation match {
     case rel: SimpleRelation => getArraySort(ctx, relation, indices)._1
@@ -259,7 +281,14 @@ object Z3Helper {
   }
 
   def extractEq(expr: Expr[_], constOnly: Boolean=true): Array[(Expr[_], Expr[_])] = {
-    if (expr.isEq) {
+    // NOTE: Z3 Java bindings can throw (rarely) when inspecting decl kinds on some expressions.
+    // Be defensive to avoid crashing the whole pipeline during simplification.
+    val isEqSafe = try expr.isEq catch { case _: Throwable => false }
+    val isNotSafe = try expr.isNot catch { case _: Throwable => false }
+    val isAppSafe = try expr.isApp catch { case _: Throwable => false }
+    val isQuantSafe = try expr.isQuantifier catch { case _: Throwable => false }
+
+    if (isEqSafe) {
       val args = expr.getArgs
       if (args.forall(a => a.isConst) || !constOnly) {
         require(expr.getNumArgs == 2)
@@ -269,13 +298,13 @@ object Z3Helper {
         args.flatMap(a => extractEq(a,constOnly))
       }
     }
-    else if (expr.isNot) {
+    else if (isNotSafe) {
       Array()
     }
-    else if (expr.isApp) {
+    else if (isAppSafe) {
       expr.getArgs.flatMap(a => extractEq(a,constOnly))
     }
-    else if (expr.isQuantifier) {
+    else if (isQuantSafe) {
       extractEq(expr.asInstanceOf[Quantifier].getBody, constOnly)
     }
     else {

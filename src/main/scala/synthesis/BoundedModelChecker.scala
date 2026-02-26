@@ -384,14 +384,11 @@ case class BoundedModelChecker() {
     if (activeRelations.size != 1)
       throw new Exception(s"Expected exactly one active transaction relation at step $stepIdx, found: ${activeRelations}")
 
-    // Remove the prefix to get the base relation name
+    // Return the recv_* interface relation directly (it already exists in program.relations
+    // and its signature matches what InductiveSynthesis expects in the predicates map).
+    // The semantic "stripped" relation (e.g. `withdraw`) may have a different signature.
     val (rel, lit) = activeRelations.head
-    val baseName = rel.name.stripPrefix(transactionRelationPrefix)
-    // Find the corresponding relation in program.relations
-    val relation = program.relations.find(_.name == baseName).getOrElse(
-      throw new Exception(s"Relation '$baseName' not found in program.relations")
-    )
-    (relation, lit)
+    (rel, lit)
   }
 
   /**

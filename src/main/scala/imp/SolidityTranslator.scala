@@ -27,7 +27,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
                               _materializedRelations: Set[Relation],
                               isInstrument: Boolean,
                               monitorViolation: Boolean,
-                              enableProjection: Boolean)
+                              enableProjection: Boolean,
+                              /** Optional UDF integration: (importPath, baseContractName). */
+                              udfInfoOpt: Option[(String, String)] = None)
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -91,7 +93,14 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     else Empty()
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     val simplified = simplifier.simplify(definitions)
-    DeclContract(name, simplified)
+    udfInfoOpt match {
+      case Some((importPath, baseName)) =>
+        // Avoid changing DeclContract signature: encode inheritance in the name string.
+        // This is safe for codegen and keeps the rest of the pipeline (e.g., Inliner) working.
+        Statement.makeSeq(Import(importPath), DeclContract(s"$name is $baseName", simplified))
+      case None =>
+        DeclContract(name, simplified)
+    }
   }
 
   private def queryToDecl(query: Query): DeclFunction = {

@@ -1,0 +1,2 @@
+claimMultiple(epoch,user,to,reward) :- currentEpoch(e),epoch<e,totalReward(epoch,user_0,total_0),total_0>c_0,claimable(epoch,user,reward),recv_claimMultiple(epoch,to),currentEpoch(e_1),msgSender(user_0),epoch<e_1,msgSender(user),claimed(epoch,user_0,c_0).
+allocate(epoch,user,amount) :- recv_allocate(epoch,user,amount).

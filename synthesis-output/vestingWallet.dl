@@ -1,0 +1,1 @@
+release() :- e_0>=0,released(released_n),t_1>=a_1,start(a),released_n>0,released(e),start(a_1),b>e,t>a+d,now(t),released(e_0),now(t_1),funds(b),recv_release(),duration(d).

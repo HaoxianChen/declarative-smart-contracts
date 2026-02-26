@@ -6,9 +6,9 @@ raised(0) :- constructor(_,_).
 onceWithdraw(false) :- constructor(_,_).
 onceRefund(false) :- constructor(_,_).
 
-raised(s) :- s = sum m: invest(_, m).
-investTotal(p,s) :- invest(p, _), s = sum m: invest(p,m).
-refundTotal(p,s) :- refund(p, _), s = sum m: refund(p,m).
+raised(s) :- invest(_, m), s = sum m: invest(_, m).
+investTotal(p,s) :- invest(p, m), s = sum m: invest(p,m).
+refundTotal(p,s) :- refund(p, m), s = sum m: refund(p,m).
 balanceOf(p,s) :- investTotal(p,i), refundTotal(p,r), s := i-r.
 
 closed(true) :- close().

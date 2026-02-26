@@ -3,9 +3,12 @@ import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner,
 import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames, combineSplitFilesToFile, parseProgramFromSplitDir, parseAllProgramsFromSplitParent}
+import util.SolcAst
 import verification.{Prove, TransitionSystem, Verifier}
 import java.nio.file.Paths
 import scala.sys.exit
+import java.io.File
+import java.nio.file.{Files, StandardCopyOption}
 
 object Main extends App {
   val outDir = "solidity/dsc"
@@ -44,23 +47,7 @@ object Main extends App {
 
   // List of split-directory names (subdirectories of `synthesis-benchmark`) to run in split-mode.
   // If empty -> run on all subdirectories (default). Modify this list to control which directories run.
-  val synthesisSplitDirs: List[String] = List(
-    "wallet",
-    "erc20",
-    "matic",
-    "controllable",
-    "cappedCrowdSale",
-    "bnb",
-    "crowFunding",
-    "tether",
-    "brickBlockToken",
-    "shib",
-    "tokenPartition",
-    "wbtc",
-    "linktoken",
-    "finalizableCrowdSale",
-    "ltcSwapAsset",
-  )
+  val synthesisSplitDirs: List[String] = List()
 
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
@@ -77,12 +64,55 @@ object Main extends App {
     }
   }
 
+  private def resolveUdfPath(filepath: String, f: File, program: Program): String = {
+    val candidate = if (f.exists() && f.isDirectory) {
+      Paths.get(filepath, "udf.sol").toString
+    } else {
+      val parent = Paths.get(filepath).getParent
+      if (parent == null) Paths.get("udf.sol").toString else parent.resolve("udf.sol").toString
+    }
+    if (isFileExists(candidate)) {
+      candidate
+    } else {
+      // Fallback for combined single-file verification inputs (e.g., tmp/*.dl):
+      // try benchmark-dir/<ProgramName>/udf.sol
+      val fallback = Paths.get("synthesis-benchmark", program.name.toLowerCase, "udf.sol").toString
+      if (isFileExists(fallback)) fallback else candidate
+    }
+  }
+
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
           consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
           arithmeticOptimization: Boolean = true): Unit = {
     createDirectory(outDir)
+    val f = new File(filepath)
     val filename = Misc.getFileNameFromPath(filepath)
-    val dl = parseProgram(filepath)
+    // Support both single-file programs (*.dl) and split benchmark directories (schema/rules/properties).
+    val dl: Program = if (f.exists() && f.isDirectory) {
+      parseProgramFromSplitDir(filepath)
+    } else {
+      parseProgram(filepath)
+    }
+
+    // --- Optional UDF integration for `compile`/`compile-all-*` paths ---
+    val udfInfoOpt: Option[(String, String)] = {
+      if (dl.udfs.nonEmpty) {
+        val udfPath = resolveUdfPath(filepath, f, dl)
+        if (!isFileExists(udfPath)) {
+          throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+        }
+        val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+        if (errors.nonEmpty) {
+          val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+          throw new Exception(s"udf.sol AST check failed:$msg")
+        }
+        val outUdfFileName = s"${filename}_udf.sol"
+        val outUdfPath = Paths.get(outDir, outUdfFileName).toString
+        Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
+        Some((s"./$outUdfFileName", baseContractName))
+      } else None
+    }
+
     val materializedRelations: Set[Relation] = if (materializePath.nonEmpty) {
       getMaterializedRelations(dl, materializePath)
     }
@@ -99,7 +129,8 @@ object Main extends App {
     }
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
-      isInstrument,monitorViolations, enableProjection).translate()
+      isInstrument,monitorViolations, enableProjection,
+      udfInfoOpt = udfInfoOpt).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -218,8 +249,19 @@ object Main extends App {
 
   else if (args(0) == "verify") {
     val filepath = args(1)
-
-    val dl = parseProgram(filepath)
+    val f = new File(filepath)
+    val dl = if (f.exists() && f.isDirectory) parseProgramFromSplitDir(filepath) else parseProgram(filepath)
+    if (dl.udfs.nonEmpty) {
+      val udfPath = resolveUdfPath(filepath, f, dl)
+      if (!isFileExists(udfPath)) {
+        throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+      }
+      val (_, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+      if (errors.nonEmpty) {
+        val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+        throw new Exception(s"udf.sol AST check failed:$msg")
+      }
+    }
     val materializedRelations: Set[Relation] = Set()
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
       monitorViolations = false, arithmeticOptimization = true)
@@ -334,33 +376,100 @@ object Main extends App {
     }
   }
 
-  // New: run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
+  // Run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
   else if (args(0) == "synthesis-all") {
-    val test = true
-    val synthesisBenchmarkDir = "synthesis-benchmark"
-    val datalogOutDir = "synthesis-output"
+    /** Optional flags:
+      *   --bench-dir <dir>  (default: synthesis-benchmark)
+      *   --out-dir   <dir>  (default: synthesis-output)
+      *
+      * Notes:
+      * - When bench-dir is not the default, we run over all subdirectories under bench-dir.
+      * - For ad-hoc dirs (e.g., tmpbenchmark) that may contain incomplete benchmarks, we skip
+      *   subdirectories that cannot be parsed (e.g., empty schema/rules).
+      * - If bench-dir itself contains schema.dl + rules.dl, treat it as a single benchmark.
+      */
+    def parseSynthesisAllArgs(list: List[String]): Map[String, String] = list match {
+      case Nil => Map.empty
+      case "--bench-dir" :: value :: tail => parseSynthesisAllArgs(tail) + ("bench-dir" -> value)
+      case "--out-dir" :: value :: tail   => parseSynthesisAllArgs(tail) + ("out-dir" -> value)
+      case unknown :: _ =>
+        println(s"Unknown option for synthesis-all: $unknown")
+        exit(1)
+    }
+
+    def isNonEmptyFile(path: String): Boolean = {
+      val f = new File(path)
+      f.exists() && f.isFile && f.length() > 0
+    }
+
+    def isSplitBenchmarkDir(dir: String): Boolean = {
+      val schemaPath = Paths.get(dir, "schema.dl").toString
+      val rulesPath = Paths.get(dir, "rules.dl").toString
+      isNonEmptyFile(schemaPath) && isNonEmptyFile(rulesPath)
+    }
+
+    def parseProgramsFromSplitParentSafe(parentDir: String): Seq[(String, Program)] = {
+      val parent = new File(parentDir)
+      if (!parent.exists() || !parent.isDirectory) return Seq.empty
+
+      val subdirs = parent.listFiles().filter(_.isDirectory).map(_.getName).sorted
+      subdirs.flatMap { name =>
+        val dir = Paths.get(parentDir, name).toString
+        val schemaPath = Paths.get(dir, "schema.dl").toString
+        val rulesPath = Paths.get(dir, "rules.dl").toString
+
+        if (!isNonEmptyFile(schemaPath) || !isNonEmptyFile(rulesPath)) {
+          println(s"Skipping incomplete split-dir (missing/empty schema or rules): ${dir}")
+          None
+        } else {
+          try {
+            Some((name, parseProgramFromSplitDir(dir)))
+          } catch {
+            case e: Throwable =>
+              println(s"Skipping split-dir due to parse/type error: ${dir}")
+              println(s"  ${e.getClass.getName}: ${e.getMessage}")
+              None
+          }
+        }
+      }
+    }
+
+    val test = false
+    val opts = parseSynthesisAllArgs(args.tail.toList)
+    val synthesisBenchmarkDir = opts.getOrElse("bench-dir", "synthesis-benchmark")
+    val datalogOutDir = opts.getOrElse("out-dir", "synthesis-output")
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
     createDirectory(datalogOutDir)
     if (!isFileExists(statsFile)) {
       Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
     }
 
-    // parse all split-program subdirectories under parent into (name, Program)
-    val programsByName: Seq[(String, Program)] = if (synthesisSplitDirs.nonEmpty) {
-      // Build (name, Program) for each requested split-dir (skip missing)
-      synthesisSplitDirs.flatMap { name =>
-        val dir = Paths.get(synthesisBenchmarkDir, name).toString
-        val f = new java.io.File(dir)
-        if (f.exists() && f.isDirectory) {
-          Some((name, parseProgramFromSplitDir(dir)))
-        } else {
-          println(s"Skipping missing split-dir: ${dir}")
-          None
+    val programsByName: Seq[(String, Program)] =
+      if (isSplitBenchmarkDir(synthesisBenchmarkDir)) {
+        val name = new File(synthesisBenchmarkDir).getName
+        try Seq((name, parseProgramFromSplitDir(synthesisBenchmarkDir)))
+        catch {
+          case e: Throwable =>
+            println(s"Skipping split-dir due to parse/type error: ${synthesisBenchmarkDir}")
+            println(s"  ${e.getClass.getName}: ${e.getMessage}")
+            Seq.empty
         }
+      } else if (synthesisBenchmarkDir == "synthesis-benchmark") {
+        if (synthesisSplitDirs.nonEmpty) {
+          synthesisSplitDirs.flatMap { name =>
+            val dir = Paths.get(synthesisBenchmarkDir, name).toString
+            val f = new java.io.File(dir)
+            if (f.exists() && f.isDirectory) Some((name, parseProgramFromSplitDir(dir)))
+            else { println(s"Skipping missing split-dir: ${dir}"); None }
+          }
+        } else {
+          // Be robust to individual benchmark parse/type errors (esp. after merging ad-hoc dirs).
+          // We want synthesis-all to complete and report skips rather than crash the whole run.
+          parseProgramsFromSplitParentSafe(synthesisBenchmarkDir)
+        }
+      } else {
+        parseProgramsFromSplitParentSafe(synthesisBenchmarkDir)
       }
-    } else {
-      parseAllProgramsFromSplitParent(synthesisBenchmarkDir)
-    }
 
     for ((name, sketch) <- programsByName) {
       val displayName = if (name.endsWith(".dl")) name else s"${name}.dl"
@@ -376,19 +485,44 @@ object Main extends App {
         val cegis = Cegis(sketch)
         val (program, stat) = cegis.run()
 
-        /** here, only write transaction rules to file. */
         println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
 
         createDirectory(datalogOutDir)
         Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
+        // --- UDF integration (split benchmarks): check udf.sol and prepare import ---
+        val udfInfoOpt: Option[(String, String)] = {
+          if (program.udfs.nonEmpty) {
+            // Determine benchmark directory that produced this program
+            val benchDir =
+              if (isSplitBenchmarkDir(synthesisBenchmarkDir)) synthesisBenchmarkDir
+              else Paths.get(synthesisBenchmarkDir, filenameNoExt).toString
+            val udfPath = Paths.get(benchDir, "udf.sol").toString
+            if (!isFileExists(udfPath)) {
+              throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
+            }
+            val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
+            if (errors.nonEmpty) {
+              val msg = errors.mkString("\n  - ", "\n  - ", "\n")
+              throw new Exception(s"udf.sol AST check failed:$msg")
+            }
+            // Copy udf.sol to output directory with a stable name
+            val outUdfFileName = s"${filenameNoExt}_udf.sol"
+            val outUdfPath = Paths.get(datalogOutDir, outUdfFileName).toString
+            Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
+            Some((s"./$outUdfFileName", baseContractName))
+          } else None
+        }
+
+        // Write associated Solidity file to disk
         val impTranslator = new ImperativeTranslator(
           program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
           enableProjection = true
         )
         val imperative = impTranslator.translate()
         val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
-          Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+          Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+          udfInfoOpt = udfInfoOpt
         ).translate()
         val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
         if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)

@@ -1,0 +1,41 @@
+// Views / state
+.decl shares(p: address, n: uint)[0]
+.decl released(p: address, n:uint)[0]
+
+.decl *totalShares(n: uint)
+.decl *totalReleased(n: uint)
+.decl *totalReceived(n: uint)
+
+// Constructor (needed by synthesis pipeline to build initial trace + constructor function)
+.decl constructor(p1:address, p2:address, s1:uint, s2:uint)
+
+// A minimal constructor-anchored singleton so the program references constructor()
+.decl *initialized(b: bool)
+
+// Expose a getter so the relation is materialized and constructor body is preserved in Solidity translation.
+.public initialized(0)
+
+// Interface + transaction
+.decl recv_release(p: address)
+.decl release(p: address)        // tx trigger
+.public recv_release
+
+// Fund (abstract receive) so totalReceived is driven by explicit transactions rather than a circular definition.
+.decl recv_fund(n:uint)
+.decl fund(n:uint)
+.public recv_fund
+
+// Derived tx amount (kept as a relation so we can sum over releases)
+.decl releaseAmount(p: address, n: uint)[0]
+
+// Properties (preserve original)
+.decl overpaid(p: address, n: uint)[0]
+.violation overpaid
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n).
+

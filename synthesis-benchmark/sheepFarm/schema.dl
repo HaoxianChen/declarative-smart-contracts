@@ -1,0 +1,45 @@
+////////////////////////////
+// SheepFarm (register-only, vulnerability-focused)
+//
+// Focus: register() can be called multiple times because it does not write
+// villages[user].timestamp. We model and "fix" this by requiring timestamp==0
+// before register, and setting timestamp at register time.
+//
+// Simplifications (accepted):
+// - Ignore sheeps[0] / manager fallback branch; always keep neighbor as provided
+//   and bonus as GEM_BONUS.
+// - Ignore initialize()/manager; assume system is initialized (constructor sets it).
+////////////////////////////
+
+// Parameters / constants (kept as simple relations; values appear as numeric constants in rules)
+.decl constructor()
+
+// Minimal init flag to ensure constructor exists in generated Solidity
+.decl *initialized(b: bool)
+.public initialized(0)
+
+// Transactions
+.decl recv_register(neighbor: address)
+.public recv_register
+
+// Semantic transaction (derived from recv_register + msgSender + time)
+.decl register(user: address, neighbor: address, bonus: uint, time: uint)
+
+// State (all are 1-value maps / singletons for synthesis compatibility)
+.decl villageTimestamp(user: address, time: uint)[0]
+.decl villageNeighbor(user: address, neighbor: address)[0]
+.decl villageGems(user: address, gems: uint)[0]
+.decl neighborCount(neighbor: address, n: uint)[0]
+.decl *totalVillages(n: uint)
+
+// Interfaces (optional for inspection)
+.public villageTimestamp(1)
+.public villageNeighbor(1)
+.public villageGems(1)
+.public neighborCount(1)
+.public totalVillages(0)
+
+// Properties / validity
+.decl invalidTx()
+.violation invalidTx
+

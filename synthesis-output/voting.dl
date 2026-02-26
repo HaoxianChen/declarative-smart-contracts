@@ -1,0 +1,2 @@
+vote(v,p) :- isVoter(v,b_1),b_1!=false,voted(v,b_2),b_2!=true,b_0!=true,hasWinner(b_0),recv_vote(v,p).
+finalize(p) :- quorumSize(q_1),b_0!=true,hasWinner(b_0),votes(p,c_1),c_1>=q_1,recv_finalize(p).

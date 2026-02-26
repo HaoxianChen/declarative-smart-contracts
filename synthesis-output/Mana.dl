@@ -1,0 +1,4 @@
+finalize() :- owner(o_2),weiRaised_1(m_1),m_1>=n_1,cap(n_1),crowdsaleFinalized(b_0),msgSender(s_2),b_0!=true,o_2==s_2,recv_finalize().
+beginContinuousSale() :- owner(o_0),msgSender(s_0),recv_beginContinuousSale(),b_1!=false,crowdsaleFinalized(b_1),o_0==s_0.
+buyToken1(p,v) :- b_2+v<=c_2,b_1!=false,p!=address(0),recv_buyToken1(p,v),bucketAmount(b_2),continuousSaleStarted(b_1),v!=0,issuance(c_2),v>=0.
+buyTokens(p,v) :- p!=address(0),cap(c_1),weiRaised_1(b_1),b_1+v<=c_1,recv_buyTokens(p,v),v>=0,v>0,v!=0.

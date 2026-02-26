@@ -1,0 +1,9 @@
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
+burn(p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
+transferFrom(o,r,sp,n) :- n>0,allowance(o,sp,k_2),r!=address(0),n<=m_0,sp!=address(0),recv_transferFrom(o,r,sp,n),balanceOf(o,m_0),n<=k_2,o!=address(0).
+approveOperator(p,o) :- recv_approveOperator(p,o),o!=address(0),p!=address(0),p!=o.
+operatorBurn(p,s,n,data,operatorData) :- n>0,data>=0,recv_operatorBurn(p,s,n,data,operatorData),p!=address(0),balanceOf(p,m_1),operatorData>=0,n<=m_1.
+mint(p,n) :- o_1==s_1,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
+transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData),n>0,data>=0,r!=address(0),operatorData>=0,balanceOf(o,m_1),n<=m_1,o!=address(0).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o),p!=address(0),p!=o,o!=address(0).

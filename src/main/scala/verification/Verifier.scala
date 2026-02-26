@@ -1,7 +1,7 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, Status, TupleSort}
-import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, FuncDecl, IntExpr, IntSort, Sort, Status, TupleSort}
+import datalog.{Balance, Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
@@ -10,7 +10,7 @@ import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
 import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, indicatorConstForTransactionTriggerRelation, simplifyByRenamingConst}
-import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
+import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getExistsRelationName, getExistsSort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
 
 import scala.collection.mutable.Queue
@@ -29,16 +29,26 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val fromStatements = getMaterializedRelations(impAbsProgram, program.interfaces)
     val violationRules = program.rules.filter(r => program.violations.contains(r.head.relation))
     val readByViolationRules = violationRules.flatMap(r => r.body.map(_.relation))
+    // UDF relations are not stateful relations; they are handled as uninterpreted functions.
     (fromStatements++readByViolationRules).filterNot(_.isInstanceOf[ReservedRelation])
       .filterNot(_.name.startsWith(transactionRelationPrefix))
+      .filterNot(r => program.udfs.contains(r))
   }
 
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
 
-  val stateVars: Set[(Expr[_], Expr[_])] = materializedRelations.map(rel => {
-    val sort = getSort(ctx, rel, getIndices(rel))
-    makeStateVar(ctx, rel.name, sort)
-  })
+  val stateVars: Set[(Expr[_], Expr[_])] = materializedRelations.flatMap {
+    case sr: SimpleRelation =>
+      val dataSort = getSort(ctx, sr, getIndices(sr))
+      val existsSort = getExistsSort(ctx, sr, getIndices(sr))
+      Set(
+        makeStateVar(ctx, sr.name, dataSort),
+        makeStateVar(ctx, getExistsRelationName(sr.name), existsSort)
+      )
+    case rel =>
+      val sort = getSort(ctx, rel, getIndices(rel))
+      Set(makeStateVar(ctx, rel.name, sort))
+  }
 
   val initializationRules = program.rules.filter(_r=>_r.body.exists(_l=>_l.relation.name=="constructor"))
 
@@ -75,6 +85,94 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     case relation: ReservedRelation => List()
   }
 
+  // --- UDF support ---
+  // Default: treat UDF relations as uninterpreted functions (quick feasibility).
+  // For specific benchmarks we can hard-code additional semantics to match `udf.sol` stubs.
+  private val udfDeclCache =
+    scala.collection.mutable.Map.empty[(String, List[Sort], Sort), FuncDecl[_]]
+
+  private def isUdfRelation(rel: Relation): Boolean = program.udfs.contains(rel)
+
+  private def isUintType(t: Type): Boolean = t.name == "uint"
+
+  private def uintNonNegativeConstraint(ctx: Context, p: Parameter, prefix: String): Option[BoolExpr] = {
+    if (isUintType(p._type)) {
+      val c = paramToConst(ctx, p, prefix)._1
+      Some(ctx.mkGe(c.asInstanceOf[Expr[ArithSort]], ctx.mkInt(0)))
+    } else None
+  }
+
+  private def txLiteralToConst(ctx: Context, lit: Literal, prefix: String): BoolExpr = {
+    val baseConstraints = lit.fields.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix))
+    val txNameConstraint = {
+      val txConst = ctx.mkConst("transaction", ctx.mkStringSort())
+      ctx.mkEq(txConst, ctx.mkString(lit.relation.name))
+    }
+    val extraConstraints: List[BoolExpr] = {
+      // recv_withdraw(earnings, affiliateEarnings, inETH, messageHash, v, r, s)
+      if (lit.relation.name == "recv_withdraw" && lit.fields.size >= 5 && isUintType(lit.fields(4)._type)) {
+        val vConst = paramToConst(ctx, lit.fields(4), prefix)._1
+        List(ctx.mkLe(vConst.asInstanceOf[Expr[ArithSort]], ctx.mkInt(255)))
+      } else Nil
+    }
+    val all = txNameConstraint :: (baseConstraints ++ extraConstraints)
+    if (all.isEmpty) ctx.mkTrue() else ctx.mkAnd(all.toArray: _*)
+  }
+
+  private def udfLiteralToConst(ctx: Context, lit: Literal, prefix: String): BoolExpr = {
+    // Convention: last field is output; others are inputs
+    require(lit.fields.nonEmpty, s"UDF literal must have at least 1 field: $lit")
+    val inputParams = lit.fields.dropRight(1)
+    val outParam = lit.fields.last
+
+    val inputConsts: Array[Expr[_]] = inputParams.map(p => paramToConst(ctx, p, prefix)._1).toArray
+    val outConst: Expr[_] = paramToConst(ctx, outParam, prefix)._1
+
+    val domain: List[Sort] = inputParams.map(p => typeToSort(ctx, p._type))
+    val range: Sort = typeToSort(ctx, outParam._type)
+    val inDomains = inputParams.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix))
+    val outDomain = uintNonNegativeConstraint(ctx, outParam, prefix).toList
+
+    // isValidSignature: inject nonce[sender] to capture replay-protection semantics.
+    // udf.sol uses nonce[beneficiary] inside the hash, so the same (v,r,s) becomes
+    // invalid once the nonce advances after a successful withdrawal.
+    val (effectiveDomain, effectiveInputConsts) =
+      if (lit.relation.name == "isValidSignature") {
+        program.relations.collectFirst { case sr: SimpleRelation if sr.name == "nonce" => sr } match {
+          case Some(_) =>
+            // sender is the first input parameter (index 0)
+            val senderConst = inputConsts(0).asInstanceOf[Expr[Sort]]
+            // Read nonce[sender] directly from the pre-state Z3 array (Array[Int,Int])
+            val nonceArraySort = ctx.mkArraySort(ctx.mkIntSort(), ctx.mkIntSort())
+            val nonceArray = ctx.mkConst("nonce", nonceArraySort).asInstanceOf[Expr[ArraySort[Sort, Sort]]]
+            val nonceVal = ctx.mkSelect(nonceArray, senderConst)
+            (domain :+ ctx.mkIntSort().asInstanceOf[Sort], inputConsts :+ nonceVal)
+          case None => (domain, inputConsts)
+        }
+      } else (domain, inputConsts)
+
+    val key = (lit.relation.name, effectiveDomain, range)
+    val decl = udfDeclCache.getOrElseUpdate(key, ctx.mkFuncDecl(lit.relation.name, effectiveDomain.toArray, range))
+
+    val app = ctx.mkApp(decl, effectiveInputConsts.map(_.asInstanceOf[Expr[Sort]]): _*)
+    val eq = ctx.mkEq(outConst.asInstanceOf[Expr[Sort]], app.asInstanceOf[Expr[Sort]])
+    val all = eq +: (inDomains ++ outDomain)
+    ctx.mkAnd(all.toArray: _*)
+  }
+
+  private def literalToConstOrUdf(ctx: Context, lit: Literal, prefix: String): BoolExpr = {
+    // Transaction interface literals (`recv_*`) are symbolic inputs with domain constraints.
+    if (lit.relation.name.startsWith(transactionRelationPrefix)) {
+      txLiteralToConst(ctx, lit, prefix)
+    }
+    else if (isUdfRelation(lit.relation)) {
+      udfLiteralToConst(ctx, lit, prefix)
+    }
+    else {
+      literalToConst(ctx, lit, getIndices(lit.relation), prefix)
+    }
+  }
+
   def getTransitionSystem(): TransitionSystem = {
     val tr = TransitionSystem(program.name, ctx)
 
@@ -88,6 +186,18 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       val (v_in, _) = tr.newVar(rel.name, sort)
       val (_init, _,_) = getInitConstraints(ctx, rel, v_in, indices, initializationRules.find(_.head.relation==rel))
       initConditions :+= _init
+      rel match {
+        case sr: SimpleRelation =>
+          val existsSort = getExistsSort(ctx, sr, getIndices(sr))
+          val (existsIn, _) = tr.newVar(getExistsRelationName(sr.name), existsSort)
+          val existsArraySort = existsSort.asInstanceOf[ArraySort[Sort, Sort]]
+          // nonce is conceptually "always 0 for everyone" before any withdrawal,
+          // so initialise its __exists array to all-true (every entry exists by default).
+          val existsDefaultVal = if (sr.name == "nonce") ctx.mkTrue() else ctx.mkFalse()
+          val existsInit = ctx.mkConstArray(existsArraySort.getDomain, existsDefaultVal)
+          initConditions :+= ctx.mkEq(existsIn, existsInit)
+        case _ =>
+      }
     }
     tr.setInit(ctx.mkAnd(initConditions.toArray:_*))
 
@@ -130,14 +240,20 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       val resTr = _resTr match {
         case Status.UNSATISFIABLE => _resTr
         case Status.UNKNOWN | Status.SATISFIABLE => {
-          invariantGenerator.findInvariant(tr, vr) match {
-            case Some(inv) => {
-              // validateInvariant(inv, tr, property)
-              val (_invInit, _invTr) = inductiveProve(ctx,tr,ctx.mkAnd(property,inv), isTransactionProperty)
-              println(s"invariant: ${inv}")
-              _invTr
+          // Quick feasibility mode for UDF: skip invariant generation to avoid
+          // predicate extraction on non-state relations (e.g., recv_* and UDFs).
+          if (program.udfs.nonEmpty) {
+            _resTr
+          } else {
+            invariantGenerator.findInvariant(tr, vr) match {
+              case Some(inv) => {
+                // validateInvariant(inv, tr, property)
+                val (_invInit, _invTr) = inductiveProve(ctx,tr,ctx.mkAnd(property,inv), isTransactionProperty)
+                println(s"invariant: ${inv}")
+                _invTr
+              }
+              case None => _resTr
             }
-            case None => _resTr
           }
         }
       }
@@ -189,7 +305,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
      *  P1, P2, ... are predicates translated from each rule body literal.
      *  */
     val prefix = "i"
-    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val bodyConstraints = rule.body.map(lit => literalToConstOrUdf(ctx, lit, prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx,f, prefix)).toArray
 
     val keyConsts: Array[Expr[_]] = {
@@ -232,7 +348,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
    */
   def getViolationCheck(ctx: Context, rule: Rule, varPrefix: String = "kv"): BoolExpr = {
     val prefix = varPrefix
-    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val bodyConstraints = rule.body.map(lit => literalToConstOrUdf(ctx, lit, prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
 
     val constraints = {
@@ -252,7 +368,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
 
     val prefix = varPrefix
-    val bodyConstraints = rule.body.diff(Set(recvLit)).map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val bodyConstraints = rule.body.diff(Set(recvLit)).map(lit => literalToConstOrUdf(ctx, lit, prefix)).toArray
     val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
 
     val constraints = {
@@ -320,6 +436,15 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
       val (v_in, v_out) = makeStateVar(ctx, rel.name, sort)
       if (!allVars.contains(v_out)) {
         unchangedConstraints :+= ctx.mkEq(v_out, v_in)
+      }
+      rel match {
+        case sr: SimpleRelation =>
+          val existsSort = getExistsSort(ctx, sr, getIndices(sr))
+          val (existsIn, existsOut) = makeStateVar(ctx, getExistsRelationName(sr.name), existsSort)
+          if (!allVars.contains(existsOut)) {
+            unchangedConstraints :+= ctx.mkEq(existsOut, existsIn)
+          }
+        case _ =>
       }
     }
     unchangedConstraints

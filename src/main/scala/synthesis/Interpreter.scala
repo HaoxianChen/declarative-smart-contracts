@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, Now, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, This, Type, Unequal, UnitType, Variable, Zero}
 import synthesis.PredicateEnumerator.extractTxLiteral
 
 import scala.collection.mutable
@@ -153,6 +153,14 @@ case class Interpreter(interpreterContext: InterpreterContext) {
   def extractKeyValueVar(literal: Literal): (Seq[Parameter], Parameter) = {
     literal.relation match {
       case sr: SimpleRelation => {
+        // UDF relations have no index entries; treat all-but-last fields as inputs and
+        // the last field as the return ("value") variable.  This is consistent with
+        // how JoinView generates `Call` statements for UDFs.
+        if (interpreterContext.udfs.contains(sr)) {
+          val inputs  = literal.fields.dropRight(1)
+          val retParam = literal.fields.last
+          return (inputs, retParam)
+        }
         val keyIndices = relationIndices.getOrElse(sr,
           throw new IllegalArgumentException(s"Missing indices for relation: $sr"))
 
@@ -168,15 +176,9 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       case _: SingletonRelation => {
         (Seq(), literal.fields.head)
       }
-      case _: MsgSender => {
-        (Seq(), literal.fields.head)
-      }
-      case _: This => {
-        (Seq(), literal.fields.head)
-      }
-      case _: Now => {
-        (Seq(), literal.fields.head)
-      }
+      // All other ReservedRelations (Balance, MsgSender, MsgValue, Now, This, ...):
+      // treat as singleton — no key params, single value field.
+      case _: ReservedRelation => (Seq(), literal.fields.head)
       case _ => {
         throw new IllegalArgumentException(s"Unsupported relation type: ${literal.relation}")
       }
@@ -213,11 +215,33 @@ case class Interpreter(interpreterContext: InterpreterContext) {
     val scalarBindingMap: Map[Variable, Constant] =
       allScalarBindings.collect { case State.Binding.Scalar(v, c) => v -> c }.toMap
 
-    // Step 2: For each binding literal, bind the value variable to the lookup result from state
+    // Step 2a: UDF bindings — mock the return value as 0 (false).
+    // When a predicate includes an UDF binding (e.g. isValidSignature(..., ret)),
+    // the interpreter cannot call the real Solidity function. We return 0 so that
+    // predicates of the form `ret == true` evaluate to false on counterexample traces,
+    // making CEGIS select them as blocking guards (→ generates require(udf(...))).
+    val udfBindings: Seq[State.Binding] = {
+      val buf = mutable.Buffer[State.Binding]()
+      for (literal <- context.bindingLiterals if interpreterContext.udfs.contains(literal.relation)) {
+        // By convention the last field of a UDF literal is the return variable.
+        literal.fields.lastOption match {
+          case Some(v: Variable) =>
+            buf += State.Binding.Scalar(v, Constant(v._type, "0"))
+          case _ => // ignore if return field is a constant
+        }
+      }
+      buf.toSeq
+    }
+
+    // Step 2b: For each binding literal, bind the value variable to the lookup result from state.
+    // UDF relations are SimpleRelation instances but have no index entries; they are already
+    // handled by the udfBindings block above, so we skip them here.
     val mapBindings = {
       val bindings = mutable.Buffer[State.Binding]()
-      // for (literal <- context.bindingLiterals) {
-      for (literal <- context.bindingLiterals.collect { case lit if lit.relation.isInstanceOf[SimpleRelation] => lit }) {
+      for (literal <- context.bindingLiterals.collect {
+        case lit if lit.relation.isInstanceOf[SimpleRelation]
+                    && !interpreterContext.udfs.contains(lit.relation) => lit
+      }) {
         val rel = literal.relation
         // match {
         //   case r: SimpleRelation => r
@@ -256,7 +280,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       }
       bindings.toSeq
     }
-    allScalarBindings ++ mapBindings
+    allScalarBindings ++ udfBindings ++ mapBindings
   }
 
   def evaluate(state: State, functor: Functor): Boolean = functor match {

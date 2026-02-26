@@ -1,0 +1,86 @@
+////////////////////////////
+// Jok In The Box Staking (minimal, vulnerability-focused)
+//
+// Goal: model stake/unstake + lock period (day-based) and prevent re-unstake.
+// Notes:
+// - We abstract away ERC20 transfers and signatures.
+// - `stakeId` is provided by the trace and corresponds to Solidity `stakeIndex`.
+////////////////////////////
+
+// Transactions (recv_* are public interfaces)
+.decl recv_stake(stakeId: uint, amount: uint, lockPeriod: uint)
+.decl stake(staker: address, stakeId: uint, amount: uint, lockPeriod: uint, stakedDay: uint)
+.public recv_stake
+
+.decl recv_unstake(stakeId: uint)
+.decl unstake(staker: address, stakeId: uint, unstakedDay: uint)
+.public recv_unstake
+
+// Withdraw (expanded): we model only the validity checks (signature + withdrawal limit)
+.decl recv_withdraw(
+  earnings: uint,
+  affiliateEarnings: uint,
+  inETH: bool,
+  messageHash: bytes32,
+  v: uint,
+  r: bytes32,
+  s: bytes32
+)
+.public recv_withdraw
+
+// Semantic relation for withdraw: records that a withdrawal was processed.
+// Named `withdraw` (matching recv_withdraw minus recv_ prefix) so that BMC can
+// resolve the relation when extracting counterexample traces.
+.decl withdraw(sender: address, total: uint)
+
+// State (keyed by (staker, stakeId))
+.decl stakeAmount(staker: address, stakeId: uint, amount: uint)[0,1]
+.decl stakeLockPeriod(staker: address, stakeId: uint, lockPeriod: uint)[0,1]
+.decl stakeStakedDay(staker: address, stakeId: uint, stakedDay: uint)[0,1]
+.decl stakeStatus(staker: address, stakeId: uint, unstaked: bool)[0,1]
+.decl unstakedDay(staker: address, stakeId: uint, day: uint)[0,1]
+// Temporal marker: whether this stake has ever been unstaked.
+.decl onceUnstake(staker: address, stakeId: uint, b: bool)[0,1]
+
+// Views (optional for inspection)
+.public stakeStatus(2)
+.public stakeAmount(2)
+.public stakeLockPeriod(2)
+.public stakeStakedDay(2)
+
+// Initialization
+.decl constructor()
+.decl *initialized(b: bool)
+.public initialized(0)
+
+// Configuration (expanded)
+.decl *maxPercentage(value: uint)
+.public maxPercentage(0)
+
+// Constant helper to avoid numeric literals in arithmetic expressions
+.decl *hundred(value: uint)
+.public hundred(0)
+
+// Nonce: per-sender withdrawal counter (captures signature replay protection from udf.sol)
+.decl nonce(sender: address, n: uint)[0]
+
+// UDFs (last column is the return value variable)
+.decl isValidSignature(
+  sender: address,
+  totalEarnings: uint,
+  inETH: bool,
+  messageHash: bytes32,
+  v: uint,
+  r: bytes32,
+  s: bytes32,
+  valid: bool
+)
+.udf isValidSignature
+
+.decl jokTokenBalance(balance: uint)
+.udf jokTokenBalance
+
+// Properties / validity
+.decl invalidTx()
+.violation invalidTx
+

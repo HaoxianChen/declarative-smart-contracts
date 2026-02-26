@@ -135,6 +135,8 @@ case class Interface(relation: Relation, inputIndices: List[Int], optReturnIndex
 case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices: Map[SimpleRelation, List[Int]],
                    functions: Set[Relation],
                    violations: Set[Relation],
+                   /** User-defined function relations declared via `.udf` (treated as external calls). */
+                   udfs: Set[Relation] = Set(),
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation) ++ interfaces.map(_.relation)
   val violationRules: Set[Rule] = rules.filter(r => violations.contains(r.head.relation))
