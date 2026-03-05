@@ -171,7 +171,8 @@ object Main extends App {
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
       enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
-    val verifier = new Verifier(dl, imperative)
+    // Single-file benchmarks do not carry a udf.sol path; Verifier falls back to UF semantics.
+    val verifier = new Verifier(dl, imperative, udfSolPath = "")
     verifier.check()
   }
 
@@ -251,7 +252,7 @@ object Main extends App {
     val filepath = args(1)
     val f = new File(filepath)
     val dl = if (f.exists() && f.isDirectory) parseProgramFromSplitDir(filepath) else parseProgram(filepath)
-    if (dl.udfs.nonEmpty) {
+    val effectiveUdfPath: String = if (dl.udfs.nonEmpty) {
       val udfPath = resolveUdfPath(filepath, f, dl)
       if (!isFileExists(udfPath)) {
         throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
@@ -261,13 +262,14 @@ object Main extends App {
         val msg = errors.mkString("\n  - ", "\n  - ", "\n")
         throw new Exception(s"udf.sol AST check failed:$msg")
       }
-    }
+      udfPath
+    } else ""
     val materializedRelations: Set[Relation] = Set()
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
       monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
     // println(imperative)
-    val verifier = new Verifier(dl, imperative)
+    val verifier = new Verifier(dl, imperative, udfSolPath = effectiveUdfPath)
     verifier.check()
 
   }
@@ -482,7 +484,16 @@ object Main extends App {
         val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
         val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-        val cegis = Cegis(sketch)
+        // Resolve udf.sol path before running CEGIS so the BMC Verifier gets semantic constraints.
+        val sketchUdfPath: String = if (sketch.udfs.nonEmpty) {
+          val benchDir =
+            if (isSplitBenchmarkDir(synthesisBenchmarkDir)) synthesisBenchmarkDir
+            else Paths.get(synthesisBenchmarkDir, filenameNoExt).toString
+          val p = Paths.get(benchDir, "udf.sol").toString
+          if (isFileExists(p)) p else ""
+        } else ""
+
+        val cegis = Cegis(sketch, udfSolPath = sketchUdfPath)
         val (program, stat) = cegis.run()
 
         println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
@@ -585,7 +596,7 @@ object Main extends App {
       monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
     // println(imperative)
-    val verifier = new Verifier(dl, imperative)
+    val verifier = new Verifier(dl, imperative, udfSolPath = "")
     verifier.traverseExpression()
   }
 

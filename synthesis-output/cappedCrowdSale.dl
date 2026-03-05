@@ -1,7 +1,7 @@
-buyToken(p,m) :- end(e_2),p!=address(0),recv_buyToken(p,m),start(s_1),now(t_2),m>0,now(t_1),t_1>=s_1,t_2<=e_2.
-burn(p,n) :- msgSender(s),n<0,o==s,owner(o),recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n),0==n.
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
-finalize() :- recv_finalize(),start(start_time),0!=start_time.
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),0==n.
-mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
+buyToken(p,m) :- now(t_0),t_1<=e_1,p!=address(0),end(e_1),tokens_2>0,recv_buyToken(p,m),getTokenAmount(m,tokens_2),m>0,start(s_0),now(t_1),t_0>=s_0.
+transferFrom(o,r,s,n) :- n>0,s!=address(0),r!=address(0),balanceOf(o,m_1),n<=m_1,recv_transferFrom(o,r,s,n),o!=address(0).
+finalize() :- recv_finalize(),owner(o),msgSender(s),o==s.
+burn(p,n) :- o_1==s_1,n>0,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
+transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
+mint(p,n) :- o_1==s_1,n>0,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

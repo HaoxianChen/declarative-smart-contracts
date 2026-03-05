@@ -1,63 +1,81 @@
 ////////////////////////////
-// levelClaimMultiple rules (fixed semantics)
-// Time: now(t) is block.timestamp (seconds), but we don't need it here.
+// LevelReferralControllerV2 rules
 ////////////////////////////
 
-// Constructor: set a constant currentEpoch (just to support epoch < currentEpoch checks).
+// Constructor: deployer becomes owner and initial updater; epoch boundary set to 10
+owner(s)         :- constructor(), msgSender(s).
+updater(s)       :- constructor(), msgSender(s).
 currentEpoch(10) :- constructor().
 
 ////////////////////
-// Transaction placeholder rules
+// setReferrer
 ////////////////////
 
-allocate(epoch, user, amount) :-
-  recv_allocate(epoch, user, amount).
+setReferrer(trader, referrer) :-
+    recv_setReferrer(referrer),
+    msgSender(trader).
 
-// Record allocation events (used to compute totalReward).
-allocateEvent(epoch, user, amount) :-
-  allocate(epoch, user, amount).
-
-// Seed claim events so that claimed(epoch,user,0) is defined immediately after allocation.
-// We avoid typing issues by assigning a typed variable z (uint) to 0.
-claimEvent(epoch, user, z) :-
-  allocateEvent(epoch, user, _),
-  z := 0.
+referredBy(trader, referrer) :- setReferrer(trader, referrer).
 
 ////////////////////
-// Derived states
+// updatePoint
+// Only fires when the trader has an established referral relationship.
+// Trading points accumulate for the trader; referral points for the referrer.
 ////////////////////
 
-// Abstract total reward: sum of allocations for (epoch,user).
-totalReward(epoch, user, total) :-
-  allocateEvent(epoch, user, _),
-  total = sum amount: allocateEvent(epoch, user, amount).
+updatePoint(epoch, trader, referrer, point) :-
+    recv_updatePoint(epoch, trader, point),
+    msgSender(s), updater(u), u == s,
+    referredBy(trader, referrer).
 
-// Claimed is cumulative: sum of all claimEvent amounts for (epoch,user).
-claimed(epoch, user, c) :-
-  claimEvent(epoch, user, _),
-  c = sum amount: claimEvent(epoch, user, amount).
+tradingPointEvent(epoch, trader, point)   :- updatePoint(epoch, trader, _, point).
+referralPointEvent(epoch, referrer, point) :- updatePoint(epoch, _, referrer, point).
 
-// Claimable is the remaining amount: max(totalReward - claimed, 0).
-// We only materialize the positive case and use invalidTx to block the non-positive case.
-claimable(epoch, user, r) :-
-  totalReward(epoch, user, total),
-  claimed(epoch, user, c),
-  total > c,
-  r := total - c.
+// Sum all trading/referral point events per (epoch, user)
+tradingPoint(epoch, user, total) :-
+    tradingPointEvent(epoch, user, _),
+    total = sum p : tradingPointEvent(epoch, user, p).
+
+referralPoint(epoch, user, total) :-
+    referralPointEvent(epoch, user, _),
+    total = sum p : referralPointEvent(epoch, user, p).
 
 ////////////////////
-// claimMultiple (single-epoch) fixed semantics
+// nextEpoch: record TWAP and vesting parameters for a given epoch
+////////////////////
+
+nextEpoch(epoch, twap, t, vestingDuration) :-
+    recv_nextEpoch(epoch, twap, vestingDuration),
+    now(t).
+
+epochTWAP(epoch, twap)                       :- nextEpoch(epoch, twap, _, _).
+epochAllocationTime(epoch, allocationTime)   :- nextEpoch(epoch, _, allocationTime, _).
+epochVestingDuration(epoch, vestingDuration) :- nextEpoch(epoch, _, _, vestingDuration).
+
+////////////////////
+// claimMultiple (single-epoch)
+//
+// Delegates the full reward computation (tier discounts, TWAP pricing, vesting)
+// to the computeClaimable UDF.  The UDF reads tradingPoint, referralPoint,
+// epochTWAP, epochAllocationTime, epochVestingDuration, and claimed from storage.
 ////////////////////
 
 claimMultiple(epoch, user, to, reward) :-
-  recv_claimMultiple(epoch, to),
-  msgSender(user),
-  currentEpoch(e),
-  epoch < e,
-  claimable(epoch, user, reward).
+    recv_claimMultiple(epoch, to),
+    msgSender(user),
+    currentEpoch(e), epoch < e,
+    computeClaimable(epoch, user, reward),
+    reward > 0.
 
-// Each successful claimMultiple claims exactly `reward` for that epoch/user.
-// This induces claimed += reward via the claimed=sum(claimEvent) definition.
-claimEvent(epoch, user, reward) :-
-  claimMultiple(epoch, user, _, reward).
+// Seed claimed=0 as soon as points exist for this (epoch,user), so claimed is
+// always defined before the first claimMultiple fires.
+claimEvent(epoch, user, 0) :- tradingPointEvent(epoch, user, _).
+claimEvent(epoch, user, 0) :- referralPointEvent(epoch, user, _).
 
+// Record each successful claim amount
+claimEvent(epoch, user, reward) :- claimMultiple(epoch, user, _, reward).
+
+// Cumulative claimed = sum of all claimEvent amounts
+claimed(epoch, user, c) :-
+    claimEvent(epoch, user, _),
+    c = sum a : claimEvent(epoch, user, a).

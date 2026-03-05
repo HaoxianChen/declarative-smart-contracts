@@ -4,10 +4,6 @@ totalSupply(0) :- constructor(_).
 unlockTime(t) :- constructor(t).
 totalBalances(0) :- constructor(_).
 
-// canTransfer function (preserve original)
-canTransfer(p,q) :- now(t), unlockTime(ut), t >= ut.
-canTransfer(p,q) :- precirculated(p,true), precirculated(q,true).
-
 // precirculation state updates
 precirculated(p,true) :- allowPrecirculation(p).
 precirculated(p,false) :- disallowPrecirculation(p).

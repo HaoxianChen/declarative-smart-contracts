@@ -1,37 +1,81 @@
 ////////////////////////////
-// metadragon (P404Token / MetaDragon) - vulnerability-focused
+// MetaDragon (P404Token) - high-fidelity model
 //
-// Cover A+B (your definition):
-// A: `to == erc721` triggers transform (amount path).
-// B1: tokenId path should be forbidden via ERC20 transfer entry.
+// Hybrid ERC20/NFT contract.  The key semantic is the _update hook:
+//   - isValidTokenId(value) determines whether value is an NFT tokenId or ERC20 amount.
+//   - Only `to == address(this)` should trigger a transform (the vulnerability fix).
+//   - erc20ToNft: burn ERC20 tokens, mint NFTs   (uses nftsForAmount UDF)
+//   - nftToErc20: burn NFT, mint ERC20 tokens    (fixed rate: TRANSFORM_PRICE * 98%)
 //
-// Fixed semantics target:
-// - ONLY allow `to == this` to trigger transform.
-// - Forbid tokenId values in this entry: require value >= 30001.
-//
-// Notes:
-// - We DO NOT compile Solidity here (imports missing). This is a Datalog benchmark.
-// - We model the internal `_update(to,value)` trigger as a public tx `recv_update(to,value)`.
-// - `this(t)` is a built-in relation yielding address(this).
+// UDFs:
+//   isValidTokenId(value, ok)  — pure: ok = (value < 30001)
+//   nftsForAmount(amount, n)   — pure: n = amount / TRANSFORM_PRICE  (TRANSFORM_PRICE = 10000e18)
 ////////////////////////////
 
-// Initialization
 .decl constructor()
-.decl *initialized(b: bool)
-.public initialized(0)
 
-// Transactions (model `_update(to,value)` as the external trigger)
+// ERC20 token state
+.decl *totalSupply(n: int)
+.decl balanceOf(user: address, n: int)[0]
+
+// NFT (ERC721 side) state
+.decl *totalNFTs(n: int)
+.decl nftBalance(user: address, n: int)[0]
+
+// UDFs
+.decl isValidTokenId(value: uint, ok: bool)
+.udf isValidTokenId
+
+.decl nftsForAmount(amount: int, n: int)
+.udf nftsForAmount
+
+// Transactions
+// recv_update models the internal _update(to, value) hook
 .decl recv_update(to: address, value: uint)
 .public recv_update
-
-// Derived transaction relation (semantic event: "transform is attempted")
 .decl update(user: address, to: address, value: uint)
 
-// Minimal observable state: how many transforms each user executed
-.decl transformCount(user: address, n: uint)[0]
-.public transformCount(1)
+// Direct transform calls (ERC20 -> NFT)
+.decl recv_erc20ToNft(amount: int)
+.public recv_erc20ToNft
+.decl erc20ToNft(user: address, amount: int, nfts: int)
 
-// Validity
+// Direct transform calls (NFT -> ERC20)
+.decl recv_nftToErc20(tokenId: uint)
+.public recv_nftToErc20
+.decl nftToErc20(user: address, tokenId: uint, tokens: int)
+
+// ERC20 transfer
+.decl recv_transfer(to: address, amount: int)
+.public recv_transfer
+.decl transfer(from: address, to: address, amount: int)
+
+// Public views
+.public balanceOf(1)
+.public nftBalance(1)
+.public totalSupply(0)
+.public totalNFTs(0)
+
+// Properties
 .decl invalidTx()
 .violation invalidTx
+.decl negativeBalance(user: address, n: int)[0]
+.violation negativeBalance
+.decl negativeNftBalance(user: address, n: int)[0]
+.violation negativeNftBalance
 
+// Intermediate accounting helpers
+.decl tokensIn(user: address, n: int)[0]
+.decl tokensOut(user: address, n: int)[0]
+.decl nftsIn(user: address, n: int)[0]
+.decl nftsOut(user: address, n: int)[0]
+.decl tokenIncome(user: address, n: int)
+.decl tokenExpense(user: address, n: int)
+.decl nftIncome(user: address, n: int)
+.decl nftExpense(user: address, n: int)
+
+// Transaction placeholder rules
+update(user, to, value)    :- recv_update(to, value), msgSender(user).
+erc20ToNft(user, amt, n)   :- recv_erc20ToNft(amt), msgSender(user), nftsForAmount(amt, n).
+nftToErc20(user, tid, tok) :- recv_nftToErc20(tid), msgSender(user), tok := 9800.
+transfer(from, to, amt)    :- recv_transfer(to, amt), msgSender(from).

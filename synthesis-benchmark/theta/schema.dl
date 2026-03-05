@@ -7,8 +7,8 @@
 .decl allowance(p: address, s: address, n:int)[0,1]
 
 .decl precirculated(p:address, b:bool)[0]
-.decl canTransfer(p:address,q:address)
-.function canTransfer
+.decl canTransfer(from: address, to: address, ok: bool)
+.udf canTransfer
 .decl *unlockTime(t: uint)
 
 // constructor

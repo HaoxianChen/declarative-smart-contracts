@@ -15,6 +15,10 @@
 
 .decl constructor(s: uint, d:uint, b:address)
 
+// UDF: proportional vesting schedule (mirrors _vestingSchedule in the original contract)
+.decl vestedAmount(totalAlloc: uint, elapsed: uint, amount: uint)
+.udf vestedAmount
+
 // Properties (preserve original)
 .decl *earlyRelease(e: uint)
 .violation earlyRelease

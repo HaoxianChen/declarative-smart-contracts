@@ -12,34 +12,31 @@ invalidTx() :- recv_mint(p,_), p==0.
 invalidTx() :- recv_burn(p,_), p==0.
 invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
 
-// transfer: endpoints non-zero, enough balance, and permissioning
+// Amount must be positive
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_mint(_,n), n<=0.
+invalidTx() :- recv_burn(_,n), n<=0.
+invalidTx() :- recv_transferFrom(o,_,_,n), n<=0.
+
+// transfer: endpoints non-zero, enough balance, and send/recv permission via UDF
 invalidTx() :- recv_transfer(s,_,_), s==0.
 invalidTx() :- recv_transfer(_,r,_), r==0.
 invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-// if permission explicitly disallows sending/receiving, or permission expired
-invalidTx() :- recv_transfer(s,_,_), permissionSendAllowed(s, sendOk), sendOk==false.
-invalidTx() :- recv_transfer(_,r,_), permissionReceiveAllowed(r, recvOk), recvOk==false.
-invalidTx() :- recv_transfer(s,_,_), permissionSendAllowed(s, b), b==true,
-    permissionExpiryTime(s, expire), expire!=0, now(t), t>=expire.
-invalidTx() :- recv_transfer(_,r,_), permissionReceiveAllowed(r, b), b==true,
-    permissionExpiryTime(r, expire), expire!=0, now(t), t>=expire.
+invalidTx() :- recv_transfer(s,_,_), canSend(s,ok), ok==false.
+invalidTx() :- recv_transfer(_,r,_), canRecv(r,ok), ok==false.
 
-// transferFrom: endpoints non-zero, enough balance/allowance, and permissioning
+// transferFrom: endpoints non-zero, enough balance/allowance, and permission via UDF
 invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
 invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
-invalidTx() :- recv_transferFrom(o,_,_,_), permissionSendAllowed(o, sendOk), sendOk==false.
-invalidTx() :- recv_transferFrom(_,r,_,_), permissionReceiveAllowed(r, recvOk), recvOk==false.
-invalidTx() :- recv_transferFrom(o,_,_,_), permissionSendAllowed(o, b), b==true,
-    permissionExpiryTime(o, expire), expire!=0, now(t), t>=expire.
-invalidTx() :- recv_transferFrom(_,r,_,_), permissionReceiveAllowed(r, b), b==true,
-    permissionExpiryTime(r, expire), expire!=0, now(t), t>=expire.
+invalidTx() :- recv_transferFrom(o,_,_,_), canSend(o,ok), ok==false.
+invalidTx() :- recv_transferFrom(_,r,_,_), canRecv(r,ok), ok==false.
 
 // increaseAllowance: delta must be non-negative
 invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
 
-// distributeInterests: must respect minInterval (legacy uses lastDistributeTime - t > i)
-invalidTx() :- recv_distributeInterests(_,t), minInterval(i), lastDistributeTime(t1), t1 - t <= i.
-
+// distributeInterests: elapsed time since last distribution must exceed minInterval
+invalidTx() :- recv_distributeInterests(_,t), minInterval(i), lastDistributeTime(t1), t - t1 <= i.
+// distributeInterests: interest amount must be positive
+invalidTx() :- recv_distributeInterests(n,_), n<=0.

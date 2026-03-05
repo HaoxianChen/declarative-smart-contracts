@@ -1,18 +1,30 @@
 ////////////////////////////
-// metadragon rules (fixed-by-synthesis guards)
+// MetaDragon rules
 ////////////////////////////
 
-initialized(true) :- constructor().
+totalSupply(260000000) :- constructor().
+totalNFTs(0)          :- constructor().
 
-// Transaction placeholder rule:
-// This represents the internal `_update(to,value)` attempting to trigger transform.
-// Guards will be synthesized from properties.dl.
-update(user, to, value) :-
-  recv_update(to, value),
-  msgSender(user).
+// Token balance accounting
+// Income events
+tokenIncome(user, n) :- nftToErc20(user, _, n).          // NFT -> token: receive tokens
 
-// Observable state: count how many times each user triggered update/transform.
-transformCount(user, n) :-
-  update(user, _, _),
-  n = count: update(user, _, _).
+// Expense events
+tokenExpense(user, n) :- erc20ToNft(user, n, _).          // ERC20 -> NFT: burn tokens
+tokenExpense(from, n) :- transfer(from, _, n).            // ERC20 transfer out
 
+// Token balance = total income - total expense (relative to constructor mint)
+tokensIn(user, s)  :- tokenIncome(user, _), s = sum n: tokenIncome(user, n).
+tokensOut(user, s) :- tokenExpense(user, _), s = sum n: tokenExpense(user, n).
+balanceOf(user, s) :- tokensIn(user, i), tokensOut(user, o), s := i - o.
+
+// NFT balance accounting
+nftIncome(user, n)  :- erc20ToNft(user, _, n).            // ERC20 -> NFT: receive NFTs
+nftExpense(user, 1) :- nftToErc20(user, _, _).            // NFT -> token: lose 1 NFT
+
+nftsIn(user, s)      :- nftIncome(user, _), s = sum n: nftIncome(user, n).
+nftsOut(user, s)     :- nftExpense(user, _), s = sum n: nftExpense(user, n).
+nftBalance(user, s)  :- nftsIn(user, i), nftsOut(user, o), s := i - o.
+
+// Total NFTs across all users
+totalNFTs(n) :- erc20ToNft(_, _, _), n = sum k: erc20ToNft(_, _, k).

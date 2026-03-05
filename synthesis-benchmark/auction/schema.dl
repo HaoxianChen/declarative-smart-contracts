@@ -1,3 +1,4 @@
+// adopted from https://docs.soliditylang.org/en/v0.8.11/solidity-by-example.html#blind-auction
 // ===== Parameters (singleton state) =====
 .decl *owner(p: address)
 .decl *beneficiary(p: address)

@@ -71,3 +71,8 @@ invalidTx() :- recv_claimRefund(_), _finalized(b), b==false.
 invalidTx() :- recv_claimRefund(_), _weiRaised(s), _goal(g), s>=g.
 invalidTx() :- recv_claimRefund(_), state(h), h!=1.
 invalidTx() :- recv_claimRefund(p), _deposits(p,a), a==0.
+
+// --- Token amount ---
+// Token amount computed by getTokenAmount must be positive.
+// Mirrors the original contract requirement that _rate > 0 so _getTokenAmount returns a non-zero value.
+invalidTx() :- recv_buyToken(_,v), getTokenAmount(v,tokens), tokens<=0.

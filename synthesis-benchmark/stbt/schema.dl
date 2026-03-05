@@ -13,10 +13,10 @@
 .decl permissionSendAllowed(p: address, b: bool)[0]
 .decl permissionReceiveAllowed(p: address, b: bool)[0]
 .decl permissionExpiryTime(p: address, t: uint)[0]
-.decl canSend(s:address)
-.decl canRecv(s:address)
-.function canSend
-.function canRecv
+.decl canSend(addr: address, ok: bool)
+.decl canRecv(addr: address, ok: bool)
+.udf canSend
+.udf canRecv
 
 // Transactions (B-style explicit params)
 .decl mint(p: address, amount: int)

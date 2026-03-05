@@ -1,10 +1,10 @@
-claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(s_1),p!=address(0),s_1!=p.
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
+transferFrom(o,r,s,n) :- n>0,0!=balanceOf_x1,balanceOf(o,m_1),n<=m_1,recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1).
 decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(s,balanceOf_x1),n<balanceOf_x1.
 transferOwnership(p) :- o_1==s_1,p!=address(0),msgSender(s_1),owner(o_1),recv_transferOwnership(p).
 paused(false) :- o_1==s_1,msgSender(s_1),b_0!=false,owner(o_1),recv_unpause(),paused(b_0).
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(s_1),p!=address(0),s_1==p.
 burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
-transfer(s,r,n) :- recv_transfer(s,r,n).
 paused(true) :- o_1==s_1,recv_pause(),msgSender(s_1),b_0!=true,paused(b_0),owner(o_1).
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
 increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>=0.

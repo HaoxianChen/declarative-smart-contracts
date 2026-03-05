@@ -16,17 +16,20 @@ invalidTx() :- recv_mint(p,_), p==0.
 invalidTx() :- recv_burn(p,_), p==0.
 invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
 
-// transfer: endpoints non-zero and enough balance
+// transfer: endpoints non-zero, positive amount, enough balance, and canTransfer must hold
 invalidTx() :- recv_transfer(s,_,_), s==0.
 invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_transfer(_,_,n), n<=0.
 invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+invalidTx() :- recv_transfer(s,r,_), canTransfer(s,r,ok), ok==false.
 
-// transferFrom: endpoints non-zero, enough balance/allowance
+// transferFrom: endpoints non-zero, enough balance/allowance, and canTransfer must hold
 invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
 invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
 invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
+invalidTx() :- recv_transferFrom(o,r,_,_), canTransfer(o,r,ok), ok==false.
 
 // increaseAllowance: delta must be non-negative
 invalidTx() :- recv_increaseAllowance(_,_,d), d<0.

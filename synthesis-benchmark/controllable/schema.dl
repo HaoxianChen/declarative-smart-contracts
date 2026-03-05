@@ -1,5 +1,5 @@
 // The controllable token contract following ERC 1644 standard.
-
+// Adopated from: https://github.com/ethereum/EIPs/issues/1644
 // parameters
 .decl *owner(p: address)
 .decl *controller(p: address)
@@ -22,6 +22,7 @@
 
 // ERC 1644 interfaces
 .decl recv_controllerTransfer(from: address, to: address, amount: int)
+.public recv_controllerTransfer
 .decl controllerTransfer(from: address, to: address, amount: int)
 .decl recv_controllerRedeem(p: address, amount: int)
 .decl controllerRedeem(p: address, amount: int)

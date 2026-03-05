@@ -1,47 +1,82 @@
 ////////////////////////////
-// LevelReferralControllerV2 (claimMultiple-only, vulnerability-focused)
+// LevelReferralControllerV2 - high-fidelity model with UDF
 //
-// Focus: claimMultiple uses `claimed = reward` (bug) instead of `claimed += reward` (fix).
-// We model the FIXED semantics: claimed is the cumulative claimed amount per (epoch,user),
-// and each claimMultiple claims exactly the remaining amount (claimable).
+// Key transactions (matching original):
+//   setReferrer(referrer)             <- trader establishes referral relationship
+//   updatePoint(epoch, trader, point) <- updater records trading/referral points
+//                                        (simplified: epoch is explicit parameter;
+//                                         original derives it from currentEpoch)
+//   nextEpoch(epoch, twap, vestDur)   <- record TWAP and vesting info per epoch
+//                                        (simplified: epoch is explicit parameter)
+//   claimMultiple(epoch, to)          <- user claims rewards for a past epoch
 //
-// Simplifications (per user decisions):
-// - claimMultiple simplified to a single-epoch tx: recv_claimMultiple(epoch,to)
-// - totalReward is abstracted and provided via recv_allocate(epoch,user,amount)
-// - ignore oracle/tier/referral/vesting and actual token transfers
+// UDF:
+//   computeClaimable(epoch, user, result)
+//     Reads state to compute claimable reward including:
+//       (tradingPoint * 5% + referralPoint * 5%) / TWAP * vestingRatio - claimed
+//     Simplified from original: uses fixed tier-1 rates (5%) instead of dynamic tiers.
 ////////////////////////////
 
-// Initialization
 .decl constructor()
+
+// Access control
+.decl *owner(p: address)
+.decl *updater(p: address)
+
+// Epoch boundary for claim eligibility
 .decl *currentEpoch(e: uint)
 .public currentEpoch(0)
 
-// Transactions
-.decl recv_allocate(epoch: uint, user: address, amount: uint)
-.public recv_allocate
+// Epoch metadata (recorded via nextEpoch)
+.decl epochTWAP(epoch: uint, twap: uint)[0]
+.decl epochAllocationTime(epoch: uint, t: uint)[0]
+.decl epochVestingDuration(epoch: uint, d: uint)[0]
+
+// Referral relationships
+.decl referredBy(trader: address, referrer: address)[0]
+
+// Point accumulation events (per epoch)
+.decl tradingPointEvent(epoch: uint, trader: address, point: uint)
+.decl referralPointEvent(epoch: uint, referrer: address, point: uint)
+
+// Point state: sum of all events per (epoch, user)
+.decl tradingPoint(epoch: uint, user: address, amount: uint)[0,1]
+.decl referralPoint(epoch: uint, user: address, amount: uint)[0,1]
+
+// Claim state: cumulative amount claimed per (epoch, user)
+.decl claimEvent(epoch: uint, user: address, amount: uint)
+.decl claimed(epoch: uint, user: address, amount: uint)[0,1]
+
+// UDF: full claimable formula (tier-1 rates + vesting + subtract already claimed)
+.decl computeClaimable(epoch: uint, user: address, result: uint)
+.udf computeClaimable
+
+// ── Transactions ─────────────────────────────────────────────────────────────
+
+.decl recv_setReferrer(referrer: address)
+.public recv_setReferrer
+.decl setReferrer(trader: address, referrer: address)
+
+.decl recv_updatePoint(epoch: uint, trader: address, point: uint)
+.public recv_updatePoint
+.decl updatePoint(epoch: uint, trader: address, referrer: address, point: uint)
+
+.decl recv_nextEpoch(epoch: uint, twap: uint, vestingDuration: uint)
+.public recv_nextEpoch
+.decl nextEpoch(epoch: uint, twap: uint, allocationTime: uint, vestingDuration: uint)
 
 .decl recv_claimMultiple(epoch: uint, to: address)
 .public recv_claimMultiple
-
-// Derived transaction relations
-.decl allocate(epoch: uint, user: address, amount: uint)
 .decl claimMultiple(epoch: uint, user: address, to: address, reward: uint)
 
-// Base event relations (used for aggregation)
-.decl allocateEvent(epoch: uint, user: address, amount: uint)
-.decl claimEvent(epoch: uint, user: address, amount: uint)
+// ── Public views ─────────────────────────────────────────────────────────────
 
-// State (1-value indexed maps; required by synthesis engine)
-.decl totalReward(epoch: uint, user: address, amount: uint)[0,1]
-.decl claimed(epoch: uint, user: address, amount: uint)[0,1]
-.decl claimable(epoch: uint, user: address, amount: uint)[0,1]
-
-// Interfaces (optional inspection)
-.public totalReward(2)
+.public tradingPoint(2)
+.public referralPoint(2)
 .public claimed(2)
-.public claimable(2)
+.public epochTWAP(1)
 
-// Properties / validity
+// ── Properties ───────────────────────────────────────────────────────────────
+
 .decl invalidTx()
 .violation invalidTx
-

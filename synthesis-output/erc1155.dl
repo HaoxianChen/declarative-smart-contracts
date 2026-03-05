@@ -1,5 +1,5 @@
+transferFrom(t,o,r,sp,n) :- n<=m_2,balanceOf(t,o,m_2),success_0!=false,allowance(t,o,sp,k_1),r!=address(0),n<=k_1,o!=address(0),recv_transferFrom(t,o,r,sp,n),onERC1155Received(r,t,n,success_0).
 transfer(t,s,r,n) :- s!=address(0),recv_transfer(t,s,r,n),r!=address(0),balanceOf(t,s,m_1),n<=m_1.
-transferFrom(t,o,r,sp,n) :- allowance(t,o,sp,k_0),n<=k_0,r!=address(0),o!=address(0),recv_transferFrom(t,o,r,sp,n),balanceOf(t,o,m_1),n<=m_1.
 increaseAllowance(t,o,s,d) :- recv_increaseAllowance(t,o,s,d).
 burn(t,p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),owner(o_1),recv_burn(t,p,n),balanceOf(t,p,m_2).
 mint(t,p,n) :- o_1==s_1,p!=address(0),msgSender(s_1),recv_mint(t,p,n),owner(o_1).

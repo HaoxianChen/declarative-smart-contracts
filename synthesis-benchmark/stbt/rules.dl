@@ -6,12 +6,6 @@ minInterval(0) :- constructor().
 lastDistributeTime(0) :- constructor().
 distributeTotal(0) :- constructor().
 
-// Permission functions (same semantics as old), using split permission maps
-canSend(s) :- permissionSendAllowed(s, true), permissionExpiryTime(s, expire), now(t), t<expire.
-canSend(s) :- permissionSendAllowed(s, true), permissionExpiryTime(s, 0).
-canRecv(s) :- permissionReceiveAllowed(s, true), permissionExpiryTime(s, expire), now(t), t<expire.
-canRecv(s) :- permissionReceiveAllowed(s, true), permissionExpiryTime(s, 0).
-
 // Interest distribution views
 lastDistributeTime(m) :- m = max t: distributeInterests(_,t).
 distributeTotal(s) :- s = sum n: distributeInterests(n,_).

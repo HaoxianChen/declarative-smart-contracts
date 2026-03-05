@@ -1,3 +1,5 @@
+// adopted from https://etherscan.io/address/0x00199C511DC889B8155fa425fc0363Ed481e8f48#code
+
 // parameters
 .decl *owner(p: address)
 .decl *paused(p: bool)
@@ -9,6 +11,7 @@
 .public allowed(2)
 
 .decl recv_pause()
+.public recv_pause
 .decl pause()
 
 // basicToken
@@ -83,6 +86,9 @@
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
 
 // Transaction placeholder rules
 pause() :- recv_pause().

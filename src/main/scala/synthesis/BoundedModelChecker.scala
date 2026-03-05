@@ -7,7 +7,7 @@ import com.microsoft.z3._
 import Verifier.indicatorConstForTransactionTriggerRelation
 import imp.SolidityTranslator.transactionRelationPrefix
 
-case class BoundedModelChecker() {
+case class BoundedModelChecker(udfSolPath: String = "") {
   // cache for per-step substitution arrays and name->Expr map
   private val stepSubstCache = scala.collection.mutable.Map.empty[Int, (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]])]
 
@@ -105,7 +105,7 @@ case class BoundedModelChecker() {
       enableProjection = true
     )
     val imperative = impTranslator.translate()
-    val verifier = new Verifier(program, imperative)
+    val verifier = new Verifier(program, imperative, udfSolPath = udfSolPath)
     val ts = verifier.getTransitionSystem()
 
     println(s"[BMC] Transition system ready for program '${program.name}'")

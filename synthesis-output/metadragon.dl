@@ -1,1 +1,4 @@
-update(user,to,value) :- to==t_1,recv_update(to,value),value>=30001,this(t_1),msgSender(user).
+erc20ToNft(user,amt,n) :- recv_erc20ToNft(amt),msgSender(user),nftsForAmount(amt,n),amt>0.
+nftToErc20(user,tid,tok) :- msgSender(user),tok := 9800,isValidTokenId(tid,ok),msgSender(msgSender),recv_nftToErc20(tid),nftBalance_x1>0,nftBalance(msgSender,nftBalance_x1),ok!=false.
+transfer(from,to,amt) :- recv_transfer(to,amt),msgSender(from),amt>0,to!=address(0).
+update(user,to,value) :- msgSender(user),0!=balanceOf_x1,recv_update(to,value),balanceOf(msgSender,balanceOf_x1),isValidTokenId(value,ok_1),ok_1!=true,this(t_0),to==t_0,msgSender(msgSender).

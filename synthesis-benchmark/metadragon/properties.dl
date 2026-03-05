@@ -1,21 +1,34 @@
 ////////////////////////////
-// metadragon properties (A + B1)
+// MetaDragon properties
 //
-// We encode the FIX as invalidTx() so CEGIS synthesizes guards for `update`.
-// Each invalidTx rule uses exactly ONE functor, so predicate extraction works.
+// Encodes the vulnerability fix and token/NFT solvency invariants.
+//
+// Vulnerability:
+//   - _update hook should ONLY trigger transform when to == address(this).
+//   - Passing a tokenId (isValidTokenId == true) via the ERC20 update path is invalid.
+//
+// Fix:
+//   - Only `to == address(this)` triggers transform; `to == erc721` must be blocked.
+//   - isValidTokenId(value) is used to distinguish tokenId vs ERC20 amount.
 ////////////////////////////
 
-// Fix for A (and also enforces your requirement "only allow to==this"):
-// If `to != this`, the transform-triggering entry is invalid.
-invalidTx() :-
-  recv_update(to, _),
-  this(t),
-  to != t.
+// Vulnerability fix A: to must equal address(this) for transform to be triggered.
+invalidTx() :- recv_update(to, _), this(t), to != t.
 
-// Fix for B1:
-// Disallow tokenId values via this entry.
-// isValidTokenId(tokenId) == (tokenId < 30001)
-invalidTx() :-
-  recv_update(_, value),
-  value < 30001.
+// Vulnerability fix B: tokenId values must not be passed as ERC20 amounts via update.
+// Uses the isValidTokenId UDF: if value is a valid tokenId (<30001), reject via update.
+invalidTx() :- recv_update(_, value), isValidTokenId(value, ok), ok == true.
 
+// erc20ToNft: amount must be positive and divisible by TRANSFORM_PRICE
+invalidTx() :- recv_erc20ToNft(amount), amount <= 0.
+
+// nftToErc20: tokenId must be a valid tokenId
+invalidTx() :- recv_nftToErc20(tokenId), isValidTokenId(tokenId, ok), ok == false.
+
+// ERC20 transfer guards
+invalidTx() :- recv_transfer(_, amount), amount <= 0.
+invalidTx() :- recv_transfer(to, _), to == 0.
+
+// Solvency violations
+negativeBalance(user, n)    :- balanceOf(user, n), n < 0.
+negativeNftBalance(user, n) :- nftBalance(user, n), n < 0.

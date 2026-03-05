@@ -1,45 +1,88 @@
 ////////////////////////////
-// SheepFarm (register-only, vulnerability-focused)
+// SheepFarm - high-fidelity model
 //
-// Focus: register() can be called multiple times because it does not write
-// villages[user].timestamp. We model and "fix" this by requiring timestamp==0
-// before register, and setting timestamp at register time.
+// Covers the full economic loop:
+//   register -> addGems -> upgradeVillage -> collectMoney -> withdrawMoney
 //
-// Simplifications (accepted):
-// - Ignore sheeps[0] / manager fallback branch; always keep neighbor as provided
-//   and bonus as GEM_BONUS.
-// - Ignore initialize()/manager; assume system is initialized (constructor sets it).
+// UDFs (pure lookup tables):
+//   getYield(farm, sheep)        -> yield increment per hour
+//   getUpgradePrice(farm, sheep) -> gem cost (price/denominator, denominator=10)
+//   syncYield(user)              -> accrued wool (state-reading: yield * elapsed hours)
+//
+// Key fix: register() must only succeed once per address (timestamp guard).
 ////////////////////////////
 
-// Parameters / constants (kept as simple relations; values appear as numeric constants in rules)
 .decl constructor()
 
-// Minimal init flag to ensure constructor exists in generated Solidity
-.decl *initialized(b: bool)
-.public initialized(0)
+// Core village state
+.decl villageGems(user: address, n: int)[0]       // gem balance
+.decl villageWool(user: address, n: int)[0]       // wool (money) balance
+.decl villageYield(user: address, y: int)[0]      // cumulative hourly yield rate
+.decl villageTimestamp(user: address, t: uint)[0] // last-sync block.timestamp
+.decl villageNeighbor(user: address, ref: address)[0]
+
+.decl *totalVillages(n: uint)
+.decl *totalSheeps(n: uint)
+
+// Intermediate accounting helpers
+.decl gemIncome(user: address, n: int)        // all gem income events
+.decl gemsEarned(user: address, n: int)[0]   // total gems earned
+.decl gemsSpent(user: address, n: int)[0]    // total gems spent on upgrades
+.decl woolEarned(user: address, n: int)[0]   // total wool collected
+.decl woolSpent(user: address, n: int)[0]    // total wool withdrawn
+
+// UDFs
+.decl getYield(farm: uint, sheep: uint, y: int)
+.udf getYield
+
+.decl getUpgradePrice(farm: uint, sheep: uint, price: int)
+.udf getUpgradePrice
+
+// State-reading UDF: accrued wool = villageYield * elapsed_hours (capped at 24h)
+.decl syncYield(user: address, wool: int)
+.udf syncYield
 
 // Transactions
-.decl recv_register(neighbor: address)
+.decl recv_register(ref: address)
 .public recv_register
+.decl register(user: address, ref: address, gems: int, t: uint)
 
-// Semantic transaction (derived from recv_register + msgSender + time)
-.decl register(user: address, neighbor: address, bonus: uint, time: uint)
+.decl recv_addGems(gems: int)
+.public recv_addGems
+.decl addGems(user: address, gems: int)
 
-// State (all are 1-value maps / singletons for synthesis compatibility)
-.decl villageTimestamp(user: address, time: uint)[0]
-.decl villageNeighbor(user: address, neighbor: address)[0]
-.decl villageGems(user: address, gems: uint)[0]
-.decl neighborCount(neighbor: address, n: uint)[0]
-.decl *totalVillages(n: uint)
+.decl recv_upgradeVillage(farm: uint, sheep: uint)
+.public recv_upgradeVillage
+.decl upgradeVillage(user: address, farm: uint, sheep: uint, yDelta: int, cost: int)
 
-// Interfaces (optional for inspection)
+.decl recv_collectMoney()
+.public recv_collectMoney
+.decl collectMoney(user: address, wool: int, t: uint)
+
+.decl recv_withdrawMoney(amount: int)
+.public recv_withdrawMoney
+.decl withdrawMoney(user: address, amount: int)
+
+// Public views
+.public villageGems(1)
+.public villageWool(1)
+.public villageYield(1)
 .public villageTimestamp(1)
 .public villageNeighbor(1)
-.public villageGems(1)
-.public neighborCount(1)
 .public totalVillages(0)
+.public totalSheeps(0)
 
-// Properties / validity
+// Properties
 .decl invalidTx()
 .violation invalidTx
+.decl negativeGems(user: address, n: int)[0]
+.violation negativeGems
+.decl negativeWool(user: address, n: int)[0]
+.violation negativeWool
 
+// Transaction placeholder rules
+register(user, ref, 10, t)       :- recv_register(ref), msgSender(user), now(t).
+addGems(user, gems)              :- recv_addGems(gems), msgSender(user).
+upgradeVillage(user, farm, sheep, y, c) :- recv_upgradeVillage(farm, sheep), msgSender(user), getYield(farm, sheep, y), getUpgradePrice(farm, sheep, c).
+collectMoney(user, wool, t)      :- recv_collectMoney(), msgSender(user), syncYield(user, wool), now(t).
+withdrawMoney(user, amount)      :- recv_withdrawMoney(amount), msgSender(user).

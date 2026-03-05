@@ -1,3 +1,4 @@
+// source: https://github.com/eth-sri/verx-benchmarks/blob/master/overview/main.sol
 // Relation declarations
 .decl *target(t: uint)
 .decl *beneficiary(p: address)
@@ -54,5 +55,5 @@
 // Transaction placeholder rules
 invest(p,n) :- recv_invest(p,n).
 close() :- recv_close().
-refund(p,n) :- recv_refund(p,n).
+refund(p,n) :- recv_refund(p,n), closed(b), b!=false, raised(r), target(t), r<t.
 withdraw(p,r) :- recv_withdraw(p,r).

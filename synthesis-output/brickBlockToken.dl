@@ -1,9 +1,9 @@
-mint(p,n) :- recv_mint(p,n),n>0.
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1),0!=balances_x1.
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(s,balances_x1),d<=balances_x1.
+pause() :- recv_pause(),owner(o),msgSender(s),o==s.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
-pause() :- recv_pause().
-decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),allowed(o,s,allowed_x2),d<=allowed_x2.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),o==s.
+unpause() :- recv_unpause(),owner(o),msgSender(s),o==s.
 evacuate(p) :- recv_evacuate(p),balances(p,balances_x1),balances_x1>0.
 upgrade(p) :- recv_upgrade(p).
-unpause() :- recv_unpause().
-transfer(s,r,n) :- recv_transfer(s,r,n),balances_x1>0,balances(r,balances_x1),paused(b),b!=true.
+transfer(s,r,n) :- paused(b_2),balances(s,m_1),recv_transfer(s,r,n),n>0,b_2!=true,n<=m_1.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,m),n<=m.

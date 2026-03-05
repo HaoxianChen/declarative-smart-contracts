@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{ArithOperator, Arithmetic, Assign, BooleanType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Unequal, Variable}
+import datalog.{ArithOperator, Arithmetic, Assign, BooleanType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Param, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Unequal, Variable, Type}
 import imp.{ImperativeAbstractProgram, ImperativeTranslator}
 import Arithmetic.extractParameters
 import viewMaterializer.BaseViewMaterializer
@@ -99,6 +99,18 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     val txViolationRules = program.violationRules.filter(
       _.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
 
+    // Build a lookup: tx relation -> canonical tx literal from an actual transaction rule.
+    // This is used to rename violation-rule variables (e.g. `a`) to the names used in
+    // the sketch transaction rules (e.g. `amount`), so the extracted predicate functor
+    // does not contain free variables when inserted into the transaction rule body.
+    val canonicalTxLiteral: Map[Relation, Literal] = program.transactionRules()
+      .flatMap { txRule =>
+        txRule.body.collectFirst {
+          case lit: Literal if lit.relation.name.startsWith(transactionRelationPrefix) =>
+            lit.relation -> lit
+        }
+      }.toMap
+
     // for each txViolation rule: recv_tx(...), p1, p2,...
     // if it has only one functor, then negate that functor, and keep p1,p2,...
     // as the binding literal, and recv_tx... as the tx literal.
@@ -123,7 +135,31 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       else {
         val f = condFunctors.head
         val negated = Functor.negate(f)
-        Some(rule -> Predicate(Context(txLiteral, bindingLiterals), negated))
+        val predicate = Predicate(Context(txLiteral, bindingLiterals), negated)
+
+        // Rename violation-rule tx literal variables to match the sketch transaction rule.
+        // E.g. violation rule uses `recv_withdrawMoney(a)` with functor `a>0`, but the
+        // transaction rule uses `recv_withdrawMoney(amount)`.  Without renaming, `a` would
+        // be an unbound free variable in the synthesized rule body.
+        val renamed: Predicate = canonicalTxLiteral.get(txLiteral.relation) match {
+          case Some(canonLit) =>
+            // Only rename when the canonical position has a proper named variable (not a wildcard
+            // `_`).  Renaming a violation-rule variable to `_` would produce degenerate functors
+            // like `_==s_1` which always evaluate as free-variable matches and mislead CEGIS.
+            val renameMap: Map[Parameter, Parameter] = txLiteral.fields.zip(canonLit.fields)
+              .collect {
+                case (from: Variable, to: Variable)
+                  if from.name != to.name
+                    && !to.name.startsWith("_")
+                    && !from.name.startsWith("_") =>
+                  from -> to
+              }
+              .toMap
+            if (renameMap.nonEmpty) predicate.rename(renameMap) else predicate
+          case None => predicate
+        }
+
+        Some(rule -> renamed)
       }
     }.toMap
     predicates
@@ -182,16 +218,26 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     val returnIdx    = udfRel.sig.size - 1
     val inputIndices = udfRel.sig.indices.dropRight(1).toList
 
-    // Gather non-wildcard candidates from the tx literal, msgSender, and msgValue
-    val candidates = (txLiteral.fields ++ Context.msgSender.fields ++ Context.msgValue.fields).filter {
+    // Primary candidates: parameters from the tx literal itself.
+    // Fallback candidates: msgSender and msgValue, used only when no primary candidate
+    // of the required type exists.  Preferring tx-literal params prevents the enumerator
+    // from binding UDF inputs to unrelated context values (e.g. isValidTokenId(msgValue,…)
+    // instead of isValidTokenId(tid,…)).
+    val primaryCandidates = txLiteral.fields.filter {
+      case v: Variable => v.name != "_" && !v.name.startsWith("_")
+      case _: Constant => true
+    }
+    val fallbackCandidates = (Context.msgSender.fields ++ Context.msgValue.fields).filter {
       case v: Variable => v.name != "_" && !v.name.startsWith("_")
       case _: Constant => true
     }
 
-    // For each input position find type-consistent candidates
+    // For each input position find type-consistent candidates, primary first.
     val allParams: List[List[Parameter]] = inputIndices.map { idx =>
       val relType = udfRel.sig(idx)
-      candidates.collect { case p if p._type == relType => p }.toList
+      val primary  = primaryCandidates.collect { case p if p._type == relType => p }.toList
+      val fallback = fallbackCandidates.collect { case p if p._type == relType => p }.toList
+      if (primary.nonEmpty) primary else fallback
     }
 
     // If any input position has no candidates, no binding can be produced
@@ -227,8 +273,25 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
    invoke makeOneBinding. For each output Literal,
    make a Predicate. */
   private def withOneBinding(txLiteral: Literal, bindingRels: Set[SimpleRelation]): Set[Predicate] = {
+    // Count explicit address-typed parameters in the tx literal (wildcards excluded).
+    val txAddressCount = txLiteral.fields.count {
+      case v: Variable => v._type == Type.addressType && v.name != "_" && !v.name.startsWith("_")
+      case _           => false
+    }
+
     bindingRels.flatMap { rel =>
       val indices = relationIndices.getOrElse(rel, Nil)
+
+      // If a state relation requires 2+ address key columns, only generate binding
+      // predicates when the tx literal has strictly MORE address parameters than the
+      // relation's key arity.  This prevents spurious allowance(msgSender, s, ...) > 0
+      // guards from being generated for direct-transfer transactions like
+      // transfer(from, to, n) (2 addresses), which have no "spender" role and do not
+      // semantically interact with allowance mappings.
+      val keyAddressCount = indices.count(i => rel.sig(i) == Type.addressType)
+      if (keyAddressCount >= 2 && txAddressCount <= keyAddressCount) Set.empty[Predicate]
+      else {
+
       val bindingLiterals = makeOneBinding(txLiteral, rel, indices)
       bindingLiterals.flatMap { bindingLiteral =>
         val context = Context(txLiteral, Set(bindingLiteral))
@@ -237,12 +300,16 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
         val bindingVars = indices.map(i => bindingLiteral.fields(i))
         val valueVars = bindingLiteral.fields.diff(bindingVars)
 
-        // Only keep functors that refer to at least one variable in bindingLiteral
+        // Only keep functors that refer to at least one variable in bindingLiteral.
+        // crossMsgValue is intentionally excluded: comparing an indexed-relation value
+        // (e.g. a stored timestamp or lockPeriod) against the ETH msg.value of the current
+        // transaction is almost never semantically correct for non-ETH state variables and
+        // produces spurious guards like `villageTimestamp_x1 < msgValue` that would block
+        // all calls in real execution when msgValue == 0.
         val singles = singleAtomCandidates(bindingLiteral)
         val crossTx = crossRelationComparison(txLiteral, bindingLiteral)
         val crossMsgSender = crossRelationComparison(bindingLiteral, Context.msgSender)
-        val crossMsgValue = crossRelationComparison(bindingLiteral, Context.msgValue)
-        val functors = (singles ++ crossTx ++ crossMsgSender ++ crossMsgValue)
+        val functors = (singles ++ crossTx ++ crossMsgSender)
           .filter { f => functorParams(f).exists {
             // case v: Variable => bindingVars.contains(v)
             case v: Variable => valueVars.contains(v)
@@ -250,6 +317,7 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
           }}
         functors.map(f => Predicate(context, f))
       }
+      } // end else (keyAddressCount filter)
     }
   }
 

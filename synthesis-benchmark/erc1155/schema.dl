@@ -47,6 +47,10 @@
 .decl allowanceTotal(tokenId: int, o:address, s:address, m:int)[0,1,2]
 .decl spentTotal(tokenId: int, o:address, s:address, m:int)[0,1,2]
 
+// UDF: ERC1155 receiver hook (safeTransferFrom checks that recipient contracts accept the token)
+.decl onERC1155Received(to: address, tokenId: int, amount: int, success: bool)
+.udf onERC1155Received
+
 // Properties (preserve original)
 .decl totalBalances(tokenId: int, m: int)[0]
 .decl unequalBalance(tokenId: int, s: int, n: int)[0]

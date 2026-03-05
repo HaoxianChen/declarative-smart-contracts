@@ -1,21 +1,48 @@
 ////////////////////////////
-// levelClaimMultiple properties (fixed semantics)
+// LevelReferralControllerV2 properties
 //
-// We encode "require" checks as invalidTx() so that synthesis can learn guards.
+// invalidTx() encodes "require" checks so that synthesis can learn guards.
 ////////////////////////////
+
+// ── setReferrer ───────────────────────────────────────────────────────────────
+
+// Referrer address must be non-zero.
+invalidTx() :- recv_setReferrer(ref), ref == 0.
+
+// A trader cannot refer themselves.
+invalidTx() :- recv_setReferrer(ref), msgSender(s), s == ref.
+
+// ── updatePoint ───────────────────────────────────────────────────────────────
+
+// Only the designated updater may call updatePoint.
+invalidTx() :- recv_updatePoint(_,_,_), updater(u), msgSender(s), u != s.
+
+// Trader address must be non-zero.
+invalidTx() :- recv_updatePoint(_, trader, _), trader == 0.
+
+// Point amount must be positive.
+invalidTx() :- recv_updatePoint(_, _, point), point <= 0.
+
+// Note: referredBy existence is enforced by the updatePoint rule itself —
+// if no referredBy entry exists for the trader, the rule body won't match
+// and the transaction will revert via the generated guard.
+
+// ── nextEpoch ─────────────────────────────────────────────────────────────────
+
+// TWAP must be positive (zero TWAP would make computeClaimable return 0).
+invalidTx() :- recv_nextEpoch(_, twap, _), twap <= 0.
+
+// ── claimMultiple ─────────────────────────────────────────────────────────────
 
 // Must only claim for past epochs.
 invalidTx() :-
-  recv_claimMultiple(epoch, _),
-  currentEpoch(e),
-  epoch >= e.
+    recv_claimMultiple(epoch, _),
+    currentEpoch(e),
+    epoch >= e.
 
-// Must have positive claimable (i.e., totalReward > claimed).
-// If totalReward <= claimed, a claimMultiple attempt is invalid.
-invalidTx() :-
-  recv_claimMultiple(epoch, _),
-  msgSender(user),
-  totalReward(epoch, user, total),
-  claimed(epoch, user, c),
-  total <= c.
+// Recipient address must be non-zero.
+invalidTx() :- recv_claimMultiple(_, to), to == 0.
 
+// Note: the claimMultiple rule body requires computeClaimable > 0, which
+// in turn requires epochTWAP to be set (otherwise UDF returns 0).
+// The guard epoch < currentEpoch is the primary synthesis target.

@@ -29,3 +29,14 @@ invalidTx() :- recv_transferFrom(from,_,_,_,_,_), from==0.
 invalidTx() :- recv_transferFrom(_,to,_,_,_,_), to==0.
 invalidTx() :- recv_transferFrom(_,_,_,op,_,_), msgSender(s), op!=s.
 
+// safeTransferFrom: recipient contract must accept the token (ERC721Receiver hook)
+invalidTx() :-
+  recv_transferFrom(from, to, tokenId, op, prevApproved, t),
+  msgSender(s),
+  op==s,
+  from!=0,
+  to!=0,
+  onERC721Received(to, tokenId, success),
+  success==false.
+
+

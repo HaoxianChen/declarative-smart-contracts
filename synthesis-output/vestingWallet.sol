@@ -1,4 +1,5 @@
-contract VestingWallet {
+import "./vestingWallet_udf.sol";
+contract VestingWallet is VestingWalletUDF {
   struct BeneficiaryTuple {
     address p;
     bool _valid;
@@ -27,15 +28,15 @@ contract VestingWallet {
   event InvalidTx();
   event Release();
   constructor(uint s,uint d,address b) public {
+    updateReleasedOnInsertConstructor_r2();
+    updateStartOnInsertConstructor_r1(s);
     updateDurationOnInsertConstructor_r6(d);
     updateBeneficiaryOnInsertConstructor_r5(b);
     updateFundsOnInsertConstructor_r7();
-    updateStartOnInsertConstructor_r2(s);
-    updateReleasedOnInsertConstructor_r3();
   }
   function release() public    {
-      bool r1 = updateReleaseOnInsertRecv_release_r1();
-      if(r1==false) {
+      bool r4 = updateReleaseOnInsertRecv_release_r4();
+      if(r4==false) {
         revert("Rule condition failed");
       }
   }
@@ -43,25 +44,7 @@ contract VestingWallet {
       uint n = released.n;
       return n;
   }
-  function updateSendOnInsertReleaseAmount_r8(uint n) private    {
-      address b = beneficiary.p;
-      if(n>0) {
-        payable(b).send(n);
-      }
-  }
-  function updateDurationOnInsertConstructor_r6(uint d) private    {
-      duration = DurationTuple(d,true);
-  }
-  function updateBeneficiaryOnInsertConstructor_r5(address b) private    {
-      beneficiary = BeneficiaryTuple(b,true);
-  }
-  function updateFundsOnInsertConstructor_r7() private    {
-      funds = FundsTuple(1000000,true);
-  }
-  function updateReleasedOnInsertReleaseAmount_r11(uint n) private    {
-      released.n += n;
-  }
-  function updateReleaseAmountOnInsertRelease_r10() private    {
+  function updateReleaseAmountOnInsertRelease_r11() private    {
       uint d = duration.t;
       uint e = released.n;
       uint b = funds.b;
@@ -69,39 +52,62 @@ contract VestingWallet {
       uint t = block.timestamp;
       if(t>a+d && b>e) {
         uint n = b-e;
-        updateSendOnInsertReleaseAmount_r8(n);
-        updateReleasedOnInsertReleaseAmount_r11(n);
+        updateReleasedOnInsertReleaseAmount_r12(n);
+        updateSendOnInsertReleaseAmount_r9(n);
       }
   }
-  function updateReleasedOnInsertConstructor_r3() private    {
-      released = ReleasedTuple(0,true);
+  function updateDurationOnInsertConstructor_r6(uint d) private    {
+      duration = DurationTuple(d,true);
   }
-  function updateStartOnInsertConstructor_r2(uint a) private    {
-      uint t = block.timestamp;
-      uint s = a+t;
-      start = StartTuple(s,true);
-  }
-  function updateReleaseOnInsertRecv_release_r1() private   returns (bool) {
-      uint released_n = released.n;
-      uint b = funds.b;
-      uint d = duration.t;
-      uint e = released.n;
-      uint a_1 = start.t;
-      uint e_0 = released.n;
-      uint t_1 = block.timestamp;
-      uint a = start.t;
-      uint t = block.timestamp;
-      if(e_0>=0 && released_n>0 && b>e && t_1>=a_1 && t>a+d) {
-        updateReleaseAmountOnInsertRelease_r10();
-        emit Release();
-        return true;
+  function updateSendOnInsertReleaseAmount_r9(uint n) private    {
+      address b = beneficiary.p;
+      if(n>0) {
+        payable(b).send(n);
       }
-      return false;
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
       int value = convertedX+delta;
       uint convertedValue = uint(value);
       return convertedValue;
+  }
+  function updateBeneficiaryOnInsertConstructor_r5(address b) private    {
+      beneficiary = BeneficiaryTuple(b,true);
+  }
+  function updateFundsOnInsertConstructor_r7() private    {
+      funds = FundsTuple(1000000,true);
+  }
+  function updateReleasedOnInsertReleaseAmount_r12(uint n) private    {
+      released.n += n;
+  }
+  function updateStartOnInsertConstructor_r1(uint a) private    {
+      uint t = block.timestamp;
+      uint s = a+t;
+      start = StartTuple(s,true);
+  }
+  function updateReleasedOnInsertConstructor_r2() private    {
+      released = ReleasedTuple(0,true);
+  }
+  function updateReleaseOnInsertRecv_release_r4() private   returns (bool) {
+      uint released_n = released.n;
+      uint b = funds.b;
+      uint a = start.t;
+      uint e_1 = released.n;
+      uint d = duration.t;
+      uint e = released.n;
+      uint a_0 = start.t;
+      uint e_0 = released.n;
+      uint t_0 = block.timestamp;
+      uint t_2 = block.timestamp;
+      uint b_0 = funds.b;
+      uint a_2 = start.t;
+      uint t = block.timestamp;
+      uint vested_0 = vestedAmount(total,elapsed);
+      if(e_1>=0 && vested_0>e_0 && released_n>0 && t_2>=a_2 && b>e && t>a+d) {
+        updateReleaseAmountOnInsertRelease_r11();
+        emit Release();
+        return true;
+      }
+      return false;
   }
 }

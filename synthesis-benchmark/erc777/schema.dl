@@ -77,6 +77,10 @@
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
 
+// UDF: ERC777 tokensReceived hook (called on transfer to notify receiver contracts)
+.decl callTokensReceived(from: address, to: address, amount: int, success: bool)
+.udf callTokensReceived
+
 ////////////////////
 // Properties (preserve original)
 ////////////////////

@@ -29,6 +29,7 @@
 
 .decl destroyBlackFund(p:address,n:int)
 .decl recv_destroyBlackFund(p:address, n:int)
+.public recv_destroyBlackFund
 
 // Interfaces
 .public recv_issue
@@ -76,6 +77,10 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// UDF: fee calculation for transfer (fee = value * basisPointsRate / 10000, capped at maximumFee)
+.decl computeFee(value: int, fee: int)
+.udf computeFee
 
 // Transaction placeholder rules
 destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).

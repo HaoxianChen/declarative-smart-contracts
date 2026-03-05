@@ -9,3 +9,25 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_swapOwnerTx(_,_,_), owner(o), msgSender(s), o!=s.
+
+// Amount must be positive
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_mint(_,n), n<=0.
+invalidTx() :- recv_burn(_,n), n<=0.
+
+// Address checks
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_mint(p,_), p==0.
+
+// Sufficient balance
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+
+// transferFrom checks
+invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
+invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
+invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(o,_,_,n), n<=0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.

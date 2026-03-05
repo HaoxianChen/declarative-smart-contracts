@@ -18,7 +18,7 @@ transfer(o,r,n) :- transferFrom(o,r,_,n).
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
-mint(p,n) :- buyToken(p,m), rate(r), n:=m*r.
+mint(p,tokens) :- buyToken(p,v), getTokenAmount(v,tokens).
 
 finalized(false) :- finalize().
 

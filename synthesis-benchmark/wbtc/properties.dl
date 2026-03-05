@@ -17,5 +17,15 @@ invalidTx() :- recv_unpause(), paused(b), b==false.
 invalidTx() :- recv_transferOwnership(p), p==0.
 invalidTx() :- recv_claimOwnership(p), p==0.
 
-// cannot claim ownership if not pending owner or if pending owner is self
-invalidTx() :- recv_claimOwnership(p), pendingOwner(s), s==p.
+// only the current pending owner can claim ownership
+invalidTx() :- recv_claimOwnership(p), pendingOwner(s), s!=p.
+
+// transfer: non-zero addresses, positive amount, sender has sufficient balance
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+
+// transferFrom: positive amount, owner has sufficient balance
+invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.

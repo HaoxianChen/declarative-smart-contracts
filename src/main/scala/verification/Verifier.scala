@@ -5,6 +5,7 @@ import datalog.{Balance, Constant, Literal, Parameter, Program, Relation, Reserv
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
+import util.{Misc, SolcAst, UdfConstraintSpec}
 import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
@@ -15,7 +16,8 @@ import view.{CountView, JoinView, MaxView, SumView, View}
 
 import scala.collection.mutable.Queue
 
-class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
+class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram,
+               udfSolPath: String = "", debug: Boolean = false)
   extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = Set(),
     isInstrument = true, monitorViolations = false, enableProjection = true, arithmeticOptimization = true) {
 
@@ -91,6 +93,12 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
   private val udfDeclCache =
     scala.collection.mutable.Map.empty[(String, List[Sort], Sort), FuncDecl[_]]
 
+  // Automatically extracted semantic constraints from udf.sol.
+  // Populated at construction time if udfSolPath is non-empty; empty map causes fallback to UF.
+  private val udfConstraintCache: Map[String, UdfConstraintSpec] =
+    if (udfSolPath.nonEmpty) SolcAst.extractFunctionConstraints(udfSolPath)
+    else Map.empty
+
   private def isUdfRelation(rel: Relation): Boolean = program.udfs.contains(rel)
 
   private def isUintType(t: Type): Boolean = t.name == "uint"
@@ -123,41 +131,53 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     // Convention: last field is output; others are inputs
     require(lit.fields.nonEmpty, s"UDF literal must have at least 1 field: $lit")
     val inputParams = lit.fields.dropRight(1)
-    val outParam = lit.fields.last
+    val outParam    = lit.fields.last
 
     val inputConsts: Array[Expr[_]] = inputParams.map(p => paramToConst(ctx, p, prefix)._1).toArray
-    val outConst: Expr[_] = paramToConst(ctx, outParam, prefix)._1
+    val outConst: Expr[_]           = paramToConst(ctx, outParam, prefix)._1
 
     val domain: List[Sort] = inputParams.map(p => typeToSort(ctx, p._type))
-    val range: Sort = typeToSort(ctx, outParam._type)
-    val inDomains = inputParams.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix))
-    val outDomain = uintNonNegativeConstraint(ctx, outParam, prefix).toList
+    val range: Sort        = typeToSort(ctx, outParam._type)
+    val inDomains  = inputParams.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix))
+    val outDomain  = uintNonNegativeConstraint(ctx, outParam, prefix).toList
 
-    // isValidSignature: inject nonce[sender] to capture replay-protection semantics.
-    // udf.sol uses nonce[beneficiary] inside the hash, so the same (v,r,s) becomes
-    // invalid once the nonce advances after a successful withdrawal.
-    val (effectiveDomain, effectiveInputConsts) =
-      if (lit.relation.name == "isValidSignature") {
-        program.relations.collectFirst { case sr: SimpleRelation if sr.name == "nonce" => sr } match {
-          case Some(_) =>
-            // sender is the first input parameter (index 0)
-            val senderConst = inputConsts(0).asInstanceOf[Expr[Sort]]
-            // Read nonce[sender] directly from the pre-state Z3 array (Array[Int,Int])
-            val nonceArraySort = ctx.mkArraySort(ctx.mkIntSort(), ctx.mkIntSort())
-            val nonceArray = ctx.mkConst("nonce", nonceArraySort).asInstanceOf[Expr[ArraySort[Sort, Sort]]]
-            val nonceVal = ctx.mkSelect(nonceArray, senderConst)
-            (domain :+ ctx.mkIntSort().asInstanceOf[Sort], inputConsts :+ nonceVal)
-          case None => (domain, inputConsts)
-        }
-      } else (domain, inputConsts)
+    // Use automatically extracted semantic constraints when available (non-empty spec).
+    // For UDFs whose body is too complex to extract (e.g., isValidSignature, computeFee),
+    // the spec is empty and we fall through to the Uninterpreted Function encoding below.
+    udfConstraintCache.get(lit.relation.name) match {
+      case Some(spec) if spec.constraints.nonEmpty =>
+        val semantic = spec.toZ3(ctx, inputConsts, outConst)
+        val domainConstraints = inDomains ++ outDomain
+        if (domainConstraints.isEmpty) semantic
+        else ctx.mkAnd((semantic +: domainConstraints).toArray: _*)
 
-    val key = (lit.relation.name, effectiveDomain, range)
-    val decl = udfDeclCache.getOrElseUpdate(key, ctx.mkFuncDecl(lit.relation.name, effectiveDomain.toArray, range))
+      case _ =>
+        // Uninterpreted Function fallback.
+        // isValidSignature: inject nonce[sender] to capture replay-protection semantics.
+        // udf.sol uses nonce[beneficiary] inside the hash, so the same (v,r,s) becomes
+        // invalid once the nonce advances after a successful withdrawal.
+        val (effectiveDomain, effectiveInputConsts) =
+          if (lit.relation.name == "isValidSignature") {
+            program.relations.collectFirst { case sr: SimpleRelation if sr.name == "nonce" => sr } match {
+              case Some(_) =>
+                // sender is the first input parameter (index 0)
+                val senderConst = inputConsts(0).asInstanceOf[Expr[Sort]]
+                val nonceArraySort = ctx.mkArraySort(ctx.mkIntSort(), ctx.mkIntSort())
+                val nonceArray = ctx.mkConst("nonce", nonceArraySort).asInstanceOf[Expr[ArraySort[Sort, Sort]]]
+                val nonceVal = ctx.mkSelect(nonceArray, senderConst)
+                (domain :+ ctx.mkIntSort().asInstanceOf[Sort], inputConsts :+ nonceVal)
+              case None => (domain, inputConsts)
+            }
+          } else (domain, inputConsts)
 
-    val app = ctx.mkApp(decl, effectiveInputConsts.map(_.asInstanceOf[Expr[Sort]]): _*)
-    val eq = ctx.mkEq(outConst.asInstanceOf[Expr[Sort]], app.asInstanceOf[Expr[Sort]])
-    val all = eq +: (inDomains ++ outDomain)
-    ctx.mkAnd(all.toArray: _*)
+        val key  = (lit.relation.name, effectiveDomain, range)
+        val decl = udfDeclCache.getOrElseUpdate(key, ctx.mkFuncDecl(lit.relation.name, effectiveDomain.toArray, range))
+
+        val app = ctx.mkApp(decl, effectiveInputConsts.map(_.asInstanceOf[Expr[Sort]]): _*)
+        val eq  = ctx.mkEq(outConst.asInstanceOf[Expr[Sort]], app.asInstanceOf[Expr[Sort]])
+        val all = eq +: (inDomains ++ outDomain)
+        ctx.mkAnd(all.toArray: _*)
+    }
   }
 
   private def literalToConstOrUdf(ctx: Context, lit: Literal, prefix: String): BoolExpr = {

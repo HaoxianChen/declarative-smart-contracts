@@ -6,8 +6,10 @@ unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 // Check that no account has negative balance
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 
-// Check that only controller can redeem
-illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), p!=c.
+// Check that only controller can redeem (violation: post-hoc detection)
+illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), msgSender(s), s!=c.
+// Also seed as invalidTx so synthesis learns the correct msgSender guard
+invalidTx() :- recv_controllerRedeem(_,_), controller(c), msgSender(s), s!=c.
 
 // Check that no account has negative allowance
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
@@ -15,3 +17,37 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 // Check that only owner can mint or burn
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+
+// Amount must be positive
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_mint(_,n), n<=0.
+invalidTx() :- recv_burn(_,n), n<=0.
+invalidTx() :- recv_controllerRedeem(_,n), n<=0.
+
+// Address checks
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_mint(p,_), p==0.
+invalidTx() :- recv_controllerRedeem(p,_), p==0.
+
+// Sufficient balance
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+invalidTx() :- recv_controllerRedeem(p,n), balanceOf(p,m), n>m.
+
+// transferFrom: address, amount, and owner balance checks
+// recv_transferFrom(from, to, spender, amount) = (o, r, s, n)
+invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
+invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
+invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+
+// controllerTransfer: only controller may call; basic guards
+// recv_controllerTransfer(from, to, amount) = (s, r, n)
+invalidTx() :- recv_controllerTransfer(_,_,_), controller(c), msgSender(s), s!=c.
+invalidTx() :- recv_controllerTransfer(s,_,_), s==0.
+invalidTx() :- recv_controllerTransfer(_,r,_), r==0.
+invalidTx() :- recv_controllerTransfer(_,_,n), n<=0.
+invalidTx() :- recv_controllerTransfer(s,_,n), balanceOf(s,m), n>m.

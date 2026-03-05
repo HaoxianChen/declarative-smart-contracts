@@ -1,10 +1,12 @@
 ////////////////////////////
-// Jok In The Box Staking (minimal, vulnerability-focused)
+// Jok In The Box Staking
 //
-// Goal: model stake/unstake + lock period (day-based) and prevent re-unstake.
-// Notes:
-// - We abstract away ERC20 transfers and signatures.
-// - `stakeId` is provided by the trace and corresponds to Solidity `stakeIndex`.
+// Models the core economic loop: stake / unstake / withdraw.
+// Key improvements over the minimal version:
+//   - isValidLockPeriod UDF enforces the four valid lock durations (1/30/60/90 days).
+//   - ethTax tracks the ETH fee rate initialised by the constructor.
+//   - totalStaked tracks cumulative staked amount for withdrawal limit semantics.
+//   - nonce relation initialisation rule prevents replay-protection bypass on first withdraw.
 ////////////////////////////
 
 // Transactions (recv_* are public interfaces)
@@ -16,7 +18,7 @@
 .decl unstake(staker: address, stakeId: uint, unstakedDay: uint)
 .public recv_unstake
 
-// Withdraw (expanded): we model only the validity checks (signature + withdrawal limit)
+// Withdraw: validity checks (signature + withdrawal limit)
 .decl recv_withdraw(
   earnings: uint,
   affiliateEarnings: uint,
@@ -28,9 +30,7 @@
 )
 .public recv_withdraw
 
-// Semantic relation for withdraw: records that a withdrawal was processed.
-// Named `withdraw` (matching recv_withdraw minus recv_ prefix) so that BMC can
-// resolve the relation when extracting counterexample traces.
+// Semantic relation for withdraw
 .decl withdraw(sender: address, total: uint)
 
 // State (keyed by (staker, stakeId))
@@ -42,7 +42,10 @@
 // Temporal marker: whether this stake has ever been unstaked.
 .decl onceUnstake(staker: address, stakeId: uint, b: bool)[0,1]
 
-// Views (optional for inspection)
+// Per-sender withdrawal nonce (replay protection)
+.decl nonce(sender: address, n: uint)[0]
+
+// Views
 .public stakeStatus(2)
 .public stakeAmount(2)
 .public stakeLockPeriod(2)
@@ -53,18 +56,25 @@
 .decl *initialized(b: bool)
 .public initialized(0)
 
-// Configuration (expanded)
+// Configuration
 .decl *maxPercentage(value: uint)
 .public maxPercentage(0)
 
-// Constant helper to avoid numeric literals in arithmetic expressions
+// ETH fee rate (percentage, 0-100); initialised to 5 by constructor.
+.decl *ethTax(rate: uint)
+.public ethTax(0)
+
+// Constant helper to avoid numeric literals in arithmetic expressions.
 .decl *hundred(value: uint)
 .public hundred(0)
 
-// Nonce: per-sender withdrawal counter (captures signature replay protection from udf.sol)
-.decl nonce(sender: address, n: uint)[0]
+// Cumulative staked amount (used for withdrawal limit context).
+.decl *totalStaked(n: uint)
+.public totalStaked(0)
 
 // UDFs (last column is the return value variable)
+
+// isValidSignature: state-reading — verifies ECDSA signature using per-user nonce.
 .decl isValidSignature(
   sender: address,
   totalEarnings: uint,
@@ -77,10 +87,14 @@
 )
 .udf isValidSignature
 
+// jokTokenBalance: state-reading — JOK token balance held by this contract.
 .decl jokTokenBalance(balance: uint)
 .udf jokTokenBalance
+
+// isValidLockPeriod: pure — returns true for lock durations {1, 30, 60, 90} days.
+.decl isValidLockPeriod(lockPeriod: uint, ok: bool)
+.udf isValidLockPeriod
 
 // Properties / validity
 .decl invalidTx()
 .violation invalidTx
-

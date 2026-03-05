@@ -1,2 +1,4 @@
-claimMultiple(epoch,user,to,reward) :- currentEpoch(e),epoch<e,totalReward(epoch,user_0,total_0),total_0>c_0,claimable(epoch,user,reward),recv_claimMultiple(epoch,to),currentEpoch(e_1),msgSender(user_0),epoch<e_1,msgSender(user),claimed(epoch,user_0,c_0).
-allocate(epoch,user,amount) :- recv_allocate(epoch,user,amount).
+setReferrer(trader,referrer) :- msgSender(msgSender),msgSender(s_1),msgSender(trader),recv_setReferrer(referrer),referrer!=address(0),referredBy(msgSender,referredBy_x1),s_1!=referrer,referredBy_x1==msgSender.
+updatePoint(epoch,trader,referrer,point) :- trader!=address(0),referredBy(trader,referrer),u_1==s_1,msgSender(s_1),updater(u_1),updater(u),point>0,recv_updatePoint(epoch,trader,point),msgSender(s),u==s.
+nextEpoch(epoch,twap,t,vestingDuration) :- recv_nextEpoch(epoch,twap,vestingDuration),now(t),twap>0.
+claimMultiple(epoch,user,to,reward) :- msgSender(user),currentEpoch(e),epoch<e,reward>0,recv_claimMultiple(epoch,to),currentEpoch(e_1),epoch<e_1,to!=address(0),computeClaimable(epoch,user,reward).

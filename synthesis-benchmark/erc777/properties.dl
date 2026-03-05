@@ -54,6 +54,9 @@ invalidTx() :- recv_operatorSend(o,_,s,_,_,_),
     revokedDefaultOperator(o,s,rev), rev==true,
     s!=o.
 
+// transfer is invalid when the tokensReceived hook signals failure
+invalidTx() :- recv_transfer(from,to,n), callTokensReceived(from,to,n,success), success==false.
+
 // operatorBurn: non-zero p, positive amount, enough balance; require one of the authorization modes
 invalidTx() :- recv_operatorBurn(p,_,_,_,_), p==0.
 invalidTx() :- recv_operatorBurn(_,_,n,_,_), n<=0.

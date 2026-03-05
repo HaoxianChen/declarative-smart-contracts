@@ -492,13 +492,12 @@ case class InductiveSynthesis(
 
     val permissiveness: Seq[IntExpr] = disambigAcceptExprs.map(boolToInt)
 
-    // z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
-    val permissivenessSum = z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+    val permissivenessSum =
+      if (permissiveness.nonEmpty) z3ctx.mkAdd(permissiveness: _*).asInstanceOf[IntExpr]
+      else z3ctx.mkInt(0)
 
     // Penalize by number of binding literals in each predicate
     val allBoolVars = encodings.values.flatten.toSeq
-    // val numSelectedPredicates = z3ctx.mkAdd(allBoolVars.map(boolToInt): _*).asInstanceOf[IntExpr]
-    // val penalty = z3ctx.mkMul(z3ctx.mkInt(1), numSelectedPredicates).asInstanceOf[IntExpr]
     val penaltyTerms = allBoolVars.map { b =>
       val boolExprToPredicate: Map[BoolExpr, Predicate] = encodings.flatMap { case (rel, boolVars) =>
         val preds = predicates(rel).toList
@@ -508,7 +507,9 @@ case class InductiveSynthesis(
       val bindingCount = predicate.context.bindingLiterals.size
       z3ctx.mkMul(z3ctx.mkInt(bindingCount), boolToInt(b)).asInstanceOf[IntExpr]
     }
-    val penalty = z3ctx.mkAdd(penaltyTerms: _*).asInstanceOf[IntExpr]
+    val penalty =
+      if (penaltyTerms.nonEmpty) z3ctx.mkAdd(penaltyTerms: _*).asInstanceOf[IntExpr]
+      else z3ctx.mkInt(0)
 
 
     // Objective: maximize permissiveness - penalty
@@ -594,8 +595,28 @@ case class InductiveSynthesis(
     val renamedPredicates = _resolveCollision(predicates)
     val bindingLits = renamedPredicates.flatMap(p => p.context.bindingLiterals)
 
-    // Collect all predicate functors
-    val predicateFunctors: Set[datalog.Functor] = renamedPredicates.map(_.functor)
+    // Collect all predicate functors, but filter out any that directly contradict a functor
+    // already present in the sketch rule.  This prevents the CEGIS Z3 solver from adding a
+    // guard whose negation was already seeded from the violation-rule properties
+    // (e.g. adding `amt<=0` when `amt>0` is already in the sketch body), which would produce
+    // a rule that never fires.
+    val allCandidateFunctors: Set[datalog.Functor] = renamedPredicates.map(_.functor)
+    // Step 1: filter out candidates that contradict any functor already in the sketch.
+    val filteredBySketch: Set[datalog.Functor] = allCandidateFunctors.filterNot { f =>
+      sketchRule.functors.exists(existing =>
+        try { datalog.Functor.contradicts(existing, f) }
+        catch { case _: Throwable => false }
+      )
+    }
+    // Step 2: filter out intra-candidate contradictions (e.g., both n<0 and 0==n
+    // selected in the same iteration).  Keep the first of any contradicting pair.
+    val predicateFunctors: Set[datalog.Functor] = filteredBySketch.foldLeft(Set.empty[datalog.Functor]) {
+      (acc, f) =>
+        val contradicted = acc.exists(existing =>
+          try { datalog.Functor.contradicts(existing, f) } catch { case _: Throwable => false }
+        )
+        if (contradicted) acc else acc + f
+    }
 
     // New body: original body plus binding literals (avoid duplicates)
     val newBody: Set[datalog.Literal] = sketchRule.body ++ bindingLits

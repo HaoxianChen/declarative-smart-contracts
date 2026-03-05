@@ -4,3 +4,18 @@ negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 // Only owner can mint or burn
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+
+// Amount must be positive
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_mint(_,n), n<=0.
+invalidTx() :- recv_burn(_,n), n<=0.
+
+// Address checks
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_burn(p,_), p==0.
+invalidTx() :- recv_mint(p,_), p==0.
+
+// Sufficient balance
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.

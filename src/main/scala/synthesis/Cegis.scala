@@ -12,7 +12,7 @@ case class SynthesisStat(
   bmcBound: Int
 )
 
-case class Cegis(sketch: Program) {
+case class Cegis(sketch: Program, udfSolPath: String = "") {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter()
@@ -57,7 +57,7 @@ case class Cegis(sketch: Program) {
 
     while (iter < maxIters && !finished) {
       val bmcStart = System.currentTimeMillis()
-      val bmc = BoundedModelChecker()
+      val bmc = BoundedModelChecker(udfSolPath = udfSolPath)
       println(s"[CEGIS] Iteration: $iter (BMC bound = $maxBound)")
 
       val (sat, optTrace) = bmc.check(program, program.violationRules, maxBound)

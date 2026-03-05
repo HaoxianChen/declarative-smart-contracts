@@ -7,3 +7,16 @@ evacuateAfterUpgrade() :- recv_evacuate(_), onceUpgrade(b), b==false.
 // should not have negative balance or allowance
 negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can mint, pause, or unpause
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
+
+// transfer: positive amount, sender has sufficient balance
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_transfer(s,_,n), balances(s,m), n>m.
+
+// transferFrom: owner (from) must have sufficient balance
+// recv_transferFrom(operator, from, to, amount) -> variables (_, f, _, n)
+invalidTx() :- recv_transferFrom(_,f,_,n), balances(f,m), n>m.

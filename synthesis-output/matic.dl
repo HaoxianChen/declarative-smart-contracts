@@ -1,8 +1,8 @@
-mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
-burn(p,n) :- msgSender(s),balanceOf(p,balanceOf_x1),o==s,balanceOf_x1>0,owner(o),recv_burn(p,n).
-increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),n>0.
-pause() :- recv_pause().
-transferFrom(o,r,s,n) :- 0!=balanceOf_x1,paused(b),b!=true,recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1).
+pause() :- recv_pause(),owner(o),msgSender(s),o==s.
+burn(p,n) :- owner(o_0),o_0==s_0,balanceOf(p,m_1),n<=m_1,msgSender(s_0),recv_burn(p,n).
+unpause() :- recv_unpause(),owner(o),msgSender(s),o==s.
 decreaseAllowance(o,s,n) :- recv_decreaseAllowance(o,s,n),balanceOf(o,balanceOf_x1),balanceOf_x1>0.
-transfer(s,r,n) :- recv_transfer(s,r,n),paused(b),b!=true.
-unpause() :- recv_unpause().
+transferFrom(o,r,s,n) :- n<=m_2,r!=address(0),recv_transferFrom(o,r,s,n),o!=address(0),balanceOf(r,balanceOf_x1),b_1!=true,paused(b_1),n>0,balanceOf(o,m_2),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),n>0.
+transfer(s,r,n) :- n<=m_2,s!=address(0),r!=address(0),balanceOf(s,m_2),recv_transfer(s,r,n),b_1!=true,paused(b_1),n>0.

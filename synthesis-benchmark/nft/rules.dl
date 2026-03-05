@@ -11,8 +11,8 @@ exists(tokenId, false) :- recv_burn(tokenId, _, _, _).
 ownerOf(tokenId, to) :- recv_transfer(_, to, tokenId, _, _).
 exists(tokenId, true) :- recv_transfer(_, _, tokenId, _, _).
 
-ownerOf(tokenId, to) :- recv_transferFrom(_, to, tokenId, _, _, _).
-exists(tokenId, true) :- recv_transferFrom(_, _, tokenId, _, _, _).
+ownerOf(tokenId, to) :- recv_transferFrom(from, to, tokenId, op, prevApproved, t), from!=0, to!=0, op!=0.
+exists(tokenId, true) :- recv_transferFrom(from, to, tokenId, op, prevApproved, t), from!=0, to!=0, op!=0.
 
 // ===== approvals：no state reads; clear old approval using prevApproved =====
 approved(tokenId, prev, false) :-
@@ -23,7 +23,7 @@ approved(tokenId, spender, b) :-
 
 approved(tokenId, prev, false) :- recv_burn(tokenId, _, prev, _), prev!=0.
 approved(tokenId, prev, false) :- recv_transfer(_, _, tokenId, prev, _), prev!=0.
-approved(tokenId, prev, false) :- recv_transferFrom(_, _, tokenId, _, prev, _), prev!=0.
+approved(tokenId, prev, false) :- recv_transferFrom(from, to, tokenId, op, prev, t), from!=0, to!=0, op!=0, prev!=0.
 
 isApprovedForAll(owner, op, b) :- recv_setApprovalForAll(owner, op, b, _).
 
@@ -35,8 +35,8 @@ deltaBal(from,-1) :- recv_burn(_, from, _, _), from!=0.
 deltaBal(from,-1) :- recv_transfer(from, _, _, _, _), from!=0.
 deltaBal(to,  1)  :- recv_transfer(_, to, _, _, _), to!=0.
 
-deltaBal(from,-1) :- recv_transferFrom(from, _, _, _, _, _), from!=0.
-deltaBal(to,  1)  :- recv_transferFrom(_, to, _, _, _, _), to!=0.
+deltaBal(from,-1) :- recv_transferFrom(from, to, tokenId, op, prevApproved, t), from!=0, to!=0, op!=0.
+deltaBal(to,  1)  :- recv_transferFrom(from, to, tokenId, op, prevApproved, t), from!=0, to!=0, op!=0.
 
 balanceOf(p,n) :- n = sum d: deltaBal(p,d).
 

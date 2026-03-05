@@ -1,13 +1,6 @@
-contract Stbt {
-  struct MinIntervalTuple {
-    uint time;
-    bool _valid;
-  }
+import "./stbt_udf.sol";
+contract Stbt is StbtUDF {
   struct AllowanceTuple {
-    int n;
-    bool _valid;
-  }
-  struct BalanceOfTuple {
     int n;
     bool _valid;
   }
@@ -15,32 +8,25 @@ contract Stbt {
     int n;
     bool _valid;
   }
-  struct PermissionExpiryTimeTuple {
-    uint t;
-    bool _valid;
-  }
   struct LastDistributeTimeTuple {
     uint time;
     bool _valid;
   }
-  struct PermissionReceiveAllowedTuple {
-    bool b;
+  struct MinIntervalTuple {
+    uint time;
     bool _valid;
   }
   struct OwnerTuple {
     address p;
     bool _valid;
   }
-  struct PermissionSendAllowedTuple {
-    bool b;
+  struct BalanceOfTuple {
+    int n;
     bool _valid;
   }
-  mapping(address=>PermissionExpiryTimeTuple) permissionExpiryTime;
   LastDistributeTimeTuple lastDistributeTime;
-  mapping(address=>PermissionReceiveAllowedTuple) permissionReceiveAllowed;
   MinIntervalTuple minInterval;
   mapping(address=>mapping(address=>AllowanceTuple)) allowance;
-  mapping(address=>PermissionSendAllowedTuple) permissionSendAllowed;
   mapping(address=>BalanceOfTuple) balanceOf;
   TotalSupplyTuple totalSupply;
   OwnerTuple owner;
@@ -52,16 +38,16 @@ contract Stbt {
   event Transfer(address from,address to,int amount);
   event InvalidTx();
   constructor() public {
-    updateDistributeTotalOnInsertConstructor_r41();
-    updateTotalSupplyOnInsertConstructor_r20();
-    updateLastDistributeTimeOnInsertConstructor_r4();
+    updateTotalSupplyOnInsertConstructor_r22();
+    updateTotalBalancesOnInsertConstructor_r32();
+    updateOwnerOnInsertConstructor_r40();
+    updateDistributeTotalOnInsertConstructor_r42();
     updateMinIntervalOnInsertConstructor_r46();
-    updateOwnerOnInsertConstructor_r39();
-    updateTotalBalancesOnInsertConstructor_r33();
+    updateLastDistributeTimeOnInsertConstructor_r6();
   }
-  function burn(address p,int amount) public    {
-      bool r14 = updateBurnOnInsertRecv_burn_r14(p,amount);
-      if(r14==false) {
+  function mint(address p,int amount) public    {
+      bool r36 = updateMintOnInsertRecv_mint_r36(p,amount);
+      if(r36==false) {
         revert("Rule condition failed");
       }
   }
@@ -69,27 +55,15 @@ contract Stbt {
       int n = balanceOf[p].n;
       return n;
   }
-  function transfer(address from,address to,int amount) public    {
-      bool r16 = updateTransferOnInsertRecv_transfer_r16(from,to,amount);
-      if(r16==false) {
-        revert("Rule condition failed");
-      }
-  }
   function distributeInterests(int n,uint t) public    {
       bool r1 = updateDistributeInterestsOnInsertRecv_distributeInterests_r1(n,t);
       if(r1==false) {
         revert("Rule condition failed");
       }
   }
-  function transferFrom(address from,address to,address spender,int amount) public    {
-      bool r26 = updateTransferFromOnInsertRecv_transferFrom_r26(from,to,spender,amount);
-      if(r26==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function mint(address p,int amount) public    {
-      bool r30 = updateMintOnInsertRecv_mint_r30(p,amount);
-      if(r30==false) {
+  function increaseAllowance(address p,address s,int d) public    {
+      bool r13 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r13(p,s,d);
+      if(r13==false) {
         revert("Rule condition failed");
       }
   }
@@ -97,122 +71,125 @@ contract Stbt {
       int n = totalSupply.n;
       return n;
   }
-  function increaseAllowance(address p,address s,int d) public    {
-      bool r11 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r11(p,s,d);
-      if(r11==false) {
-        revert("Rule condition failed");
-      }
-  }
   function getAllowance(address p,address s) public view  returns (int) {
       int n = allowance[p][s].n;
       return n;
   }
-  function updateTransferOnInsertTransferFrom_r28(address o,address r,int n) private    {
+  function transfer(address from,address to,int amount) public    {
+      bool r23 = updateTransferOnInsertRecv_transfer_r23(from,to,amount);
+      if(r23==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function burn(address p,int amount) public    {
+      bool r28 = updateBurnOnInsertRecv_burn_r28(p,amount);
+      if(r28==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function transferFrom(address from,address to,address spender,int amount) public    {
+      bool r27 = updateTransferFromOnInsertRecv_transferFrom_r27(from,to,spender,amount);
+      if(r27==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function updateAllMintOnInsertMint_r12(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllMint_r16(delta0);
+  }
+  function updateOwnerOnInsertConstructor_r40() private    {
+      address s = msg.sender;
+      owner = OwnerTuple(s,true);
+  }
+  function updateTotalSupplyOnIncrementAllMint_r16(int m) private    {
+      totalSupply.n += m;
+  }
+  function updateTotalInOnInsertTransfer_r15(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalIn_r29(p,delta0);
+  }
+  function updateTransferOnInsertTransferFrom_r30(address o,address r,int n) private    {
+      updateTotalInOnInsertTransfer_r15(r,n);
       updateTotalOutOnInsertTransfer_r50(o,n);
-      updateTotalInOnInsertTransfer_r13(r,n);
       emit Transfer(o,r,n);
   }
-  function updateAllowanceTotalOnInsertIncreaseAllowance_r40(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementAllowanceTotal_r47(o,s,delta0);
+  function updateTotalSupplyOnIncrementAllBurn_r16(int b) private    {
+      totalSupply.n -= b;
   }
-  function updateBalanceOfOnIncrementTotalMint_r27(address p,int n) private    {
-      balanceOf[p].n += n;
+  function updateLastDistributeTimeOnInsertDistributeInterests_r33(uint t) private    {
+      uint _max = lastDistributeTime.time;
+      if(t>_max) {
+        lastDistributeTime = LastDistributeTimeTuple(m,true);
+      }
   }
-  function updateTotalBurnOnInsertBurn_r15(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalBurn_r27(p,delta0);
-  }
-  function updateMintOnInsertRecv_mint_r30(address p,int amount) private   returns (bool) {
-      address s_1 = msg.sender;
-      address o_1 = owner.p;
-      if(p!=address(0) && o_1==s_1) {
-        updateAllMintOnInsertMint_r10(n);
-        updateTotalMintOnInsertMint_r37(p,n);
-        emit Mint(p,n);
+  function updateTransferFromOnInsertRecv_transferFrom_r27(address from,address to,address spender,int amount) private   returns (bool) {
+      int m_1 = balanceOf[o].n;
+      bool ok_3 = canRecv(r);
+      bool ok_2 = canSend(o);
+      if(sp!=address(0) && n<=m_1 && n>0 && ok_3!=false && r!=address(0) && ok_2!=false && o!=address(0)) {
+        updateSpentTotalOnInsertTransferFrom_r44(o,sp,n);
+        updateTransferOnInsertTransferFrom_r30(o,r,n);
+        emit TransferFrom(o,r,sp,n);
         return true;
       }
       return false;
   }
-  function updateLastDistributeTimeOnInsertConstructor_r4() private    {
-      lastDistributeTime = LastDistributeTimeTuple(0,true);
-  }
-  function updateAllowanceOnIncrementAllowanceTotal_r47(address o,address s,int m) private    {
-      allowance[o][s].n += m;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r26(address from,address to,address spender,int amount) private   returns (bool) {
-      bool recvOk_0 = permissionReceiveAllowed[r].b;
-      int k_4 = allowance[o][sp].n;
-      int m_2 = balanceOf[o].n;
-      bool sendOk_1 = permissionSendAllowed[o].b;
-      if(r!=address(0) && sp!=address(0) && n<=k_4 && recvOk_0!=false && o!=address(0) && n<=m_2 && sendOk_1!=false) {
-        updateSpentTotalOnInsertTransferFrom_r44(o,sp,n);
-        updateTransferOnInsertTransferFrom_r28(o,r,n);
-        emit TransferFrom(o,r,sp,n);
+  function updateTransferOnInsertRecv_transfer_r23(address from,address to,int amount) private   returns (bool) {
+      int m_2 = balanceOf[s].n;
+      bool ok_3 = canRecv(r);
+      bool ok_1 = canSend(s);
+      if(ok_1!=false && s!=address(0) && n<=m_2 && n>0 && ok_3!=false && r!=address(0)) {
+        updateTotalInOnInsertTransfer_r15(r,n);
+        updateTotalOutOnInsertTransfer_r50(s,n);
+        emit Transfer(s,r,n);
         return true;
       }
       return false;
   }
   function updateTotalMintOnInsertMint_r37(address p,int n) private    {
       int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalMint_r27(p,delta0);
+      updateBalanceOfOnIncrementTotalMint_r29(p,delta0);
   }
-  function updateAllMintOnInsertMint_r10(int n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllMint_r17(delta0);
-  }
-  function updateBalanceOfOnIncrementTotalOut_r27(address p,int o) private    {
-      balanceOf[p].n -= o;
-  }
-  function updateBalanceOfOnIncrementTotalBurn_r27(address p,int m) private    {
-      balanceOf[p].n -= m;
-  }
-  function updateTotalSupplyOnInsertConstructor_r20() private    {
+  function updateTotalSupplyOnInsertConstructor_r22() private    {
       totalSupply = TotalSupplyTuple(0,true);
   }
-  function updateTotalInOnInsertTransfer_r13(address p,int n) private    {
+  function updateAllowanceTotalOnInsertIncreaseAllowance_r41(address o,address s,int n) private    {
       int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalIn_r27(p,delta0);
+      updateAllowanceOnIncrementAllowanceTotal_r48(o,s,delta0);
   }
-  function updateAllBurnOnInsertBurn_r23(int n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllBurn_r17(delta0);
-  }
-  function updateTransferOnInsertRecv_transfer_r16(address from,address to,int amount) private   returns (bool) {
-      int m_3 = balanceOf[s].n;
-      bool sendOk_2 = permissionSendAllowed[s].b;
-      bool recvOk_1 = permissionReceiveAllowed[r].b;
-      if(sendOk_2!=false && r!=address(0) && recvOk_1!=false && s!=address(0) && n<=m_3) {
-        updateTotalOutOnInsertTransfer_r50(s,n);
-        updateTotalInOnInsertTransfer_r13(r,n);
-        emit Transfer(s,r,n);
+  function updateBurnOnInsertRecv_burn_r28(address p,int amount) private   returns (bool) {
+      address s_1 = msg.sender;
+      address o_1 = owner.p;
+      int m_2 = balanceOf[p].n;
+      if(n>0 && p!=address(0) && o_1==s_1 && n<=m_2) {
+        updateAllBurnOnInsertBurn_r3(n);
+        updateTotalBurnOnInsertBurn_r0(p,n);
+        emit Burn(p,n);
         return true;
       }
       return false;
   }
-  function updateTotalSupplyOnIncrementAllMint_r17(int m) private    {
-      totalSupply.n += m;
-  }
-  function updateOwnerOnInsertConstructor_r39() private    {
-      address s = msg.sender;
-      owner = OwnerTuple(s,true);
-  }
-  function updateTotalSupplyOnIncrementAllBurn_r17(int b) private    {
-      totalSupply.n -= b;
-  }
-  function updateTotalBalancesOnInsertConstructor_r33() private    {
+  function updateTotalBalancesOnInsertConstructor_r32() private    {
       // Empty()
   }
-  function updateDistributeInterestsOnInsertRecv_distributeInterests_r1(int n,uint t) private   returns (bool) {
-      uint t1 = lastDistributeTime.time;
-      uint i = minInterval.time;
-      if(t1-t>i) {
-        updateDistributeTotalOnInsertDistributeInterests_r45(n);
-        updateLastDistributeTimeOnInsertDistributeInterests_r34(t);
-        emit DistributeInterests(n,t);
-        return true;
-      }
-      return false;
+  function updateBalanceOfOnIncrementTotalBurn_r29(address p,int m) private    {
+      balanceOf[p].n -= m;
+  }
+  function updateLastDistributeTimeOnInsertConstructor_r6() private    {
+      lastDistributeTime = LastDistributeTimeTuple(0,true);
+  }
+  function updateAllowanceOnIncrementSpentTotal_r48(address o,address s,int l) private    {
+      allowance[o][s].n -= l;
+  }
+  function updateBalanceOfOnIncrementTotalIn_r29(address p,int i) private    {
+      balanceOf[p].n += i;
+  }
+  function updateBalanceOfOnIncrementTotalMint_r29(address p,int n) private    {
+      balanceOf[p].n += n;
+  }
+  function updateTotalBurnOnInsertBurn_r0(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalBurn_r29(p,delta0);
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -220,63 +197,35 @@ contract Stbt {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function canRecv(address s) private view  returns (bool) {
-      uint t = block.timestamp;
-      uint expire = permissionExpiryTime[s].t;
-      if(true==permissionReceiveAllowed[s].b) {
-        if(t<expire) {
-          return true;
-        }
-      }
-      if(0==permissionExpiryTime[s].t) {
-        if(true==permissionReceiveAllowed[s].b) {
-          return true;
-        }
-      }
-      return false;
+  function updateDistributeTotalOnInsertDistributeInterests_r45(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementDistributeTotal_r16(delta0);
   }
-  function updateTotalSupplyOnIncrementDistributeTotal_r17(int d) private    {
-      totalSupply.n -= d;
-  }
-  function updateBurnOnInsertRecv_burn_r14(address p,int amount) private   returns (bool) {
+  function updateMintOnInsertRecv_mint_r36(address p,int amount) private   returns (bool) {
       address s_1 = msg.sender;
       address o_1 = owner.p;
-      int m_2 = balanceOf[p].n;
-      if(p!=address(0) && o_1==s_1 && n<=m_2) {
-        updateTotalBurnOnInsertBurn_r15(p,n);
-        updateAllBurnOnInsertBurn_r23(n);
-        emit Burn(p,n);
+      if(n>0 && p!=address(0) && o_1==s_1) {
+        updateTotalMintOnInsertMint_r37(p,n);
+        updateAllMintOnInsertMint_r12(n);
+        emit Mint(p,n);
         return true;
       }
       return false;
   }
-  function updateBalanceOfOnIncrementTotalIn_r27(address p,int i) private    {
-      balanceOf[p].n += i;
-  }
-  function updateAllowanceOnIncrementSpentTotal_r47(address o,address s,int l) private    {
-      allowance[o][s].n -= l;
-  }
-  function updateTotalOutOnInsertTransfer_r50(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalOut_r27(p,delta0);
-  }
-  function canSend(address s) private view  returns (bool) {
-      uint t = block.timestamp;
-      uint expire = permissionExpiryTime[s].t;
-      if(true==permissionSendAllowed[s].b) {
-        if(t<expire) {
-          return true;
-        }
-      }
-      if(0==permissionExpiryTime[s].t) {
-        if(true==permissionSendAllowed[s].b) {
-          return true;
-        }
+  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r13(address p,address s,int d) private   returns (bool) {
+      if(d>=0) {
+        updateAllowanceTotalOnInsertIncreaseAllowance_r41(o,s,d);
+        emit IncreaseAllowance(o,s,d);
+        return true;
       }
       return false;
   }
-  function updateDistributeTotalOnInsertConstructor_r41() private    {
+  function updateDistributeTotalOnInsertConstructor_r42() private    {
       // Empty()
+  }
+  function updateSpentTotalOnInsertTransferFrom_r44(address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementSpentTotal_r48(o,s,delta0);
   }
   function updateMinIntervalOnInsertConstructor_r46() private    {
       minInterval = MinIntervalTuple(0,true);
@@ -285,26 +234,32 @@ contract Stbt {
       int newValue = x+delta;
       return newValue;
   }
-  function updateLastDistributeTimeOnInsertDistributeInterests_r34(uint t) private    {
-      uint _max = lastDistributeTime.time;
-      if(t>_max) {
-        lastDistributeTime = LastDistributeTimeTuple(m,true);
-      }
+  function updateBalanceOfOnIncrementTotalOut_r29(address p,int o) private    {
+      balanceOf[p].n -= o;
   }
-  function updateSpentTotalOnInsertTransferFrom_r44(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementSpentTotal_r47(o,s,delta0);
-  }
-  function updateDistributeTotalOnInsertDistributeInterests_r45(int n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementDistributeTotal_r17(delta0);
-  }
-  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r11(address p,address s,int d) private   returns (bool) {
-      if(d>=0) {
-        updateAllowanceTotalOnInsertIncreaseAllowance_r40(o,s,d);
-        emit IncreaseAllowance(o,s,d);
+  function updateDistributeInterestsOnInsertRecv_distributeInterests_r1(int n,uint t) private   returns (bool) {
+      uint t1_1 = lastDistributeTime.time;
+      uint i_1 = minInterval.time;
+      if(n>0 && t-t1_1>i_1) {
+        updateLastDistributeTimeOnInsertDistributeInterests_r33(t);
+        updateDistributeTotalOnInsertDistributeInterests_r45(n);
+        emit DistributeInterests(n,t);
         return true;
       }
       return false;
+  }
+  function updateTotalSupplyOnIncrementDistributeTotal_r16(int d) private    {
+      totalSupply.n -= d;
+  }
+  function updateAllowanceOnIncrementAllowanceTotal_r48(address o,address s,int m) private    {
+      allowance[o][s].n += m;
+  }
+  function updateAllBurnOnInsertBurn_r3(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllBurn_r16(delta0);
+  }
+  function updateTotalOutOnInsertTransfer_r50(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalOut_r29(p,delta0);
   }
 }

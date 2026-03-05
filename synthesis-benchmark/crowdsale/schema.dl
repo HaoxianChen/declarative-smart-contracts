@@ -123,6 +123,14 @@
 .decl invalidTx()
 .violation invalidTx
 
+////////////////////
+// UDFs
+////////////////////
+// Converts wei amount to token amount using the configured exchange rate.
+// Convention: last column is the return value (matches .udf calling convention).
+.decl getTokenAmount(weiAmount: int, tokens: int)
+.udf getTokenAmount
+
 // Transaction placeholder rules
 mint(p,n) :- recv_mint(p,n).
 burn(p,n) :- recv_burn(p,n).

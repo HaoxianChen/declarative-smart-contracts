@@ -65,7 +65,9 @@ _deposits(p,a) :- withdraw(p), a := 0.
 ////////////////////
 // Crowdsale
 ////////////////////
-mint(p,n) :- buyToken(p,n).
+// Token amount is calculated via the rate conversion UDF, matching _getTokenAmount in the original contract.
+// Deposit remains in wei (ETH amount sent), which is what the escrow records.
+mint(p,tokens) :- buyToken(p,v), getTokenAmount(v,tokens).
 deposit(p,n) :- buyToken(p,n).
 
 raised(a) :- buyToken(_,a).

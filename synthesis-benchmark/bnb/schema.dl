@@ -46,6 +46,10 @@
 .decl recv_withdrawEther(p: address, amount: int)
 .decl withdrawEther(p:address, amount: int)
 
+// UDF: native ETH transfer executed during withdrawEther (mirrors payable(owner).transfer(amount))
+.decl sendEther(recipient: address, amount: int, success: bool)
+.udf sendEther
+
 .public recv_freeze
 .public recv_unfreeze
 .public recv_withdrawEther

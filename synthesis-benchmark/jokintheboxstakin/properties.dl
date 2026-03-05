@@ -1,19 +1,17 @@
 ////////////////////////////
 // Jok In The Box Staking (properties)
-// We encode "require" checks as invalidTx() violations.
+// Encode "require" checks as invalidTx() violations so CEGIS learns guards.
 ////////////////////////////
 
-// 1) Fix the vulnerability: cannot unstake twice.
-// If a stake is already marked as unstaked, a new recv_unstake is invalid.
+// 1) Vulnerability fix: cannot unstake twice.
 invalidTx() :-
   recv_unstake(stakeId),
   msgSender(p),
   onceUnstake(p, stakeId, u),
   u == true.
 
-// 2) Lock period check (day-based), matching Solidity:
-// require(currentDay > stakedDay + lockPeriod)
-// Therefore invalid when currentDay <= stakedDay + lockPeriod.
+// 2) Lock period check (day-based):
+// require(currentDay > stakedDay + lockPeriod)  =>  invalid when <=.
 invalidTx() :-
   recv_unstake(stakeId),
   msgSender(p),
@@ -22,7 +20,17 @@ invalidTx() :-
   now(t),
   t <= staked + lock.
 
-// 3) withdraw: signature must be valid
+// 3) stake: amount must be positive.
+invalidTx() :- recv_stake(_, amount, _), amount <= 0.
+
+// 4) stake: lockPeriod must be one of {1, 30, 60, 90} days.
+// Uses the isValidLockPeriod UDF so the synthesized contract calls the pure helper.
+invalidTx() :-
+  recv_stake(_, _, lockPeriod),
+  isValidLockPeriod(lockPeriod, ok),
+  ok == false.
+
+// 5) withdraw: signature must be valid (ECDSA check via UDF).
 invalidTx() :-
   recv_withdraw(earnings, affiliateEarnings, inETH, messageHash, v, r, s),
   msgSender(sender),
@@ -30,7 +38,7 @@ invalidTx() :-
   isValidSignature(sender, total, inETH, messageHash, v, r, s, valid),
   valid == false.
 
-// 4) withdraw (ETH): total * 100 >= thisBalance * maxPercentage  => invalid
+// 6) withdraw (ETH path): total must be < maxPercentage% of contract ETH balance.
 invalidTx() :-
   recv_withdraw(earnings, affiliateEarnings, true, messageHash, v, r, s),
   total := earnings + affiliateEarnings,
@@ -39,7 +47,7 @@ invalidTx() :-
   thisBalance(bal),
   total * c >= bal * maxPct.
 
-// 5) withdraw (token): total * 100 >= jokTokenBalance * maxPercentage => invalid
+// 7) withdraw (token path): total must be < maxPercentage% of JOK token balance.
 invalidTx() :-
   recv_withdraw(earnings, affiliateEarnings, false, messageHash, v, r, s),
   total := earnings + affiliateEarnings,

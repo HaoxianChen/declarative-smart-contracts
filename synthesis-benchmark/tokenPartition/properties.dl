@@ -4,3 +4,18 @@ negativeBalance(p,q,n) :- balanceOfByPartition(p,q,n), n<0, p!=0.
 // only owner can issue or redeem tokens
 invalidTx() :- recv_issueByPartition(_,_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_redeemByPartition(_,_,_), owner(o), msgSender(s), o!=s.
+
+// Amount must be positive
+invalidTx() :- recv_issueByPartition(_,_,n), n<=0.
+invalidTx() :- recv_redeemByPartition(_,_,n), n<=0.
+invalidTx() :- recv_transferByPartition(_,_,_,n), n<=0.
+
+// Address checks
+invalidTx() :- recv_issueByPartition(p,_,_), p==0.
+invalidTx() :- recv_redeemByPartition(p,_,_), p==0.
+invalidTx() :- recv_transferByPartition(s,_,_,_), s==0.
+invalidTx() :- recv_transferByPartition(_,r,_,_), r==0.
+
+// Sufficient balance
+invalidTx() :- recv_redeemByPartition(p,q,n), balanceOfByPartition(p,q,m), n>m.
+invalidTx() :- recv_transferByPartition(s,_,q,n), balanceOfByPartition(s,q,m), n>m.

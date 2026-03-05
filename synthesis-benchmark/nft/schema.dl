@@ -41,6 +41,10 @@
 .public approved(2)
 .public isApprovedForAll(2)
 
+// UDF: ERC721 receiver hook (safeTransferFrom checks that recipient contracts accept the token)
+.decl onERC721Received(to: address, tokenId: uint, success: bool)
+.udf onERC721Received
+
 // Properties
 .decl invalidTx()
 .violation invalidTx

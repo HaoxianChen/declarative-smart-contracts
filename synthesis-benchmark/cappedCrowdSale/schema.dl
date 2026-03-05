@@ -1,3 +1,5 @@
+// adopted from https://github.com/binodnp/openzeppelin-solidity/blob/master/contracts/crowdsale/validation/CappedCrowdsale.sol
+
 // parameters
 .decl *owner(p: address)
 
@@ -102,6 +104,10 @@
 
 .decl invalidTx()
 .violation invalidTx
+
+// UDF: token amount from wei (delegates to external rate logic)
+.decl getTokenAmount(weiAmount: int, tokens: int)
+.udf getTokenAmount
 
 // Transaction placeholder rules
 mint(p,n) :- recv_mint(p,n).

@@ -1,17 +1,22 @@
 ////////////////////////////
-// SheepFarm (register-only) properties
+// SheepFarm properties
 //
-// Express the bug and the fix:
-// - Bug: register does not write timestamp, so timestamp stays 0 and user can register again.
-// - Fix (target semantics): after one register, timestamp becomes non-zero, and any further
-//   recv_register by same msgSender becomes invalid.
+// Key violations driving CEGIS guard synthesis:
+//   1. Re-register prevention (the original bug fix).
+//   2. negativeGems  -> CEGIS learns gem-sufficiency guard for upgradeVillage.
+//   3. negativeWool  -> CEGIS learns wool-sufficiency guard for withdrawMoney.
+//
+// "Must be registered before action" is enforced indirectly: without registration
+// there are no gems earned, so negativeGems fires for any upgrade attempt.
 ////////////////////////////
 
-// If the caller already has a non-zero timestamp, a new registration is invalid.
-// This induces the guard `t == 0` for the synthesized register rule.
-invalidTx() :-
-  recv_register(_),
-  msgSender(user),
-  villageTimestamp(user, t),
-  t != 0.
+// Re-register prevention: timestamp must be 0 on first call.
+invalidTx() :- recv_register(_), msgSender(user), villageTimestamp(user, t), t != 0.
 
+// Positive-amount guards for add/withdraw operations.
+invalidTx() :- recv_addGems(g), g <= 0.
+invalidTx() :- recv_withdrawMoney(a), a <= 0.
+
+// Solvency violations — drive CEGIS to add sufficiency checks in transaction guards.
+negativeGems(user, n) :- villageGems(user, n), n < 0.
+negativeWool(user, n) :- villageWool(user, n), n < 0.

@@ -8,3 +8,17 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 // only owner can perform restricted actions
 invalidTx() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_issue(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_destroyBlackFund(_,_), owner(o), msgSender(s), o!=s.
+
+// transfer fee must not exceed the transfer value (prevents negative sendAmount)
+invalidTx() :- recv_transfer(_,_,v), computeFee(v,fee), fee >= v.
+
+// transfer: non-zero addresses, positive amount, sender has sufficient balance
+invalidTx() :- recv_transfer(s,_,_), s==0.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+invalidTx() :- recv_transfer(_,_,n), n<=0.
+invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
+
+// transferFrom: positive amount, owner has sufficient balance
+invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
+invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.

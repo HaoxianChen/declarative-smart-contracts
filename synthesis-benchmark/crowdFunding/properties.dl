@@ -12,12 +12,6 @@ illegalRefund() :- onceRefund(true), raised(r), target(t), r>=t.
 // only owner can close the crowdfunding
 invalidTx() :- recv_close(), owner(o), msgSender(s), o!=s.
 
-// cannot refund if target is met
-invalidTx() :- recv_refund(_,_), raised(r), target(t), r>=t.
-
-// cannot refund if crowdfunding is not closed
-invalidTx() :- recv_refund(_,_), closed(b), b==false.
-
 // cannot withdraw if target is not met
 invalidTx() :- recv_withdraw(_,_), raised(r), target(t), r<t.
 

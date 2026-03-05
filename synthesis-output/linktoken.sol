@@ -27,22 +27,38 @@ contract Linktoken {
   event IncreaseApproval(address o,address s,int n);
   event TransferFrom(address o,address r,address s,int n);
   constructor(int n) public {
-    updateTotalSupplyOnInsertConstructor_r13(n);
-    updateBalanceOfOnInsertConstructor_r17(n);
-    updateTotalBalancesOnInsertConstructor_r30(n);
-    updateTotalInOnInsertConstructor_r25(n);
-    updateTotalMintOnInsertConstructor_r7(n);
-    updateOwnerOnInsertConstructor_r8(n);
+    updateTotalBalancesOnInsertConstructor_r34(n);
+    updateOwnerOnInsertConstructor_r26(n);
+    updateTotalSupplyOnInsertConstructor_r10(n);
+    updateBalanceOfOnInsertConstructor_r13(n);
+    updateTotalMintOnInsertConstructor_r24(n);
+    updateTotalInOnInsertConstructor_r5(n);
   }
-  function increaseApproval(address o,address s,int n) public    {
-      bool r10 = updateIncreaseApprovalOnInsertRecv_increaseApproval_r10(o,s,n);
-      if(r10==false) {
+  function burn(address p,int amount) public    {
+      bool r35 = updateBurnOnInsertRecv_burn_r35(p,amount);
+      if(r35==false) {
         revert("Rule condition failed");
       }
   }
+  function getBalanceOf(address p) public view  returns (int) {
+      int n = balanceOf[p].n;
+      return n;
+  }
   function decreaseApproval(address o,address s,int n) public    {
-      bool r5 = updateDecreaseApprovalOnInsertRecv_decreaseApproval_r5(o,s,n);
-      if(r5==false) {
+      bool r38 = updateDecreaseApprovalOnInsertRecv_decreaseApproval_r38(o,s,n);
+      if(r38==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function increaseApproval(address o,address s,int n) public    {
+      bool r8 = updateIncreaseApprovalOnInsertRecv_increaseApproval_r8(o,s,n);
+      if(r8==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function transferFrom(address o,address r,address s,int n) public    {
+      bool r14 = updateTransferFromOnInsertRecv_transferFrom_r14(o,r,s,n);
+      if(r14==false) {
         revert("Rule condition failed");
       }
   }
@@ -50,31 +66,9 @@ contract Linktoken {
       int n = allowance[p][s].n;
       return n;
   }
-  function getBalanceOf(address p) public view  returns (int) {
-      int n = balanceOf[p].n;
-      return n;
-  }
-  function mint(address p,int amount) public    {
-      bool r4 = updateMintOnInsertRecv_mint_r4(p,amount);
-      if(r4==false) {
-        revert("Rule condition failed");
-      }
-  }
   function transfer(address s,address r,int n) public    {
-      bool r24 = updateTransferOnInsertRecv_transfer_r24(s,r,n);
-      if(r24==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function transferFrom(address o,address r,address s,int n) public    {
-      bool r11 = updateTransferFromOnInsertRecv_transferFrom_r11(o,r,s,n);
-      if(r11==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function burn(address p,int amount) public    {
-      bool r31 = updateBurnOnInsertRecv_burn_r31(p,amount);
-      if(r31==false) {
+      bool r30 = updateTransferOnInsertRecv_transfer_r30(s,r,n);
+      if(r30==false) {
         revert("Rule condition failed");
       }
   }
@@ -82,37 +76,109 @@ contract Linktoken {
       int n = totalSupply.n;
       return n;
   }
-  function updateSpentTotalOnInsertTransferFrom_r21(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementSpentTotal_r22(o,s,delta0);
+  function mint(address p,int amount) public    {
+      bool r3 = updateMintOnInsertRecv_mint_r3(p,amount);
+      if(r3==false) {
+        revert("Rule condition failed");
+      }
   }
-  function updateAllowanceOnIncrementDecreaseAllowanceTotal_r22(address o,address s,int d) private    {
+  function updateTotalOutOnInsertTransfer_r36(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalOut_r29(p,delta0);
+  }
+  function updateTotalMintOnInsertConstructor_r24(int n) private    {
+      address s = msg.sender;
+      // Empty()
+  }
+  function updateAllowanceTotalOnInsertIncreaseApproval_r2(address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementAllowanceTotal_r21(o,s,delta0);
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r14(address o,address r,address s,int n) private   returns (bool) {
+      int m_2 = balanceOf[o].n;
+      int m_1 = allowance[o][s].n;
+      if(n>0 && n<=m_1 && n<=m_2) {
+        updateSpentTotalOnInsertTransferFrom_r20(o,s,n);
+        updateTransferOnInsertTransferFrom_r27(o,r,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
+  }
+  function updateTotalMintOnInsertMint_r9(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalMint_r29(p,delta0);
+  }
+  function updateTotalSupplyOnIncrementAllBurn_r19(int b) private    {
+      totalSupply.n -= b;
+  }
+  function updateAllMintOnInsertMint_r12(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllMint_r19(delta0);
+  }
+  function updateAllowanceOnIncrementDecreaseAllowanceTotal_r21(address o,address s,int d) private    {
       allowance[o][s].n -= d;
   }
-  function updateAllMintOnInsertMint_r16(int n) private    {
+  function updateTransferOnInsertTransferFrom_r27(address o,address r,int n) private    {
+      updateTotalInOnInsertTransfer_r7(r,n);
+      updateTotalOutOnInsertTransfer_r36(o,n);
+      emit Transfer(o,r,n);
+  }
+  function updateDecreaseAllowanceTotalOnInsertDecreaseApproval_r1(address o,address s,int n) private    {
       int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllMint_r20(delta0);
+      updateAllowanceOnIncrementDecreaseAllowanceTotal_r21(o,s,delta0);
   }
-  function updateBalanceOfOnIncrementTotalMint_r27(address p,int n) private    {
-      balanceOf[p].n += n;
+  function updateOwnerOnInsertConstructor_r26(int n) private    {
+      address s = msg.sender;
+      if(s>address(0) && n>=0) {
+        owner = OwnerTuple(s,true);
+      }
   }
-  function updateTotalInOnInsertTransfer_r6(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalIn_r27(p,delta0);
+  function updateIncreaseApprovalOnInsertRecv_increaseApproval_r8(address o,address s,int n) private   returns (bool) {
+      if(n>=0) {
+        updateAllowanceTotalOnInsertIncreaseApproval_r2(o,s,n);
+        emit IncreaseApproval(o,s,n);
+        return true;
+      }
+      return false;
   }
-  function updateAllowanceOnIncrementSpentTotal_r22(address o,address s,int l) private    {
+  function updateBalanceOfOnIncrementTotalBurn_r29(address p,int m) private    {
+      balanceOf[p].n -= m;
+  }
+  function updateBurnOnInsertRecv_burn_r35(address p,int amount) private   returns (bool) {
+      address s = msg.sender;
+      address o = owner.p;
+      int balanceOf_x1 = balanceOf[p].n;
+      if(o==s && n<=balanceOf_x1) {
+        updateTotalBurnOnInsertBurn_r15(p,n);
+        updateAllBurnOnInsertBurn_r18(n);
+        emit Burn(p,n);
+        return true;
+      }
+      return false;
+  }
+  function updateTotalInOnInsertConstructor_r5(int n) private    {
+      address s = msg.sender;
+      // Empty()
+  }
+  function updateBalanceOfOnIncrementTotalIn_r29(address p,int i) private    {
+      balanceOf[p].n += i;
+  }
+  function updateAllowanceOnIncrementAllowanceTotal_r21(address o,address s,int m) private    {
+      allowance[o][s].n += m;
+  }
+  function updateAllowanceOnIncrementSpentTotal_r21(address o,address s,int l) private    {
       allowance[o][s].n -= l;
   }
-  function updateDecreaseAllowanceTotalOnInsertDecreaseApproval_r2(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementDecreaseAllowanceTotal_r22(o,s,delta0);
+  function updateBalanceOfOnIncrementTotalMint_r29(address p,int n) private    {
+      balanceOf[p].n += n;
   }
-  function updateAllBurnOnInsertBurn_r19(int n) private    {
+  function updateTotalBurnOnInsertBurn_r15(address p,int n) private    {
       int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllBurn_r20(delta0);
+      updateBalanceOfOnIncrementTotalBurn_r29(p,delta0);
   }
-  function updateTotalSupplyOnInsertConstructor_r13(int n) private    {
-      totalSupply = TotalSupplyTuple(n,true);
+  function updateTotalSupplyOnIncrementAllMint_r19(int m) private    {
+      totalSupply.n += m;
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -120,134 +186,65 @@ contract Linktoken {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function updateBalanceOfOnIncrementTotalIn_r27(address p,int i) private    {
-      balanceOf[p].n += i;
-  }
-  function updateTotalMintOnInsertMint_r12(address p,int n) private    {
+  function updateSpentTotalOnInsertTransferFrom_r20(address o,address s,int n) private    {
       int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalMint_r27(p,delta0);
+      updateAllowanceOnIncrementSpentTotal_r21(o,s,delta0);
   }
-  function updateAllowanceOnIncrementAllowanceTotal_r22(address o,address s,int m) private    {
-      allowance[o][s].n += m;
-  }
-  function updateTotalBalancesOnInsertConstructor_r30(int n) private    {
-      // Empty()
-  }
-  function updateDecreaseApprovalOnInsertRecv_decreaseApproval_r5(address o,address s,int n) private   returns (bool) {
-      int allowance_x2 = allowance[o][s].n;
-      if(n<allowance_x2) {
-        updateDecreaseAllowanceTotalOnInsertDecreaseApproval_r2(o,s,n);
-        emit DecreaseApproval(o,s,n);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalBurnOnInsertBurn_r1(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalBurn_r27(p,delta0);
-  }
-  function updateIncreaseApprovalOnInsertRecv_increaseApproval_r10(address o,address s,int n) private   returns (bool) {
-      if(n>0) {
-        updateAllowanceTotalOnInsertIncreaseApproval_r3(o,s,n);
-        emit IncreaseApproval(o,s,n);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalSupplyOnIncrementAllMint_r20(int m) private    {
-      totalSupply.n += m;
-  }
-  function updateMintOnInsertRecv_mint_r4(address p,int amount) private   returns (bool) {
+  function updateMintOnInsertRecv_mint_r3(address p,int amount) private   returns (bool) {
       address s = msg.sender;
       address o = owner.p;
       if(o==s && n>=0) {
-        updateAllMintOnInsertMint_r16(n);
-        updateTotalMintOnInsertMint_r12(p,n);
+        updateTotalMintOnInsertMint_r9(p,n);
+        updateAllMintOnInsertMint_r12(n);
         emit Mint(p,n);
         return true;
       }
       return false;
   }
-  function updateOwnerOnInsertConstructor_r8(int n) private    {
-      address s = msg.sender;
-      if(s>address(0) && n>=0) {
-        owner = OwnerTuple(s,true);
-      }
-  }
-  function updateTotalMintOnInsertConstructor_r7(int n) private    {
-      address s = msg.sender;
-      // Empty()
-  }
-  function updateTotalInOnInsertConstructor_r25(int n) private    {
-      address s = msg.sender;
-      // Empty()
-  }
-  function updateTransferOnInsertRecv_transfer_r24(address s,address r,int n) private   returns (bool) {
-      address msgSender = msg.sender;
-      address t_1 = address(this);
-      int allowance_x2_3 = allowance[s][msgSender].n;
-      int allowance_x2_2 = allowance[r][s].n;
-      int allowance_x2_1 = allowance[msgSender][r].n;
-      if(r!=address(0) && 0!=allowance_x2_1 && r!=t_1 && n>=0 && n<=allowance_x2_3 && n<allowance_x2_2) {
-        updateTotalInOnInsertTransfer_r6(r,n);
-        updateTotalOutOnInsertTransfer_r32(s,n);
-        emit Transfer(s,r,n);
-        return true;
-      }
-      return false;
-  }
-  function updateBalanceOfOnInsertConstructor_r17(int n) private    {
-      address p = msg.sender;
-      balanceOf[p] = BalanceOfTuple(n,true);
-  }
-  function updateBurnOnInsertRecv_burn_r31(address p,int amount) private   returns (bool) {
-      address s = msg.sender;
-      address o = owner.p;
-      int balanceOf_x1 = balanceOf[p].n;
-      if(o==s && n<=balanceOf_x1) {
-        updateTotalBurnOnInsertBurn_r1(p,n);
-        updateAllBurnOnInsertBurn_r19(n);
-        emit Burn(p,n);
-        return true;
-      }
-      return false;
-  }
-  function updateTransferOnInsertTransferFrom_r26(address o,address r,int n) private    {
-      updateTotalInOnInsertTransfer_r6(r,n);
-      updateTotalOutOnInsertTransfer_r32(o,n);
-      emit Transfer(o,r,n);
+  function updateAllBurnOnInsertBurn_r18(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllBurn_r19(delta0);
   }
   function updateintByint(int x,int delta) private   returns (int) {
       int newValue = x+delta;
       return newValue;
   }
-  function updateTransferFromOnInsertRecv_transferFrom_r11(address o,address r,address s,int n) private   returns (bool) {
-      int allowance_x2_2 = allowance[r][o].n;
-      int allowance_x2_1 = allowance[o][s].n;
-      int allowance_x2_0 = allowance[s][r].n;
-      if(0!=allowance_x2_0 && n<=allowance_x2_1 && allowance_x2_2>0) {
-        updateTransferOnInsertTransferFrom_r26(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r21(o,s,n);
-        emit TransferFrom(o,r,s,n);
+  function updateTotalSupplyOnInsertConstructor_r10(int n) private    {
+      totalSupply = TotalSupplyTuple(n,true);
+  }
+  function updateTotalInOnInsertTransfer_r7(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalIn_r29(p,delta0);
+  }
+  function updateTransferOnInsertRecv_transfer_r30(address s,address r,int n) private   returns (bool) {
+      address t_1 = address(this);
+      int m_2 = balanceOf[s].n;
+      if(n>0 && r!=address(0) && r!=t_1 && n<=m_2) {
+        updateTotalInOnInsertTransfer_r7(r,n);
+        updateTotalOutOnInsertTransfer_r36(s,n);
+        emit Transfer(s,r,n);
         return true;
       }
       return false;
   }
-  function updateAllowanceTotalOnInsertIncreaseApproval_r3(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementAllowanceTotal_r22(o,s,delta0);
-  }
-  function updateTotalSupplyOnIncrementAllBurn_r20(int b) private    {
-      totalSupply.n -= b;
-  }
-  function updateBalanceOfOnIncrementTotalOut_r27(address p,int o) private    {
+  function updateBalanceOfOnIncrementTotalOut_r29(address p,int o) private    {
       balanceOf[p].n -= o;
   }
-  function updateBalanceOfOnIncrementTotalBurn_r27(address p,int m) private    {
-      balanceOf[p].n -= m;
+  function updateBalanceOfOnInsertConstructor_r13(int n) private    {
+      address p = msg.sender;
+      balanceOf[p] = BalanceOfTuple(n,true);
   }
-  function updateTotalOutOnInsertTransfer_r32(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalOut_r27(p,delta0);
+  function updateTotalBalancesOnInsertConstructor_r34(int n) private    {
+      // Empty()
+  }
+  function updateDecreaseApprovalOnInsertRecv_decreaseApproval_r38(address o,address s,int n) private   returns (bool) {
+      int totalSupply_n_0 = totalSupply.n;
+      int balanceOf_x1_1 = balanceOf[o].n;
+      if(n>0 && n==totalSupply_n_0 && 0!=balanceOf_x1_1) {
+        updateDecreaseAllowanceTotalOnInsertDecreaseApproval_r1(o,s,n);
+        emit DecreaseApproval(o,s,n);
+        return true;
+      }
+      return false;
   }
 }

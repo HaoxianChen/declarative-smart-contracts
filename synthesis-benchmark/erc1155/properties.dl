@@ -27,3 +27,6 @@ invalidTx() :- recv_transferFrom(_,_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(t,o,_,_,n), balanceOf(t,o,m), n>m.
 invalidTx() :- recv_transferFrom(t,o,_,sp,n), allowance(t,o,sp,k), n>k.
 
+// safeTransferFrom: recipient contract must accept the token (ERC1155Receiver hook)
+invalidTx() :- recv_transferFrom(tokenId,_,to,_,n), onERC1155Received(to,tokenId,n,success), success==false.
+
