@@ -1,6 +1,6 @@
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,m_1),n>0,n<=m_1.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n>0,n<balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
 mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
-burn(p,n) :- o_1==s_1,n>0,msgSender(s_1),owner(o_1),recv_burn(p,n).
-burnFrom(s,p,n) :- recv_burnFrom(s,p,n),n>0.
+burn(p,n) :- o_1==s_1,n>0,n<=balanceOf_x1,owner(o_1),recv_burn(p,n),balanceOf(p,balanceOf_x1),msgSender(s_1).
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2),balanceOf(o,m_1),n<=allowance_x2,n<=m_1,recv_transferFrom(o,r,s,n).
 transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.

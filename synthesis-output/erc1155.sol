@@ -71,69 +71,40 @@ contract Erc1155 is ERC1155UDF {
         revert("Rule condition failed");
       }
   }
+  function updateAllowanceTotalOnInsertIncreaseAllowance_r10(int t,address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementAllowanceTotal_r6(t,o,s,delta0);
+  }
   function updateBalanceOfOnIncrementTotalIn_r7(int t,address p,int i) private    {
       balanceOf[t][p].n += i;
   }
-  function updateTransferOnInsertRecv_transfer_r5(int tokenId,address from,address to,int amount) private   returns (bool) {
-      int m_1 = balanceOf[t][s].n;
-      if(r!=address(0) && s!=address(0) && n<=m_1) {
-        updateTotalOutOnInsertTransfer_r14(t,s,n);
-        updateTotalInOnInsertTransfer_r18(t,r,n);
-        emit Transfer(t,s,r,n);
-        return true;
-      }
-      return false;
-  }
-  function updateBurnOnInsertRecv_burn_r27(int tokenId,address p,int amount) private   returns (bool) {
-      address s_1 = msg.sender;
-      address o_1 = owner.p;
-      int m_2 = balanceOf[t][p].n;
-      if(p!=address(0) && o_1==s_1 && n<=m_2) {
-        updateTotalBurnOnInsertBurn_r31(t,p,n);
-        updateAllBurnOnInsertBurn_r0(t,n);
-        emit Burn(t,p,n);
-        return true;
-      }
-      return false;
+  function updateTransferOnInsertTransferFrom_r26(int t,address o,address r,int n) private    {
+      updateTotalOutOnInsertTransfer_r14(t,o,n);
+      updateTotalInOnInsertTransfer_r18(t,r,n);
+      emit Transfer(t,o,r,n);
   }
   function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r24(int tokenId,address o,address s,int d) private   returns (bool) {
-      updateAllowanceTotalOnInsertIncreaseAllowance_r10(t,o,s,d);
-      emit IncreaseAllowance(t,o,s,d);
+      updateAllowanceTotalOnInsertIncreaseAllowance_r10(tokenId,o,s,d);
+      emit IncreaseAllowance(tokenId,o,s,d);
       return true;
       return false;
-  }
-  function updateBalanceOfOnIncrementTotalMint_r7(int t,address p,int n) private    {
-      balanceOf[t][p].n += n;
   }
   function updateTotalBurnOnInsertBurn_r31(int t,address p,int n) private    {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalBurn_r7(t,p,delta0);
   }
-  function updateMintOnInsertRecv_mint_r13(int tokenId,address p,int amount) private   returns (bool) {
-      address s_1 = msg.sender;
-      address o_1 = owner.p;
-      if(p!=address(0) && o_1==s_1) {
-        updateAllMintOnInsertMint_r29(t,n);
-        updateTotalMintOnInsertMint_r17(t,p,n);
-        emit Mint(t,p,n);
+  function updateTransferOnInsertRecv_transfer_r5(int tokenId,address from,address to,int amount) private   returns (bool) {
+      int m_1 = balanceOf[tokenId][from].n;
+      if(to!=address(0) && from!=address(0) && amount<=m_1) {
+        updateTotalOutOnInsertTransfer_r14(tokenId,from,amount);
+        updateTotalInOnInsertTransfer_r18(tokenId,to,amount);
+        emit Transfer(tokenId,from,to,amount);
         return true;
       }
       return false;
   }
   function updateTotalSupplyOnIncrementAllBurn_r28(int t,int b) private    {
       totalSupply[t].n -= b;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r1(int tokenId,address from,address to,address spender,int amount) private   returns (bool) {
-      int k_1 = allowance[t][o][sp].n;
-      int m_2 = balanceOf[t][o].n;
-      bool success_0 = onERC1155Received(r,t,n);
-      if(n<=k_1 && r!=address(0) && success_0!=false && o!=address(0) && n<=m_2) {
-        updateSpentTotalOnInsertTransferFrom_r30(t,o,sp,n);
-        updateTransferOnInsertTransferFrom_r26(t,o,r,n);
-        emit TransferFrom(t,o,r,sp,n);
-        return true;
-      }
-      return false;
   }
   function updateAllMintOnInsertMint_r29(int t,int n) private    {
       int delta0 = int(n);
@@ -143,28 +114,44 @@ contract Erc1155 is ERC1155UDF {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r7(t,p,delta0);
   }
+  function updateTransferFromOnInsertRecv_transferFrom_r1(int tokenId,address from,address to,address spender,int amount) private   returns (bool) {
+      int k_1 = allowance[tokenId][from][spender].n;
+      int m_2 = balanceOf[tokenId][from].n;
+      if(amount<=k_1 && to!=address(0) && from!=address(0) && amount<=m_2) {
+        bool success_0 = onERC1155Received(to,tokenId,amount);
+        if(success_0!=false) {
+          updateTransferOnInsertTransferFrom_r26(tokenId,from,to,amount);
+          updateSpentTotalOnInsertTransferFrom_r30(tokenId,from,spender,amount);
+          emit TransferFrom(tokenId,from,to,spender,amount);
+          return true;
+        }
+      }
+      return false;
+  }
   function updateAllowanceOnIncrementAllowanceTotal_r6(int t,address o,address s,int m) private    {
       allowance[t][o][s].n += m;
   }
-  function updateAllowanceTotalOnInsertIncreaseAllowance_r10(int t,address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementAllowanceTotal_r6(t,o,s,delta0);
+  function updateAllowanceOnIncrementSpentTotal_r6(int t,address o,address s,int l) private    {
+      allowance[t][o][s].n -= l;
   }
   function updateOwnerOnInsertConstructor_r25() private    {
       address s = msg.sender;
       owner = OwnerTuple(s,true);
   }
-  function updateAllowanceOnIncrementSpentTotal_r6(int t,address o,address s,int l) private    {
-      allowance[t][o][s].n -= l;
-  }
   function updateAllBurnOnInsertBurn_r0(int t,int n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllBurn_r28(t,delta0);
   }
-  function updateTransferOnInsertTransferFrom_r26(int t,address o,address r,int n) private    {
-      updateTotalOutOnInsertTransfer_r14(t,o,n);
-      updateTotalInOnInsertTransfer_r18(t,r,n);
-      emit Transfer(t,o,r,n);
+  function updateMintOnInsertRecv_mint_r13(int tokenId,address p,int amount) private   returns (bool) {
+      address s_1 = msg.sender;
+      address o_1 = owner.p;
+      if(p!=address(0) && o_1==s_1) {
+        updateTotalMintOnInsertMint_r17(tokenId,p,amount);
+        updateAllMintOnInsertMint_r29(tokenId,amount);
+        emit Mint(tokenId,p,amount);
+        return true;
+      }
+      return false;
   }
   function updateTotalMintOnInsertMint_r17(int t,address p,int n) private    {
       int delta0 = int(n);
@@ -178,6 +165,21 @@ contract Erc1155 is ERC1155UDF {
   }
   function updateBalanceOfOnIncrementTotalOut_r7(int t,address p,int o) private    {
       balanceOf[t][p].n -= o;
+  }
+  function updateBurnOnInsertRecv_burn_r27(int tokenId,address p,int amount) private   returns (bool) {
+      address s_1 = msg.sender;
+      address o_1 = owner.p;
+      int m_2 = balanceOf[tokenId][p].n;
+      if(p!=address(0) && o_1==s_1 && amount<=m_2) {
+        updateAllBurnOnInsertBurn_r0(tokenId,amount);
+        updateTotalBurnOnInsertBurn_r31(tokenId,p,amount);
+        emit Burn(tokenId,p,amount);
+        return true;
+      }
+      return false;
+  }
+  function updateBalanceOfOnIncrementTotalMint_r7(int t,address p,int n) private    {
+      balanceOf[t][p].n += n;
   }
   function updateTotalOutOnInsertTransfer_r14(int t,address p,int n) private    {
       int delta0 = int(n);

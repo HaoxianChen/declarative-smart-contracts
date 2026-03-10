@@ -1,2 +1,2 @@
 fund(n) :- recv_fund(n),n>=0,n<=1000.
-release(p) :- recv_release(p),shares(p,_),totalShares(s),s!=0.
+release(p) :- recv_release(p).

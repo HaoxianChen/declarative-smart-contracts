@@ -95,13 +95,13 @@ object Main extends App {
     }
 
     // --- Optional UDF integration for `compile`/`compile-all-*` paths ---
-    val udfInfoOpt: Option[(String, String)] = {
+    val udfInfoOpt: Option[(String, SolcAst.UdfAstInfo)] = {
       if (dl.udfs.nonEmpty) {
         val udfPath = resolveUdfPath(filepath, f, dl)
         if (!isFileExists(udfPath)) {
           throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
         }
-        val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+        val (udfAstInfo, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
         if (errors.nonEmpty) {
           val msg = errors.mkString("\n  - ", "\n  - ", "\n")
           throw new Exception(s"udf.sol AST check failed:$msg")
@@ -109,7 +109,7 @@ object Main extends App {
         val outUdfFileName = s"${filename}_udf.sol"
         val outUdfPath = Paths.get(outDir, outUdfFileName).toString
         Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
-        Some((s"./$outUdfFileName", baseContractName))
+        Some((s"./$outUdfFileName", udfAstInfo))
       } else None
     }
 
@@ -502,7 +502,7 @@ object Main extends App {
         Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
         // --- UDF integration (split benchmarks): check udf.sol and prepare import ---
-        val udfInfoOpt: Option[(String, String)] = {
+        val udfInfoOpt: Option[(String, SolcAst.UdfAstInfo)] = {
           if (program.udfs.nonEmpty) {
             // Determine benchmark directory that produced this program
             val benchDir =
@@ -512,7 +512,7 @@ object Main extends App {
             if (!isFileExists(udfPath)) {
               throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
             }
-            val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
+            val (udfAstInfo, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
             if (errors.nonEmpty) {
               val msg = errors.mkString("\n  - ", "\n  - ", "\n")
               throw new Exception(s"udf.sol AST check failed:$msg")
@@ -521,7 +521,7 @@ object Main extends App {
             val outUdfFileName = s"${filenameNoExt}_udf.sol"
             val outUdfPath = Paths.get(datalogOutDir, outUdfFileName).toString
             Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
-            Some((s"./$outUdfFileName", baseContractName))
+            Some((s"./$outUdfFileName", udfAstInfo))
           } else None
         }
 

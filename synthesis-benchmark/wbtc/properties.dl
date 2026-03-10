@@ -29,3 +29,6 @@ invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
 // transferFrom: positive amount, owner has sufficient balance
 invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+
+// decreaseApproval: decrease amount must be positive
+invalidTx() :- recv_decreaseApproval(_,_,n), n<=0.

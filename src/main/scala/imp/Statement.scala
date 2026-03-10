@@ -380,13 +380,58 @@ object Statement {
       Search(relation, newConds, renameParameters(statement,mapping))
     }
     case solidityStatement: SolidityStatement => solidityStatement match {
+      case Constructor(params, statement) =>
+        Constructor(params.map(p => mapping.getOrElse(p, p)), renameParameters(statement, mapping))
       case ReadTuple(relation, keyList, outputVar) => {
         val newKeys = keyList.map(k=>mapping.getOrElse(k,k))
         ReadTuple(relation, newKeys, outputVar)
       }
-      case _ => {
-        ???
-      }
+      case ReadArray(arrayName, iterator, outputVar) =>
+        ReadArray(arrayName, mapping.getOrElse(iterator, iterator), outputVar)
+      case ReadValueFromMap(relation, keyList, output) =>
+        ReadValueFromMap(relation, keyList.map(k => mapping.getOrElse(k, k)), mapping.getOrElse(output, output))
+      case UpdateMap(name, keys, tupleTypeName, params) =>
+        UpdateMap(name, keys.map(k => mapping.getOrElse(k, k)), tupleTypeName, params.map(p => mapping.getOrElse(p, p)))
+      case UpdateMapValue(name, keys, fieldName, p) =>
+        UpdateMapValue(name, keys.map(k => mapping.getOrElse(k, k)), fieldName, mapping.getOrElse(p, p))
+      case SetTuple(relation, params) =>
+        SetTuple(relation, params.map(p => mapping.getOrElse(p, p)))
+      case ConvertType(from, to) =>
+        ConvertType(Arithmetic.rename(from, mapping), mapping.getOrElse(to, to).asInstanceOf[Variable])
+      case Call(functionName, params, optReturnVar) =>
+        Call(functionName, params.map(p => mapping.getOrElse(p, p)),
+          optReturnVar.map(v => mapping.getOrElse(v, v).asInstanceOf[Variable]))
+      case DefineStruct(name, _type) => DefineStruct(name, _type)
+      case DeclVariable(name, _type) => DeclVariable(name, _type)
+      case DeclFunction(name, params, returnType, stmt, metaData) =>
+        DeclFunction(name, params.map(p => mapping.getOrElse(p, p)), returnType, renameParameters(stmt, mapping), metaData)
+      case DeclEvent(name, params) =>
+        DeclEvent(name, params.map(p => mapping.getOrElse(p, p)))
+      case DeclModifier(name, params, beforeStatement, afterStatement) =>
+        DeclModifier(name, params.map(p => mapping.getOrElse(p, p)),
+          renameParameters(beforeStatement, mapping), renameParameters(afterStatement, mapping))
+      case DeclContract(name, statement) =>
+        DeclContract(name, renameParameters(statement, mapping))
+      case ForLoop(iterator, initValue, loopCondition, statementNextValue, statement) =>
+        ForLoop(mapping.getOrElse(iterator, iterator).asInstanceOf[Variable],
+          Arithmetic.rename(initValue, mapping),
+          Condition.rename(loopCondition, mapping),
+          Arithmetic.rename(statementNextValue, mapping),
+          renameParameters(statement, mapping))
+      case GetObjectAttribute(objectName, attributeName, ret) =>
+        GetObjectAttribute(objectName, attributeName, mapping.getOrElse(ret, ret))
+      case CallObjectMethod(objectName, methodName, params, optRet) =>
+        CallObjectMethod(objectName, methodName, params, optRet.map(v => mapping.getOrElse(v, v).asInstanceOf[Variable]))
+      case Return(p) =>
+        Return(mapping.getOrElse(p, p))
+      case Require(condition, msg) =>
+        Require(Condition.rename(condition, mapping), msg)
+      case Revert(msg) =>
+        Revert(msg)
+      case SendEther(p, amount) =>
+        SendEther(mapping.getOrElse(p, p), mapping.getOrElse(amount, amount))
+      case Emit(event, parameters) =>
+        Emit(event, parameters.map(p => mapping.getOrElse(p, p)))
     }
   }
 }

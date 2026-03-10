@@ -1,7 +1,7 @@
 package synthesis
 
 import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, IntExpr, Model}
-import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
+import datalog.{Arithmetic, Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
 import scala.collection.mutable
@@ -556,17 +556,60 @@ case class InductiveSynthesis(
   }
 
   def augmentSketchWithPredicates(sketch: Program,
-                                  candidates: Map[Rule, Predicate],
+                                  candidates: Map[Rule, Set[Predicate]],
                                  ): Program = {
-    val predicatesPerRelation: Map[Relation, Set[Predicate]] = candidates.groupBy {
-      case (rule, predicate) => PredicateEnumerator.extractTxLiteral(rule).relation
-    }.mapValues(_.values.toSet).toMap
-
-    val newProgram = makeProgram(sketch, Representation(predicatesPerRelation))
-    newProgram
+    val newRules: Set[Rule] = sketch.rules.diff(sketch.violationRules).map { r =>
+      val selectedPreds = candidates.getOrElse(r, Set.empty)
+      if (selectedPreds.nonEmpty) {
+        val newRule = makeRule(r, selectedPreds)
+        println(s"[makeProgram] new rule: $newRule")
+        newRule
+      } else {
+        r
+      }
+    }
+    sketch.copy(rules = newRules ++ sketch.violationRules)
   }
 
   private def makeRule(sketchRule: Rule, predicates: Set[Predicate]): Rule = {
+    val targetTxLiteralOpt = try {
+      Some(PredicateEnumerator.extractTxLiteral(sketchRule))
+    } catch {
+      case _: Throwable => None
+    }
+
+    def predicateReferencedParams(predicate: Predicate): Set[Parameter] = {
+      val bindingParams = predicate.context.bindingLiterals.flatMap(_.fields)
+      val functorParamsSet = PredicateEnumerator.functorParams(predicate.functor)
+      val helperParams = predicate.helperFunctors.flatMap(assign => Arithmetic.extractParameters(assign.b))
+      (bindingParams ++ functorParamsSet ++ helperParams).toSet
+    }
+
+    def adaptPredicateToRule(predicate: Predicate): Option[Predicate] = {
+      targetTxLiteralOpt match {
+        case None => Some(predicate)
+        case Some(targetTxLiteral) =>
+          val sourceTxLiteral = predicate.context.tx
+          if (sourceTxLiteral.relation != targetTxLiteral.relation) return None
+          val referencedParams = predicateReferencedParams(predicate)
+          val compatible = sourceTxLiteral.fields.zip(targetTxLiteral.fields).forall {
+            case (sourceVar: Variable, targetVar: Variable)
+              if sourceVar.name != "_" && referencedParams.contains(sourceVar) =>
+              targetVar.name != "_"
+            case _ => true
+          }
+          if (!compatible) None
+          else {
+            val renameMap: Map[Parameter, Parameter] = sourceTxLiteral.fields.zip(targetTxLiteral.fields).collect {
+              case (from: Variable, to: Variable)
+                if from.name != "_" && to.name != "_" && from != to =>
+                from -> to
+            }.toMap
+            val renamed = if (renameMap.nonEmpty) predicate.rename(renameMap) else predicate
+            Some(renamed)
+          }
+      }
+    }
 
     def _resolveCollision(_preds: Set[Predicate]): Set[Predicate] = {
       val groups = _preds.groupBy(_.context.bindingLiterals)
@@ -592,8 +635,10 @@ case class InductiveSynthesis(
       renamedPredicates
     }
 
-    val renamedPredicates = _resolveCollision(predicates)
+    val compatiblePredicates = predicates.flatMap(adaptPredicateToRule)
+    val renamedPredicates = _resolveCollision(compatiblePredicates)
     val bindingLits = renamedPredicates.flatMap(p => p.context.bindingLiterals)
+    val helperAssigns: Set[datalog.Assign] = renamedPredicates.flatMap(_.helperFunctors)
 
     // Collect all predicate functors, but filter out any that directly contradict a functor
     // already present in the sketch rule.  This prevents the CEGIS Z3 solver from adding a
@@ -622,7 +667,7 @@ case class InductiveSynthesis(
     val newBody: Set[datalog.Literal] = sketchRule.body ++ bindingLits
 
     // New functors: original functors plus selected predicate functors
-    val newFunctors: Set[datalog.Functor] = sketchRule.functors ++ predicateFunctors
+    val newFunctors: Set[datalog.Functor] = sketchRule.functors ++ predicateFunctors ++ helperAssigns
 
     // if predicate refer to variable in the context literals,
     // add those literal to the rule as well.

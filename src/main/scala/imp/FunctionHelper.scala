@@ -63,16 +63,28 @@ case class FunctionHelper(onStatement: OnStatement) {
   def getFunctionDeclaration(): DeclFunction = {
     val (funcName,params, newStatement) = onStatement match {
       case OnInsert(literal, updateTarget, statement,_) => {
-        val params =
-          if (isTransaction) inRel.paramList
-          else literal.fields.filterNot(_.name == "_")
-        (functionName, params, statement)
+        if (isTransaction) {
+          val params = inRel.paramList
+          val mapping: Map[Parameter, Parameter] = literal.fields.zip(params).collect {
+            case (from, to) if from.name != "_" && from != to => from -> to
+          }.toMap
+          (functionName, params, Statement.renameParameters(statement, mapping))
+        } else {
+          val params = literal.fields.filterNot(_.name == "_")
+          (functionName, params, statement)
+        }
       }
       case OnDelete(literal, updateTarget, statement,_) => {
-        val params =
-          if (isTransaction) inRel.paramList
-          else literal.fields.filterNot(_.name == "_")
-        (functionName, params, statement)
+        if (isTransaction) {
+          val params = inRel.paramList
+          val mapping: Map[Parameter, Parameter] = literal.fields.zip(params).collect {
+            case (from, to) if from.name != "_" && from != to => from -> to
+          }.toMap
+          (functionName, params, Statement.renameParameters(statement, mapping))
+        } else {
+          val params = literal.fields.filterNot(_.name == "_")
+          (functionName, params, statement)
+        }
       }
       case onIncrement: OnIncrement => {
         val _delta0 = Variable(onIncrement.updateValue._type, onIncrement.updateValue.name)

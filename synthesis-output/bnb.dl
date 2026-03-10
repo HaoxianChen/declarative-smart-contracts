@@ -5,4 +5,4 @@ burn(p,n) :- owner(o_0),o_0==s_0,balanceOf(p,m_1),n<=m_1,msgSender(s_0),recv_bur
 withdrawEther(p,n) :- recv_withdrawEther(p,n),sendEther(p,n,success),success!=false.
 transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
 unfreeze(p,n) :- recv_unfreeze(p,n),n>=0.
-transferFrom(o,r,s,n) :- n>0,n<=balanceOf_x1,balanceOf(o,m_1),n<=m_1,recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1).
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2),balanceOf(o,m_1),n<=allowance_x2,n<=m_1,recv_transferFrom(o,r,s,n).

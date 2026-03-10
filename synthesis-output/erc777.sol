@@ -46,8 +46,8 @@ contract Erc777 is ERC777UDF {
   event Transfer(address from,address to,int amount);
   event InvalidTx();
   constructor() public {
-    updateOwnerOnInsertConstructor_r55();
     updateTotalSupplyOnInsertConstructor_r31();
+    updateOwnerOnInsertConstructor_r55();
   }
   function getOperators(address p,address o) public view  returns (bool) {
       bool b = operators[p][o].b;
@@ -127,50 +127,27 @@ contract Erc777 is ERC777UDF {
       int n = allowance[p][s].n;
       return n;
   }
-  function updateBalanceOfOnIncrementTotalBurn_r7(address p,int m) private    {
-      balanceOf[p].n -= m;
-  }
-  function updateTotalSupplyOnIncrementAllBurn_r33(int b) private    {
-      totalSupply.n -= b;
-  }
-  function updateAllowanceOnIncrementSpentTotal_r62(address o,address s,int l) private    {
-      allowance[o][s].n -= l;
-  }
-  function updateAllMintOnInsertMint_r12(int n) private    {
-      int delta0 = int(n);
-      updateTotalSupplyOnIncrementAllMint_r33(delta0);
-  }
   function updateMintOnInsertRecv_mint_r47(address p,int amount) private   returns (bool) {
       address s_1 = msg.sender;
       address o_1 = owner.p;
       if(p!=address(0) && o_1==s_1) {
-        updateAllMintOnInsertMint_r12(n);
-        updateTotalMintOnInsertMint_r52(p,n);
-        emit Mint(p,n);
+        updateAllMintOnInsertMint_r12(amount);
+        updateTotalMintOnInsertMint_r52(p,amount);
+        emit Mint(p,amount);
         return true;
       }
       return false;
   }
-  function updateTotalSupplyOnInsertConstructor_r31() private    {
-      totalSupply = TotalSupplyTuple(0,true);
+  function updateTransferOnInsertTransferFrom_r43(address o,address r,int n) private    {
+      updateTotalOutOnInsertTransfer_r9(o,n);
+      updateTotalInOnInsertTransfer_r17(r,n);
+      emit Transfer(o,r,n);
   }
-  function updateTransferFromOnInsertRecv_transferFrom_r27(address from,address to,address spender,int amount) private   returns (bool) {
-      int k_2 = allowance[o][sp].n;
-      int m_0 = balanceOf[o].n;
-      if(r!=address(0) && sp!=address(0) && n<=k_2 && n<=m_0 && o!=address(0) && n>0) {
-        updateTransferOnInsertTransferFrom_r43(o,r,n);
-        updateSpentTotalOnInsertTransferFrom_r59(o,sp,n);
-        emit TransferFrom(o,r,sp,n);
-        return true;
-      }
-      return false;
+  function updateBalanceOfOnIncrementTotalBurn_r7(address p,int m) private    {
+      balanceOf[p].n -= m;
   }
-  function updateTotalMintOnInsertMint_r52(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalMint_r7(p,delta0);
-  }
-  function updateAllowanceOnIncrementAllowanceTotal_r62(address o,address s,int m) private    {
-      allowance[o][s].n += m;
+  function updateAllowanceOnIncrementSpentTotal_r62(address o,address s,int l) private    {
+      allowance[o][s].n -= l;
   }
   function updateOperatorBurnOnInsertRecv_operatorBurn_r57(address p,address s,int n,int data,int operatorData) private   returns (bool) {
       int m_1 = balanceOf[p].n;
@@ -181,20 +158,71 @@ contract Erc777 is ERC777UDF {
       }
       return false;
   }
-  function updateBurnOnInsertOperatorBurn_r54(address p,int n) private    {
-      updateAllBurnOnInsertBurn_r32(n);
-      updateTotalBurnOnInsertBurn_r20(p,n);
-      emit Burn(p,n);
+  function updateAllMintOnInsertMint_r12(int n) private    {
+      int delta0 = int(n);
+      updateTotalSupplyOnIncrementAllMint_r33(delta0);
   }
   function updateOwnerOnInsertConstructor_r55() private    {
       address s = msg.sender;
       owner = OwnerTuple(s,true);
   }
-  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r14(address p,address s,int d) private   returns (bool) {
-      if(d>=0) {
-        updateAllowanceTotalOnInsertIncreaseAllowance_r56(o,s,d);
-        emit IncreaseAllowance(o,s,d);
+  function updateuintByint(uint x,int delta) private   returns (uint) {
+      int convertedX = int(x);
+      int value = convertedX+delta;
+      uint convertedValue = uint(value);
+      return convertedValue;
+  }
+  function updateBalanceOfOnIncrementTotalIn_r7(address p,int i) private    {
+      balanceOf[p].n += i;
+  }
+  function updateTotalOutOnInsertTransfer_r9(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalOut_r7(p,delta0);
+  }
+  function updateTotalSupplyOnIncrementAllMint_r33(int m) private    {
+      totalSupply.n += m;
+  }
+  function updateBurnOnInsertOperatorBurn_r54(address p,int n) private    {
+      updateAllBurnOnInsertBurn_r32(n);
+      updateTotalBurnOnInsertBurn_r20(p,n);
+      emit Burn(p,n);
+  }
+  function updateRevokedDefaultOperatorOnInsertRevokeDefaultOperator_r60(address p,address o) private    {
+      revokedDefaultOperator[p][o] = RevokedDefaultOperatorTuple(true,true);
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r27(address from,address to,address spender,int amount) private   returns (bool) {
+      int k_2 = allowance[from][spender].n;
+      int m_0 = balanceOf[from].n;
+      if(to!=address(0) && spender!=address(0) && amount<=k_2 && amount<=m_0 && from!=address(0) && amount>0) {
+        updateSpentTotalOnInsertTransferFrom_r59(from,spender,amount);
+        updateTransferOnInsertTransferFrom_r43(from,to,amount);
+        emit TransferFrom(from,to,spender,amount);
         return true;
+      }
+      return false;
+  }
+  function updateOperatorsOnInsertApproveOperator_r15(address p,address o) private    {
+      operators[p][o] = OperatorsTuple(true,true);
+  }
+  function updateTotalSupplyOnIncrementAllBurn_r33(int b) private    {
+      totalSupply.n -= b;
+  }
+  function updateTotalSupplyOnInsertConstructor_r31() private    {
+      totalSupply = TotalSupplyTuple(0,true);
+  }
+  function updateOperatorsOnInsertRevokeDefaultOperator_r25(address p,address o) private    {
+      operators[p][o] = OperatorsTuple(false,true);
+  }
+  function updateTransferOnInsertRecv_transfer_r22(address from,address to,int amount) private   returns (bool) {
+      int m_2 = balanceOf[from].n;
+      if(to!=address(0) && from!=address(0) && amount<=m_2 && amount>0) {
+        bool success_1 = callTokensReceived(from,to,amount);
+        if(success_1!=false) {
+          updateTotalInOnInsertTransfer_r17(to,amount);
+          updateTotalOutOnInsertTransfer_r9(from,amount);
+          emit Transfer(from,to,amount);
+          return true;
+        }
       }
       return false;
   }
@@ -207,40 +235,29 @@ contract Erc777 is ERC777UDF {
       }
       return false;
   }
+  function updateRevokedDefaultOperatorOnInsertApproveOperator_r58(address p,address o) private    {
+      revokedDefaultOperator[o][p] = RevokedDefaultOperatorTuple(false,true);
+  }
   function updateTotalInOnInsertTransfer_r17(address p,int n) private    {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalIn_r7(p,delta0);
+  }
+  function updateTransferOnInsertOperatorSend_r6(address o,address r,int n) private    {
+      updateTotalOutOnInsertTransfer_r9(o,n);
+      updateTotalInOnInsertTransfer_r17(r,n);
+      emit Transfer(o,r,n);
   }
   function updateTotalBurnOnInsertBurn_r20(address p,int n) private    {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalBurn_r7(p,delta0);
   }
-  function updateApproveOperatorOnInsertRecv_approveOperator_r4(address p,address o) private   returns (bool) {
-      if(o!=address(0) && p!=address(0) && p!=o) {
-        updateOperatorsOnInsertApproveOperator_r15(p,o);
-        updateRevokedDefaultOperatorOnInsertApproveOperator_r58(p,o);
-        emit ApproveOperator(p,o);
-        return true;
-      }
-      return false;
+  function updateintByint(int x,int delta) private   returns (int) {
+      int newValue = x+delta;
+      return newValue;
   }
-  function updateBurnOnInsertRecv_burn_r19(address p,int amount) private   returns (bool) {
-      address s_1 = msg.sender;
-      address o_1 = owner.p;
-      int m_2 = balanceOf[p].n;
-      if(p!=address(0) && o_1==s_1 && n<=m_2) {
-        updateAllBurnOnInsertBurn_r32(n);
-        updateTotalBurnOnInsertBurn_r20(p,n);
-        emit Burn(p,n);
-        return true;
-      }
-      return false;
-  }
-  function updateuintByint(uint x,int delta) private   returns (uint) {
-      int convertedX = int(x);
-      int value = convertedX+delta;
-      uint convertedValue = uint(value);
-      return convertedValue;
+  function updateSpentTotalOnInsertTransferFrom_r59(address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowanceOnIncrementSpentTotal_r62(o,s,delta0);
   }
   function updateOperatorSendOnInsertRecv_operatorSend_r49(address o,address r,address s,int n,int data,int operatorData) private   returns (bool) {
       int m_1 = balanceOf[o].n;
@@ -251,67 +268,52 @@ contract Erc777 is ERC777UDF {
       }
       return false;
   }
-  function updateBalanceOfOnIncrementTotalIn_r7(address p,int i) private    {
-      balanceOf[p].n += i;
-  }
-  function updateTransferOnInsertTransferFrom_r43(address o,address r,int n) private    {
-      updateTotalOutOnInsertTransfer_r9(o,n);
-      updateTotalInOnInsertTransfer_r17(r,n);
-      emit Transfer(o,r,n);
-  }
-  function updateTotalOutOnInsertTransfer_r9(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalanceOfOnIncrementTotalOut_r7(p,delta0);
-  }
-  function updateOperatorsOnInsertApproveOperator_r15(address p,address o) private    {
-      operators[p][o] = OperatorsTuple(true,true);
-  }
-  function updateintByint(int x,int delta) private   returns (int) {
-      int newValue = x+delta;
-      return newValue;
-  }
-  function updateSpentTotalOnInsertTransferFrom_r59(address o,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowanceOnIncrementSpentTotal_r62(o,s,delta0);
-  }
-  function updateTransferOnInsertOperatorSend_r6(address o,address r,int n) private    {
-      updateTotalOutOnInsertTransfer_r9(o,n);
-      updateTotalInOnInsertTransfer_r17(r,n);
-      emit Transfer(o,r,n);
-  }
-  function updateTotalSupplyOnIncrementAllMint_r33(int m) private    {
-      totalSupply.n += m;
-  }
-  function updateRevokedDefaultOperatorOnInsertApproveOperator_r58(address p,address o) private    {
-      revokedDefaultOperator[o][p] = RevokedDefaultOperatorTuple(false,true);
-  }
-  function updateRevokedDefaultOperatorOnInsertRevokeDefaultOperator_r60(address p,address o) private    {
-      revokedDefaultOperator[p][o] = RevokedDefaultOperatorTuple(true,true);
+  function updateBurnOnInsertRecv_burn_r19(address p,int amount) private   returns (bool) {
+      address s_1 = msg.sender;
+      address o_1 = owner.p;
+      int m_2 = balanceOf[p].n;
+      if(p!=address(0) && o_1==s_1 && amount<=m_2) {
+        updateTotalBurnOnInsertBurn_r20(p,amount);
+        updateAllBurnOnInsertBurn_r32(amount);
+        emit Burn(p,amount);
+        return true;
+      }
+      return false;
   }
   function updateAllBurnOnInsertBurn_r32(int n) private    {
       int delta0 = int(n);
       updateTotalSupplyOnIncrementAllBurn_r33(delta0);
   }
-  function updateTransferOnInsertRecv_transfer_r22(address from,address to,int amount) private   returns (bool) {
-      int m_2 = balanceOf[s].n;
-      bool success_1 = callTokensReceived(s,r,n);
-      if(r!=address(0) && s!=address(0) && n<=m_2 && success_1!=false && n>0) {
-        updateTotalInOnInsertTransfer_r17(r,n);
-        updateTotalOutOnInsertTransfer_r9(s,n);
-        emit Transfer(s,r,n);
-        return true;
-      }
-      return false;
-  }
   function updateAllowanceTotalOnInsertIncreaseAllowance_r56(address o,address s,int n) private    {
       int delta0 = int(n);
       updateAllowanceOnIncrementAllowanceTotal_r62(o,s,delta0);
   }
+  function updateTotalMintOnInsertMint_r52(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalanceOfOnIncrementTotalMint_r7(p,delta0);
+  }
+  function updateApproveOperatorOnInsertRecv_approveOperator_r4(address p,address o) private   returns (bool) {
+      if(p!=address(0) && o!=address(0) && p!=o) {
+        updateOperatorsOnInsertApproveOperator_r15(p,o);
+        updateRevokedDefaultOperatorOnInsertApproveOperator_r58(p,o);
+        emit ApproveOperator(p,o);
+        return true;
+      }
+      return false;
+  }
+  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r14(address p,address s,int d) private   returns (bool) {
+      if(d>=0) {
+        updateAllowanceTotalOnInsertIncreaseAllowance_r56(p,s,d);
+        emit IncreaseAllowance(p,s,d);
+        return true;
+      }
+      return false;
+  }
+  function updateAllowanceOnIncrementAllowanceTotal_r62(address o,address s,int m) private    {
+      allowance[o][s].n += m;
+  }
   function updateBalanceOfOnIncrementTotalOut_r7(address p,int o) private    {
       balanceOf[p].n -= o;
-  }
-  function updateOperatorsOnInsertRevokeDefaultOperator_r25(address p,address o) private    {
-      operators[p][o] = OperatorsTuple(false,true);
   }
   function updateBalanceOfOnIncrementTotalMint_r7(address p,int n) private    {
       balanceOf[p].n += n;

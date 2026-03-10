@@ -1,5 +1,5 @@
+distributeInterests(n,t) :- n>0,t-t1_1>i_1,minInterval(i_1),recv_distributeInterests(n,t),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),lastDistributeTime(t1_1),n<balanceOf_x1.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
-distributeInterests(n,t) :- n>0,t-t1_1>i_1,minInterval(i_1),lastDistributeTime(t1_1),recv_distributeInterests(n,t).
 transfer(s,r,n) :- canSend(s,ok_1),n<=m_2,s!=address(0),r!=address(0),canRecv(r,ok_3),ok_3!=false,balanceOf(s,m_2),ok_1!=false,recv_transfer(s,r,n),n>0.
 transferFrom(o,r,sp,n) :- n>0,r!=address(0),recv_transferFrom(o,r,sp,n),ok_3!=false,n<=m_1,o!=address(0),ok_2!=false,canRecv(r,ok_3),sp!=address(0),balanceOf(o,m_1),canSend(o,ok_2).
 burn(p,n) :- o_1==s_1,n>0,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).

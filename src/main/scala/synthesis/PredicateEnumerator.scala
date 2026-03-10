@@ -31,9 +31,10 @@ object Context {
     (msgValue.fields ++ msgValue.fields).toSet
   }
 }
-case class Predicate(context: Context, functor: Functor) {
+case class Predicate(context: Context, functor: Functor, helperFunctors: Set[Assign] = Set()) {
   override def toString: String = {
-    s"Predicate(context: $context, functor: $functor)"
+    val helpers = if (helperFunctors.isEmpty) "" else s", helperFunctors: ${helperFunctors.mkString("{", ", ", "}")}"
+    s"Predicate(context: $context, functor: $functor$helpers)"
   }
 
   def referredMsgValue(): Boolean = {
@@ -49,7 +50,8 @@ case class Predicate(context: Context, functor: Functor) {
   def rename(mapping: Map[Parameter, Parameter]): Predicate = {
     val newContext = context.rename(mapping)
     val newFunctor = Functor.rename(this.functor,mapping)
-    this.copy(context=newContext, functor = newFunctor)
+    val newHelpers = helperFunctors.map(f => Functor.rename(f, mapping).asInstanceOf[Assign])
+    this.copy(context=newContext, functor = newFunctor, helperFunctors = newHelpers)
   }
 }
 
@@ -95,27 +97,50 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       }
     }
 
-  def extractPredicateFromTxProperties(program: Program): Map[Rule,Predicate] = {
+  def extractPredicateFromTxProperties(program: Program): Map[Rule, Set[Predicate]] = {
     val txViolationRules = program.violationRules.filter(
       _.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
+    val txRulesByRelation: Map[Relation, Set[Rule]] = program.transactionRules().groupBy { txRule =>
+      PredicateEnumerator.extractTxLiteral(txRule).relation
+    }
 
-    // Build a lookup: tx relation -> canonical tx literal from an actual transaction rule.
-    // This is used to rename violation-rule variables (e.g. `a`) to the names used in
-    // the sketch transaction rules (e.g. `amount`), so the extracted predicate functor
-    // does not contain free variables when inserted into the transaction rule body.
-    val canonicalTxLiteral: Map[Relation, Literal] = program.transactionRules()
-      .flatMap { txRule =>
-        txRule.body.collectFirst {
-          case lit: Literal if lit.relation.name.startsWith(transactionRelationPrefix) =>
-            lit.relation -> lit
-        }
-      }.toMap
+    def predicateParams(predicate: Predicate): Set[Parameter] = {
+      val bindingParams = predicate.context.bindingLiterals.flatMap(_.fields)
+      val functorParamsSet = functorParams(predicate.functor)
+      val helperParams = predicate.helperFunctors.flatMap { assign =>
+        Arithmetic.extractParameters(assign.b) ++ Set(assign.a.p)
+      }
+      (bindingParams ++ functorParamsSet ++ helperParams).toSet
+    }
+
+    def isCompatibleWithTxRule(predicate: Predicate,
+                               sourceTxLiteral: Literal,
+                               targetTxLiteral: Literal): Boolean = {
+      val referencedParams = predicateParams(predicate)
+      sourceTxLiteral.fields.zip(targetTxLiteral.fields).forall {
+        case (sourceVar: Variable, targetVar: Variable) if sourceVar.name != "_" && referencedParams.contains(sourceVar) =>
+          targetVar.name != "_"
+        case _ => true
+      }
+    }
+
+    def hasDanglingVariables(predicate: Predicate, targetTxLiteral: Literal): Boolean = {
+      val available = (
+        targetTxLiteral.fields.filterNot(_.name == "_") ++
+          predicate.context.bindingLiterals.flatMap(_.fields).filterNot(_.name == "_")
+        ).toSet
+      predicateParams(predicate).exists {
+        case v: Variable =>
+          v.name == "_" || (!available.contains(v) && !targetTxLiteral.relation.paramList.contains(v))
+        case _ => false
+      }
+    }
 
     // for each txViolation rule: recv_tx(...), p1, p2,...
     // if it has only one functor, then negate that functor, and keep p1,p2,...
     // as the binding literal, and recv_tx... as the tx literal.
     // if it has more than one functor, skip it for now.
-    val predicates = txViolationRules.flatMap  { rule =>
+    val predicates = txViolationRules.foldLeft(Map.empty[Rule, Set[Predicate]]) { (acc, rule) =>
       val txLiteral = PredicateEnumerator.extractTxLiteral(rule)
 
       // collect binding literals (all body Literals except the tx literal)
@@ -124,44 +149,47 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
 
       // Assign functors are temp-variable definitions (e.g. total := earnings + affiliateEarnings),
       // not real guard conditions; ignore them when checking for "single condition" rules.
+      val assignFunctors = rule.functors.collect { case a: Assign => a }
       val condFunctors = rule.functors.filterNot(_.isInstanceOf[Assign])
       if (condFunctors.size != 1) {
-        None
+        acc
       }
       else if (rule.body.exists(_.relation.name.startsWith("once"))) {
         // skip those tracking relations
-        None
+        acc
       }
       else {
         val f = condFunctors.head
         val negated = Functor.negate(f)
-        val predicate = Predicate(Context(txLiteral, bindingLiterals), negated)
-
-        // Rename violation-rule tx literal variables to match the sketch transaction rule.
-        // E.g. violation rule uses `recv_withdrawMoney(a)` with functor `a>0`, but the
-        // transaction rule uses `recv_withdrawMoney(amount)`.  Without renaming, `a` would
-        // be an unbound free variable in the synthesized rule body.
-        val renamed: Predicate = canonicalTxLiteral.get(txLiteral.relation) match {
-          case Some(canonLit) =>
-            // Only rename when the canonical position has a proper named variable (not a wildcard
-            // `_`).  Renaming a violation-rule variable to `_` would produce degenerate functors
-            // like `_==s_1` which always evaluate as free-variable matches and mislead CEGIS.
-            val renameMap: Map[Parameter, Parameter] = txLiteral.fields.zip(canonLit.fields)
-              .collect {
-                case (from: Variable, to: Variable)
-                  if from.name != to.name
-                    && !to.name.startsWith("_")
-                    && !from.name.startsWith("_") =>
-                  from -> to
-              }
-              .toMap
-            if (renameMap.nonEmpty) predicate.rename(renameMap) else predicate
-          case None => predicate
+        val predicate = Predicate(Context(txLiteral, bindingLiterals), negated, helperFunctors = assignFunctors)
+        val attachedPredicates: Map[Rule, Set[Predicate]] = txRulesByRelation.getOrElse(txLiteral.relation, Set.empty)
+          .flatMap { txRule =>
+            val targetTxLiteral = PredicateEnumerator.extractTxLiteral(txRule)
+            if (!isCompatibleWithTxRule(predicate, txLiteral, targetTxLiteral)) None
+            else {
+              val renameMap: Map[Parameter, Parameter] = txLiteral.fields.zip(targetTxLiteral.fields)
+                .collect {
+                  case (from: Variable, to: Variable)
+                    if from.name != "_"
+                      && to.name != "_"
+                      && from != to =>
+                    from -> to
+                }
+                .toMap
+              val renamed = if (renameMap.nonEmpty) predicate.rename(renameMap) else predicate
+              if (hasDanglingVariables(renamed, targetTxLiteral)) None
+              else Some(txRule -> renamed)
+            }
+          }
+          .groupMap(_._1)(_._2)
+          .view
+          .mapValues(_.toSet)
+          .toMap
+        acc ++ attachedPredicates.map { case (txRule, preds) =>
+          txRule -> (acc.getOrElse(txRule, Set.empty) ++ preds)
         }
-
-        Some(rule -> renamed)
       }
-    }.toMap
+    }
     predicates
   }
 

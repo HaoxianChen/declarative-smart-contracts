@@ -25,6 +25,13 @@ object SolcAst {
     visibility: String
   )
 
+  case class UdfAstInfo(
+    baseContractName: String,
+    functionSigs: List[SolFunctionSig],
+    externalFunctions: Set[String],
+    ownedRelationNames: Set[String]
+  )
+
   private def normalizeSolType(typeString: String): String = {
     if (typeString == null) return ""
     val t = typeString.trim
@@ -105,20 +112,68 @@ object SolcAst {
     )
   }
 
-  def extractSingleContractAndFunctions(udfSolPath: String): (String, List[SolFunctionSig]) = {
+  private def relationNameFromTuple(tupleName: String): Option[String] = {
+    if (!tupleName.endsWith("Tuple") || tupleName.length <= "Tuple".length) None
+    else {
+      val base = tupleName.stripSuffix("Tuple")
+      Some(base.head.toLower + base.tail)
+    }
+  }
+
+  private def contractOwnedRelations(contractNode: Map[String, Any]): Set[String] = {
+    val nodes = asList(contractNode.getOrElse("nodes", Nil)).map(asMap)
+    val structOwned = nodes.flatMap { node =>
+      if (node.get("nodeType").contains("StructDefinition")) {
+        relationNameFromTuple(node.getOrElse("name", "").toString)
+      } else None
+    }
+    val stateOwned = nodes.flatMap { node =>
+      val isStateVar = node.get("nodeType").contains("VariableDeclaration") &&
+        (node.getOrElse("stateVariable", false) match {
+          case b: Boolean => b
+          case s: String => s == "true"
+          case _ => false
+        })
+      if (isStateVar) Some(node.getOrElse("name", "").toString) else None
+    }
+    (structOwned ++ stateOwned).filter(_.nonEmpty).toSet
+  }
+
+  private def contractFunctions(contractNode: Map[String, Any]): List[SolFunctionSig] = {
+    val nodes = asList(contractNode.getOrElse("nodes", Nil)).map(asMap)
+    nodes
+      .filter(n => n.get("nodeType").contains("FunctionDefinition"))
+      .filter(n => n.getOrElse("name", "").toString.nonEmpty)
+      .map(extractFunctionSig)
+  }
+
+  def extractUdfAstInfo(program: Program, udfSolPath: String): UdfAstInfo = {
     val json = runSolcAstJson(udfSolPath)
     val root = parseJson(json)
 
     val contractNodes = findAllNodes(root, n => n.get("nodeType").contains("ContractDefinition"))
     if (contractNodes.isEmpty) throw new Exception(s"No ContractDefinition found in $udfSolPath")
-    val contractName = contractNodes.head.getOrElse("name", "").toString
-
-    val functionNodes = findAllNodes(root, n => n.get("nodeType").contains("FunctionDefinition"))
-      // filter out constructors/fallback/receive (name may be empty)
-      .filter(n => n.getOrElse("name", "").toString.nonEmpty)
-
-    val funcs = functionNodes.map(extractFunctionSig)
-    (contractName, funcs)
+    val udfNames = program.udfs.map(_.name)
+    val rankedContracts = contractNodes.map { node =>
+      val name = node.getOrElse("name", "").toString
+      val kind = node.getOrElse("contractKind", "contract").toString
+      val funcs = contractFunctions(node)
+      val funcNames = funcs.map(_.name).toSet
+      val matchCount = udfNames.intersect(funcNames).size
+      val kindScore = kind match {
+        case "contract" => 2
+        case "abstract" => 1
+        case _ => 0
+      }
+      (node, name, funcs, matchCount, kindScore)
+    }
+    val selected = rankedContracts.maxBy { case (_, _, _, matchCount, kindScore) => (matchCount, kindScore) }
+    val (contractNode, contractName, funcs, _, _) = selected
+    val externalFunctions = funcs.collect {
+      case f if f.visibility == "external" => f.name
+    }.toSet
+    val ownedRelationNames = contractOwnedRelations(contractNode)
+    UdfAstInfo(contractName, funcs, externalFunctions, ownedRelationNames)
   }
 
   // ---- Constraint extraction from udf.sol body ----
@@ -284,9 +339,9 @@ object SolcAst {
     }
   }
 
-  def checkUdfsAgainstUdfSol(program: Program, udfSolPath: String): (String, List[String]) = {
-    val (contractName, funcs) = extractSingleContractAndFunctions(udfSolPath)
-    val funcIndex: Map[String, List[SolFunctionSig]] = funcs.groupBy(_.name)
+  def checkUdfsAgainstUdfSol(program: Program, udfSolPath: String): (UdfAstInfo, List[String]) = {
+    val info = extractUdfAstInfo(program, udfSolPath)
+    val funcIndex: Map[String, List[SolFunctionSig]] = info.functionSigs.groupBy(_.name)
 
     def relationToExpectedSig(rel: Relation): (String, List[String], String) = {
       val name = rel.name
@@ -335,7 +390,7 @@ object SolcAst {
       }
     }
 
-    (contractName, errors)
+    (info, errors)
   }
 }
 
