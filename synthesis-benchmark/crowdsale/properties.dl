@@ -33,10 +33,22 @@ invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(o,_,sp,n), balanceOf(o,m), n>m.
 invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
 
+// increaseAllowance: non-negative delta, and the explicit owner argument must match the caller
+invalidTx() :- recv_increaseAllowance(_,_,n), n<0.
+invalidTx() :- recv_increaseAllowance(o,_,_), msgSender(s), o!=s.
+
 // Deposit: beneficiary must be non-zero and escrow must be in state 0
 invalidTx() :- recv_deposit(p,_), p==0.
 invalidTx() :- recv_deposit(_,a), a==0.
 invalidTx() :- recv_deposit(_,_), state(h), h!=0.
+invalidTx() :- recv_deposit(_,_), msgSender(s), _primary(p), s!=p.
+
+// Withdraw: only primary can withdraw
+invalidTx() :- recv_withdraw(_), msgSender(s), _primary(p), s!=p.
+
+// TransferPrimary: non-zero recipient, only primary can transfer
+invalidTx() :- recv_transferPrimary(p), p==0.
+invalidTx() :- recv_transferPrimary(_), msgSender(s), _primary(p), s!=p.
 
 // BuyToken: buyer non-zero, value non-zero, and raised should not exceed cap
 invalidTx() :- recv_buyToken(p,_), p==0.

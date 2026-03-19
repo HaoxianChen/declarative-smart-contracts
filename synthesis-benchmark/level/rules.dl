@@ -13,7 +13,9 @@ currentEpoch(10) :- constructor().
 
 setReferrer(trader, referrer) :-
     recv_setReferrer(referrer),
-    msgSender(trader).
+    msgSender(trader),
+    referrer != 0,
+    trader != referrer.
 
 referredBy(trader, referrer) :- setReferrer(trader, referrer).
 

@@ -41,8 +41,10 @@ invalidTx() :- recv_controllerRedeem(p,n), balanceOf(p,m), n>m.
 invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
 invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
+invalidTx() :- recv_transferFrom(_,_,sp,_), msgSender(caller), sp!=caller.
 invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,m), n>m.
 
 // controllerTransfer: only controller may call; basic guards
 // recv_controllerTransfer(from, to, amount) = (s, r, n)

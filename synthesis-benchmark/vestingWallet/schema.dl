@@ -36,6 +36,10 @@ release() :-
   duration(d),
   funds(b),
   released(e),
+  total := b + e,
+  elapsed := t - a,
+  vestedAmount(total, elapsed, vested),
   t>a+d,
-  b>e.
+  b>e,
+  vested>e.
 

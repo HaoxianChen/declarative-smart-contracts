@@ -5,6 +5,8 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 // only owner can mint, burn, pause, unpause, transferOwnership
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,n), n<=0.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
 invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_transferOwnership(_), owner(o), msgSender(s), o!=s.
@@ -26,9 +28,10 @@ invalidTx() :- recv_transfer(_,r,_), r==0.
 invalidTx() :- recv_transfer(_,_,n), n<=0.
 invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
 
-// transferFrom: positive amount, owner has sufficient balance
+// transferFrom: positive amount, owner has sufficient balance and allowance
 invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.
 
 // decreaseApproval: decrease amount must be positive
 invalidTx() :- recv_decreaseApproval(_,_,n), n<=0.

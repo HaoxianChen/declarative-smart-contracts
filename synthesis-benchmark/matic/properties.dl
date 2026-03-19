@@ -15,11 +15,12 @@ invalidTx() :- recv_transfer(_,r,_), r==0.
 invalidTx() :- recv_transfer(_,_,n), n<=0.
 invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
 
-// transferFrom: non-zero addresses, positive amount, owner has sufficient balance
+// transferFrom: non-zero addresses, positive amount, owner has sufficient balance and allowance
 invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
 invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.
 
 // only owner can mint / burn
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
@@ -27,5 +28,8 @@ invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 // only owner can pause / unpause
 invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
-// burn: target account must have sufficient balance
+// burn: amount must be positive; target account must have sufficient balance
+invalidTx() :- recv_burn(_,n), n<=0.
 invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+// decreaseAllowance: decrease amount must be positive
+invalidTx() :- recv_decreaseAllowance(_,_,n), n<=0.

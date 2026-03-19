@@ -55,5 +55,5 @@
 // Transaction placeholder rules
 invest(p,n) :- recv_invest(p,n).
 close() :- recv_close().
-refund(p,n) :- recv_refund(p,n), closed(b), b!=false, raised(r), target(t), r<t.
+refund(p,n) :- recv_refund(p,n).
 withdraw(p,r) :- recv_withdraw(p,r).

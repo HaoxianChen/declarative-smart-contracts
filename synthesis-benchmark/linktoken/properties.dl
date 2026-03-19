@@ -22,7 +22,13 @@ invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,m), n>m.
 // decreaseApproval: decrease amount must be positive
 // recv_decreaseApproval(owner, spender, amount)
 invalidTx() :- recv_decreaseApproval(_,_,n), n<=0.
+invalidTx() :- recv_increaseApproval(_,_,n), n<0.
+invalidTx() :- recv_increaseApproval(o,_,_), msgSender(s), o!=s.
+invalidTx() :- recv_decreaseApproval(o,_,_), msgSender(s), o!=s.
+invalidTx() :- recv_decreaseApproval(o,s,n), allowance(o,s,m), n>m.
 
 // only owner can mint or burn tokens
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,n), n<=0.
+invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.

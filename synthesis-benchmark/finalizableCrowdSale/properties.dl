@@ -31,6 +31,7 @@ invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
 invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
 invalidTx() :- recv_transferFrom(o,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
 
 // cannot finalize before start or after end
 invalidTx() :- recv_finalize(), now(t), end(e), t<e.

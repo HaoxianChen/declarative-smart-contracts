@@ -8,11 +8,17 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 // only owner can mint or burn tokens
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-// burn: target account must have sufficient balance
+// burn: amount must be positive; target account must have sufficient balance
+invalidTx() :- recv_burn(_,n), n<=0.
 invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
 
 // withdrawEther is invalid when the native ETH transfer would fail
 invalidTx() :- recv_withdrawEther(p, n), sendEther(p, n, success), success==false.
+
+// freeze/unfreeze: positive amount, account has sufficient balance
+invalidTx() :- recv_freeze(_,n), n<=0.
+invalidTx() :- recv_freeze(p,n), balanceOf(p,m), n>m.
+invalidTx() :- recv_unfreeze(_,n), n<=0.
 
 // transfer: non-zero addresses, positive amount, sender has sufficient balance
 // recv_transfer(from, to, amount)
@@ -21,7 +27,8 @@ invalidTx() :- recv_transfer(_,r,_), r==0.
 invalidTx() :- recv_transfer(_,_,n), n<=0.
 invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
 
-// transferFrom: positive amount, owner (from) has sufficient balance
+// transferFrom: positive amount, owner (from) has sufficient balance and allowance
 // recv_transferFrom(from, to, spender, amount)
 invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
 invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
+invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.

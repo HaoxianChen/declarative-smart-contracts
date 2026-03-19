@@ -35,6 +35,7 @@ invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
 invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
 
 invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
+invalidTx() :- recv_increaseAllowance(o,_,_), msgSender(s), o!=s.
 
 // --- Escrow ownership/phase ---
 invalidTx() :- recv_transferPrimary(p), p==0.

@@ -59,8 +59,7 @@
 ////////////////////
 // Transaction placeholder rules
 ////////////////////
-// Tighten the input domain to help synthesis avoid contradictory "disable-the-tx" guards.
-buyTokens(p,v) :- recv_buyTokens(p,v), v>0.
+buyTokens(p,v) :- recv_buyTokens(p,v).
 finalize() :- recv_finalize().
 beginContinuousSale() :- recv_beginContinuousSale().
 buyToken1(p,v) :- recv_buyToken1(p,v).

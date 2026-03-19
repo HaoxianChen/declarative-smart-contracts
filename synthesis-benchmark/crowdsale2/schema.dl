@@ -138,7 +138,8 @@ mint(p,n) :- recv_mint(p,n).
 burn(p,n) :- recv_burn(p,n).
 transfer(s,r,n) :- recv_transfer(s,r,n).
 transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+// The owner argument should agree with the transaction caller.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d), msgSender(o), d>=0.
 
 transferPrimary(p) :- recv_transferPrimary(p).
 deposit(p,a) :- recv_deposit(p,a).

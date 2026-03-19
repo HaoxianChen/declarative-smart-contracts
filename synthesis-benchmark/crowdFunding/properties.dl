@@ -12,6 +12,12 @@ illegalRefund() :- onceRefund(true), raised(r), target(t), r>=t.
 // only owner can close the crowdfunding
 invalidTx() :- recv_close(), owner(o), msgSender(s), o!=s.
 
+// refund is only valid once the campaign is closed, the goal is missed, and the caller requests a positive amount
+invalidTx() :- recv_refund(_,_), closed(b), b==false.
+invalidTx() :- recv_refund(_,_), raised(r), target(t), r>=t.
+invalidTx() :- recv_refund(p,_), msgSender(s), p!=s.
+invalidTx() :- recv_refund(_,n), n<=0.
+
 // cannot withdraw if target is not met
 invalidTx() :- recv_withdraw(_,_), raised(r), target(t), r<t.
 

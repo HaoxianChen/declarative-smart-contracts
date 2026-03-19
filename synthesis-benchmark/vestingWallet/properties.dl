@@ -11,6 +11,8 @@ invalidTx() :- recv_release(), released(e), e < 0.
 
 // disallow calling release before start
 invalidTx() :- recv_release(), now(t), start(a), t<a.
+invalidTx() :- recv_release(), now(t), start(a), duration(d), t<=a+d.
+invalidTx() :- recv_release(), funds(b), released(e), b<=e.
 
 // release is invalid when the vested amount does not exceed what has already been released
 invalidTx() :-
