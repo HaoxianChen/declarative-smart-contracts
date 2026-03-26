@@ -1,0 +1,18 @@
+// WETH9 – no owner; anyone can deposit/withdraw their own ETH.
+totalSupply(0) :- constructor().
+
+totalDeposit(p,s) :- deposit(p,_), s = sum n: deposit(p,n).
+totalWithdraw(p,s) :- withdraw(p,_), s = sum n: withdraw(p,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+balanceOf(p,s) :- totalDeposit(p,d), totalWithdraw(p,w), totalIn(p,i), totalOut(p,o), s := d+i-w-o.
+
+allDeposit(s) :- s = sum n: deposit(_,n).
+allWithdraw(s) :- s = sum n: withdraw(_,n).
+totalSupply(n) :- allDeposit(d), allWithdraw(w), n := d-w.
+
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+
+totalBalances(s) :- s = sum n: balanceOf(_,n).

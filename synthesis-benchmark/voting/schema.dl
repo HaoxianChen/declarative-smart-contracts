@@ -1,0 +1,42 @@
+// Simple governance voting contract.
+// Based on the backup voting.dl: uses uint for counts/proposals.
+
+// Parameters
+.decl *owner(s: address)
+.decl *quorumSize(q: uint)
+
+// Views
+.decl isVoter(v: address, b: bool)[0]
+.decl voted(v: address, b: bool)[0]
+.decl votes(proposal: uint, c: uint)[0]
+.decl wins(proposal: uint, b: bool)[0]
+.decl *winningProposal(p: uint)
+.decl *hasWinner(b: bool)
+
+// Transactions
+.decl constructor(q: uint)
+.decl addVoter(v: address)
+.decl recv_addVoter(v: address)
+.decl vote(v: address, proposal: uint)
+.decl recv_vote(v: address, proposal: uint)
+
+// Interfaces
+.public recv_addVoter
+.public recv_vote
+.public isVoter(1)
+.public votes(1)
+.public voted(1)
+.public winningProposal(0)
+.public hasWinner(0)
+.public owner(0)
+
+// Violations
+.decl invalidTx()
+.violation invalidTx
+
+.decl inconsistency(p1: uint, p2: uint)[0,1]
+.violation inconsistency
+
+// Transaction placeholder rules (guards to be synthesized)
+addVoter(v) :- recv_addVoter(v).
+vote(v, p) :- recv_vote(v, p).

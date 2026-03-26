@@ -1,0 +1,21 @@
+// UNI properties
+// Source: https://github.com/Uniswap/governance/blob/master/contracts/Uni.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only the current minter can mint
+invalidTx() :- recv_mint(_,_), minter(m), msgSender(s), m!=s.
+
+// Only the current minter can change the minter
+invalidTx() :- recv_setMinter(_), minter(m), msgSender(s), m!=s.
+
+// Transfer and transferFrom amounts must be positive
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.

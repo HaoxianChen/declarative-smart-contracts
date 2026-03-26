@@ -1,0 +1,18 @@
+// Initialization rules
+owner(s) :- constructor(_), msgSender(s).
+quorumSize(q) :- constructor(q).
+
+// Voter registration
+isVoter(v, true) :- addVoter(v).
+
+// Vote tallying
+votes(p, c) :- vote(_, p), c = count: vote(_, p).
+
+// Winner computation
+wins(p, true) :- votes(p, c), quorumSize(q), c >= q.
+hasWinner(true) :- wins(_, b), b == true.
+winningProposal(p) :- wins(p, b), b == true.
+
+// Track who has voted (initialise to false so the synthesizer can test b != true)
+voted(v, false) :- isVoter(v, _).
+voted(v, true) :- vote(v, _).

@@ -1,0 +1,48 @@
+// Simple DAO: members can create proposals and vote; quorum required to pass.
+// Source: OpenZeppelin Contracts – Governor.sol (simplified)
+// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/governance/Governor.sol
+// Simplified: no timelock, no weighted voting; quorum = raw vote count.
+
+.decl *owner(p: address)
+.decl *quorum(n: uint)
+.decl isMember(p: address, b: bool)[0]
+.decl votes(proposalId: int, n: uint)[0]
+.decl voted(proposalId: int, p: address, b: bool)[0, 1]
+// Reversed-arg version for count aggregation (CountView needs grouping var at position 1)
+.decl voteRev(voter: address, proposalId: int)
+.decl executed(proposalId: int)[0]
+.decl proposalExists(proposalId: int)[0]
+.decl executionDone(proposalId: int, b: bool)[0]  // false = pending, true = executed
+
+.decl constructor(quorum: uint)
+
+// Transactions
+.decl addMember(p: address)
+.decl recv_addMember(p: address)
+.decl propose(proposalId: int)
+.decl recv_propose(proposalId: int)
+.decl vote(proposalId: int, voter: address)
+.decl recv_vote(proposalId: int, voter: address)
+.decl execute(proposalId: int)
+.decl recv_execute(proposalId: int)
+
+// Interfaces
+.public recv_addMember
+.public recv_propose
+.public recv_vote
+.public recv_execute
+.public isMember(1)
+.public votes(1)
+.public voted(2)
+.public quorum(0)
+.public owner(0)
+
+// Violations
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+addMember(p) :- recv_addMember(p).
+propose(id) :- recv_propose(id).
+vote(id, p) :- recv_vote(id, p).
+execute(id) :- recv_execute(id).

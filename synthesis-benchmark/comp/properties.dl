@@ -1,0 +1,21 @@
+// COMP properties
+// Source: https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/Comp.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only owner can mint
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+
+// Minting must not exceed cap
+invalidTx() :- recv_mint(_, n), totalSupply(s), cap(c), n + s > c.
+
+// Transfer and transferFrom amounts must be positive
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.

@@ -1,0 +1,66 @@
+// ERC20Burnable – standard ERC20 where any holder can burn their own tokens.
+// Source: OpenZeppelin Contracts – ERC20Burnable.sol
+// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC20Burnable.sol
+// Simplified: fixed owner mints; any address burns own tokens; burnFrom uses allowance.
+
+.decl *owner(p: address)
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n: int)[0,1]
+
+.decl constructor()
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl burnFrom(from: address, spender: address, amount: int)
+.decl recv_burnFrom(from: address, spender: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(o: address, s: address, n: int)
+.decl recv_increaseAllowance(o: address, s: address, n: int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_burnFrom
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public balanceOf(1)
+.public totalSupply(0)
+.public allowance(2)
+
+// Auxiliary
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl allowanceTotal(o: address, s: address, m: int)[0,1]
+.decl spentTotal(o: address, s: address, m: int)[0,1]
+.decl burnFromTotal(from: address, s: address, m: int)[0,1]
+.decl *totalBalances(n: int)
+
+// Violations
+.decl unequalBalance(s: int, n: int)
+.violation unequalBalance
+.decl negativeBalance(p: address, n: int)[0]
+.violation negativeBalance
+.decl negativeAllowance(s: address, p: address, n: int)[0,1]
+.violation negativeAllowance
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+burnFrom(from,s,n) :- recv_burnFrom(from,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

@@ -1,0 +1,20 @@
+// ERC20Roles properties
+// Source: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only owner can set the minter
+invalidTx() :- recv_setMinter(_), owner(o), msgSender(s), o!=s.
+
+// Only the designated minter can mint
+invalidTx() :- recv_mint(_,_), minter(m), msgSender(s), m!=s.
+
+// Only owner can burn
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.

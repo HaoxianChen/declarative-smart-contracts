@@ -1,0 +1,51 @@
+// Simplified ERC-721 NFT contract.
+
+// Parameters
+.decl *owner(p: address)
+
+// Views
+.decl ownerOf(tokenId: int, p: address)[0]
+.decl approved(tokenId: int, p: address)[0]
+.decl *totalMinted(n: uint)
+
+// Transactions
+.decl constructor()
+.decl mint(to: address, tokenId: int)
+.decl recv_mint(to: address, tokenId: int)
+.decl transfer(from: address, to: address, tokenId: int)
+.decl recv_transfer(from: address, to: address, tokenId: int)
+.decl transferFrom(from: address, to: address, tokenId: int)
+.decl recv_transferFrom(from: address, to: address, tokenId: int)
+.decl approve(owner: address, spender: address, tokenId: int)
+.decl recv_approve(spender: address, tokenId: int)
+.decl burn(tokenId: int)
+.decl recv_burn(tokenId: int)
+
+// Interfaces
+.public recv_mint
+.public recv_transfer
+.public recv_transferFrom
+.public recv_approve
+.public recv_burn
+.public ownerOf(1)
+.public approved(1)
+.public totalMinted(0)
+.public owner(0)
+
+// Auxiliary aggregation relations
+.decl *mintCount(n: uint)
+.decl mintCountPerToken(tokenId: int, c: uint)[0]
+
+// Violations
+.decl doubleMint(tokenId: int, c: uint)[0]
+.violation doubleMint
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(to, tokenId) :- recv_mint(to, tokenId).
+transfer(from, to, tokenId) :- recv_transfer(from, to, tokenId).
+transferFrom(from, to, tokenId) :- recv_transferFrom(from, to, tokenId).
+approve(o, spender, tokenId) :- recv_approve(spender, tokenId).
+burn(tokenId) :- recv_burn(tokenId).

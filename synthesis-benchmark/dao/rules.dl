@@ -1,0 +1,15 @@
+owner(s) :- constructor(_), msgSender(s).
+quorum(n) :- constructor(n).
+
+isMember(p, true) :- addMember(p).
+
+proposalExists(id) :- propose(id).
+
+voted(id, p, true) :- vote(id, p).
+// Reverse args so proposalId is at position 1 (CountView requires grouping var at position 1)
+voteRev(p, id) :- vote(id, p).
+votes(id, n) :- voteRev(_, id), n = count: voteRev(_, id).
+
+executed(id) :- execute(id).
+executionDone(id, false) :- propose(id).
+executionDone(id, true)  :- execute(id).

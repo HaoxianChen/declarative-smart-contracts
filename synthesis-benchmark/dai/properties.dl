@@ -1,0 +1,20 @@
+// DAI properties
+// Source: https://github.com/makerdao/dss/blob/master/src/dai.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only owner can grant ward status
+invalidTx() :- recv_rely(_), owner(o), msgSender(s), o!=s.
+
+// Only wards can mint
+invalidTx() :- recv_mint(_,_), ward(w), msgSender(s), w!=s.
+
+// Only wards can burn
+invalidTx() :- recv_burn(_,_), ward(w), msgSender(s), w!=s.

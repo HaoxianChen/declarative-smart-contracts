@@ -1,0 +1,21 @@
+// Balance must not go negative
+negativeBalance(n) :- balance(n), n < 0.
+
+// Only owner1 can call approveOwner1 (single functor: s != o1)
+invalidTx() :- recv_approveOwner1(_), owner1(o1), msgSender(s), s != o1.
+
+// Only owner2 can call approveOwner2 (single functor: s != o2)
+invalidTx() :- recv_approveOwner2(_), owner2(o2), msgSender(s), s != o2.
+
+// Need both approvals before executing
+invalidTx() :- recv_execute(txId, _, _), approvalCount(txId, n), n < 2.
+
+// Cannot execute the same tx twice
+invalidTx() :- recv_execute(txId, _, _), executed(txId).
+
+// Deposit must be positive
+invalidTx() :- recv_deposit(n), n <= 0.
+
+// Execution amount must be positive and within balance
+invalidTx() :- recv_execute(_, _, n), n <= 0.
+invalidTx() :- recv_execute(_, _, n), balance(b), n > b.

@@ -1,0 +1,23 @@
+// Only owner can add members
+invalidTx() :- recv_addMember(_), owner(o), msgSender(s), o != s.
+
+// Only members can propose
+invalidTx() :- recv_propose(_), isMember(p, b), msgSender(s), p == s, b != true.
+
+// Only members can vote
+invalidTx() :- recv_vote(_, _), isMember(p, b), msgSender(s), p == s, b != true.
+
+// Cannot vote twice on same proposal
+invalidTx() :- recv_vote(id, _), voted(id, p, b), msgSender(s), p == s, b == true.
+
+// Proposal must exist to vote
+invalidTx() :- recv_vote(id, _), proposalExists(id0), id0 != id.
+
+// Need quorum to execute
+invalidTx() :- recv_execute(id), votes(id, n), quorum(q), n < q.
+
+// Proposal must exist to execute
+invalidTx() :- recv_execute(id), proposalExists(id0), id0 != id.
+
+// Cannot execute same proposal twice
+invalidTx() :- recv_execute(id), executionDone(id, b), b == true.

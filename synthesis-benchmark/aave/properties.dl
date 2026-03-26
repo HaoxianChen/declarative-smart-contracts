@@ -1,0 +1,21 @@
+// AAVE properties
+// Source: https://github.com/aave/aave-token/blob/master/contracts/token/AaveToken.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only lendingPool can mint (minting represents deposit collateral)
+invalidTx() :- recv_mint(_,_), lendingPool(lp), msgSender(s), lp!=s.
+
+// Only the token holder can burn their own tokens (burn = withdraw)
+invalidTx() :- recv_burn(p,_), msgSender(s), p!=s.
+
+// Transfer and transferFrom amounts must be positive
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.

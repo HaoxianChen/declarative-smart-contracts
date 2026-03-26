@@ -1,0 +1,18 @@
+// Initialization rules
+owner(s) :- constructor(), msgSender(s).
+
+// Ownership tracking (indexed [0] so the latest mint/transfer replaces prior entry)
+ownerOf(tokenId, to) :- mint(to, tokenId).
+ownerOf(tokenId, to) :- transfer(_, to, tokenId).
+ownerOf(tokenId, to) :- transferFrom(_, to, tokenId).
+
+// Approval tracking: set by approve, implicitly cleared on transfer
+// (The synthesizer should add guards so approve is only called by the token owner)
+approved(tokenId, spender) :- approve(_, spender, tokenId).
+
+// Total supply / minted count
+mintCount(n) :- n = count: mint(_, _).
+totalMinted(n) :- mintCount(n).
+
+// Per-token mint count (used to detect double-minting)
+mintCountPerToken(tokenId, c) :- mint(_, tokenId), c = count: mint(_, tokenId).

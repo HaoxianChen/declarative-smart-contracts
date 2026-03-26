@@ -1,0 +1,60 @@
+// WETH9 (Wrapped Ether) – deposit ETH to get WETH, withdraw to get ETH back.
+// Source: https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2#code
+// Simplified: no native-ETH accounting; deposit/withdraw modeled as open mint/burn.
+// increaseAllowance instead of approve (additive allowance model).
+
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(o: address, s: address, n: int)[0,1]
+
+.decl constructor()
+
+// Transactions
+.decl deposit(p: address, n: int)
+.decl recv_deposit(p: address, n: int)
+.decl withdraw(p: address, n: int)
+.decl recv_withdraw(p: address, n: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(o: address, s: address, n: int)
+.decl recv_increaseAllowance(o: address, s: address, n: int)
+
+// Interfaces
+.public recv_deposit
+.public recv_withdraw
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public balanceOf(1)
+.public totalSupply(0)
+.public allowance(2)
+
+// Auxiliary
+.decl totalDeposit(p: address, n: int)[0]
+.decl totalWithdraw(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl *allDeposit(n: int)
+.decl *allWithdraw(n: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl allowanceTotal(o: address, s: address, m: int)[0,1]
+.decl spentTotal(o: address, s: address, m: int)[0,1]
+.decl *totalBalances(n: int)
+
+// Violations
+.decl unequalBalance(s: int, n: int)
+.violation unequalBalance
+.decl negativeBalance(p: address, n: int)[0]
+.violation negativeBalance
+.decl negativeAllowance(o: address, s: address, n: int)[0,1]
+.violation negativeAllowance
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+deposit(p,n) :- recv_deposit(p,n).
+withdraw(p,n) :- recv_withdraw(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
