@@ -12,10 +12,10 @@ case class SynthesisStat(
   bmcBound: Int
 )
 
-case class Cegis(sketch: Program) {
+case class Cegis(sketch: Program, externalFunctions: String = "") {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
-  val interpreter = SolidityInterpreter()
+  val interpreter = SolidityInterpreter(Some(sketch), externalFunctions)
   // val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
   //   numTraces = 1000, txsPerTrace = 5)
 //   val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTracesHeuristic(sketch, interpreter,

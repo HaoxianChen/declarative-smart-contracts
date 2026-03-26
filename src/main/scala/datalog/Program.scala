@@ -68,7 +68,8 @@ case class Now() extends ReservedRelation {
 }
 case class Send() extends ReservedRelation {
   def name: String = "send"
-  def sig: List[Type] = List(Type.addressType, Type.uintType)
+  // def sig: List[Type] = List(Type.addressType, Type.uintType)
+  def sig: List[Type] = List(Type.addressType, Type.integerType)
   def memberNames: List[String] = List("p", "amount")
 }
 case class Receive() extends ReservedRelation {

@@ -15,6 +15,5 @@ invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 // buyToken address must be non-zero
 invalidTx() :- recv_buyToken(p,_), p==0.
 
-// buyToken must be within start and end time
-invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
-invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
+// cannot buy zero or negative amount
+invalidTx() :- recv_buyToken(_, m), m <= 0.

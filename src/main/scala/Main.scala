@@ -44,23 +44,10 @@ object Main extends App {
 
   // List of split-directory names (subdirectories of `synthesis-benchmark`) to run in split-mode.
   // If empty -> run on all subdirectories (default). Modify this list to control which directories run.
-  val synthesisSplitDirs: List[String] = List(
-    "wallet",
-    "erc20",
-    "matic",
-    "controllable",
-    "cappedCrowdSale",
-    "bnb",
-    "crowFunding",
-    "tether",
-    "brickBlockToken",
-    "shib",
-    "tokenPartition",
-    "wbtc",
-    "linktoken",
-    "finalizableCrowdSale",
-    "ltcSwapAsset",
-  )
+  // When empty, synthesis-all / compile-split process every subdirectory of
+  // synthesis-benchmark automatically — no source change needed for new benchmarks.
+  // Individual runs: java -jar ... synthesis-all <name1> <name2> ...
+  val synthesisSplitDirs: List[String] = List()
 
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
@@ -79,7 +66,7 @@ object Main extends App {
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
           consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
-          arithmeticOptimization: Boolean = true): Unit = {
+          arithmeticOptimization: Boolean = true, externalFunctions: String = ""): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
@@ -99,7 +86,7 @@ object Main extends App {
     }
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
-      isInstrument,monitorViolations, enableProjection).translate()
+      isInstrument,monitorViolations, enableProjection, externalFunctions).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -127,6 +114,7 @@ object Main extends App {
     case "--instrument" :: tail => nextArg(map++Map("instrument"->true), tail)
     case "--monitor" :: tail => nextArg(map++Map("monitor"->true), tail)
     case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
+    case "--external-functions" :: value :: tail => nextArg(map++ Map("external-functions"->value), tail)
     case unknown :: _ =>
       println(s"Unknown option: $unknown")
       exit(1)
@@ -156,13 +144,18 @@ object Main extends App {
     // val isInstrument = args(2).toBoolean
     // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     val filepath = options("filepath").toString
+    val extFunctions: String = options.get("external-functions") match {
+      case Some(path) => Misc.fileToString(path.toString)
+      case None => ""
+    }
     run(filepath, displayResult = true, outDir=options("out").toString,
       isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
       monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
       consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
       materializePath = options.getOrElse("materialize","").toString,
       arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
-      enableProjection = options.getOrElse("projection", true).toString.toBoolean)
+      enableProjection = options.getOrElse("projection", true).toString.toBoolean,
+      externalFunctions = extFunctions)
   }
   else if (args(0) == "compile-all") {
     val options: Map[String, Any] = if (args.length <= 1) {
@@ -303,7 +296,9 @@ object Main extends App {
           val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
           val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-          val cegis = Cegis(sketch)
+          val extFunctionsPathCegis = Paths.get(synthesisBenchmarkDir, filenameNoExt, "functions.sol").toString
+          val extFunctionsCegis = if (isFileExists(extFunctionsPathCegis)) Misc.fileToString(extFunctionsPathCegis) else ""
+          val cegis = Cegis(sketch, extFunctionsCegis)
           val (program, stat) = cegis.run() // Capture both result and stats
 
           println(s"Synthesis output:\n${program}")
@@ -336,7 +331,7 @@ object Main extends App {
 
   // New: run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
   else if (args(0) == "synthesis-all") {
-    val test = true
+    val test = false
     val synthesisBenchmarkDir = "synthesis-benchmark"
     val datalogOutDir = "synthesis-output"
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
@@ -345,10 +340,12 @@ object Main extends App {
       Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
     }
 
+    // Extra CLI args override synthesisSplitDirs: java -jar ... synthesis-all name1 name2 ...
+    val cliDirs: List[String] = args.drop(1).toList
     // parse all split-program subdirectories under parent into (name, Program)
-    val programsByName: Seq[(String, Program)] = if (synthesisSplitDirs.nonEmpty) {
-      // Build (name, Program) for each requested split-dir (skip missing)
-      synthesisSplitDirs.flatMap { name =>
+    val dirsToRun = if (cliDirs.nonEmpty) cliDirs else synthesisSplitDirs
+    val programsByName: Seq[(String, Program)] = if (dirsToRun.nonEmpty) {
+      dirsToRun.flatMap { name =>
         val dir = Paths.get(synthesisBenchmarkDir, name).toString
         val f = new java.io.File(dir)
         if (f.exists() && f.isDirectory) {
@@ -373,7 +370,9 @@ object Main extends App {
         val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
         val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-        val cegis = Cegis(sketch)
+        val extFunctionsPathForCegis = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
+        val extFunctionsForCegis = if (isFileExists(extFunctionsPathForCegis)) Misc.fileToString(extFunctionsPathForCegis) else ""
+        val cegis = Cegis(sketch, extFunctionsForCegis)
         val (program, stat) = cegis.run()
 
         /** here, only write transaction rules to file. */
@@ -387,8 +386,11 @@ object Main extends App {
           enableProjection = true
         )
         val imperative = impTranslator.translate()
+        val extFunctionsPath = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
+        val extFunctions = if (isFileExists(extFunctionsPath)) Misc.fileToString(extFunctionsPath) else ""
         val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
-          Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+          Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+          externalFunctions = extFunctions
         ).translate()
         val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
         if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)
@@ -420,6 +422,74 @@ object Main extends App {
       println(s"Running synthesis on (split): ${name}")
       val cegis = Cegis(sketch)
       cegis.run()
+    }
+  }
+
+  /** Compile all split-benchmark programs (spec + synthesized rules) to Solidity.
+   *  For each benchmark in synthesisSplitDirs (or all if empty), reads the split
+   *  benchmark dir, strips placeholder transaction rules (body = single recv_ literal),
+   *  appends the synthesized rules from synthesis-output/{name}.dl, and compiles.
+   *  Writes Solidity to synthesis-output/{name}.sol.
+   */
+  else if (args(0) == "compile-split") {
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    val datalogOutDir = "synthesis-output"
+    val solidityOutDir = "synthesis-output"
+    createDirectory(solidityOutDir)
+
+    // Extra CLI args override synthesisSplitDirs: java -jar ... compile-split name1 name2 ...
+    val cliNames: List[String] = args.drop(1).toList
+    val names: List[String] = if (cliNames.nonEmpty) cliNames
+      else if (synthesisSplitDirs.nonEmpty) synthesisSplitDirs
+      else new java.io.File(synthesisBenchmarkDir).listFiles()
+             .filter(_.isDirectory).map(_.getName).sorted.toList
+
+    // Regex: a placeholder rule has exactly one body literal that is a recv_ relation and no guards.
+    // Pattern: word(args) :- recv_word(args).
+    val placeholderRe = """^\s*\w+\([^)]*\)\s*:-\s*recv_\w+\([^)]*\)\s*\.\s*$""".r
+
+    for (name <- names) {
+      println(s"Compiling $name ...")
+      val dir = Paths.get(synthesisBenchmarkDir, name).toString
+      val synthesizedRulesPath = Paths.get(datalogOutDir, s"$name.dl").toString
+
+      if (!isFileExists(synthesizedRulesPath)) {
+        println(s"  Skipping $name: no synthesis output at $synthesizedRulesPath")
+      } else {
+        try {
+          // Read schema.dl, stripping placeholder rules (lines matching the pattern above)
+          val schemaRaw = fileToString(Paths.get(dir, "schema.dl").toString)
+          val schemaStripped = schemaRaw.linesIterator
+            .filterNot(l => placeholderRe.matches(l))
+            .mkString("\n")
+
+          val rulesStr  = if (isFileExists(Paths.get(dir, "rules.dl").toString))
+                            fileToString(Paths.get(dir, "rules.dl").toString) else ""
+          val funDlStr  = if (isFileExists(Paths.get(dir, "functions.dl").toString))
+                            fileToString(Paths.get(dir, "functions.dl").toString) else ""
+          val propsStr  = if (isFileExists(Paths.get(dir, "properties.dl").toString))
+                            fileToString(Paths.get(dir, "properties.dl").toString) else ""
+          val synthStr  = fileToString(synthesizedRulesPath)
+          val extFunStr = if (isFileExists(Paths.get(dir, "functions.sol").toString))
+                            fileToString(Paths.get(dir, "functions.sol").toString) else ""
+
+          val combined = Seq(schemaStripped, rulesStr, funDlStr, propsStr, synthStr)
+            .filter(_.trim.nonEmpty).mkString("\n")
+
+          val dl = Misc.parseProgramFromRawString(combined).setName(name.capitalize)
+          val impTranslator = new ImperativeTranslator(dl, Set(), isInstrument = false,
+            monitorViolations = false, arithmeticOptimization = true, enableProjection = true)
+          val imperative = impTranslator.translate()
+          val solidity = SolidityTranslator(imperative, dl.interfaces, dl.violations,
+            Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+            externalFunctions = extFunStr).translate()
+          val solidityOutfile = Paths.get(solidityOutDir, s"$name.sol").toString
+          Misc.writeToFile(solidity.toString, solidityOutfile)
+          println(s"  -> $solidityOutfile (${impTranslator.ruleSize} rules)")
+        } catch {
+          case e: Exception => println(s"  ERROR compiling $name: ${e.getMessage}")
+        }
+      }
     }
   }
 

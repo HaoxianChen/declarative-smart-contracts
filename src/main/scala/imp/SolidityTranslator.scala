@@ -27,7 +27,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
                               _materializedRelations: Set[Relation],
                               isInstrument: Boolean,
                               monitorViolation: Boolean,
-                              enableProjection: Boolean)
+                              enableProjection: Boolean,
+                              externalFunctions: String = "")
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -89,7 +90,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       Statement.makeSeq(_all.toList:+declModifier:_*)
     }
     else Empty()
-    val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
+    val externalFunctionsStmt: Statement = if (externalFunctions.nonEmpty) RawSolidity(externalFunctions) else Empty()
+    val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, externalFunctionsStmt, functions)
     val simplified = simplifier.simplify(definitions)
     DeclContract(name, simplified)
   }

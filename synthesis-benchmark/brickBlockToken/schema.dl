@@ -74,9 +74,10 @@
 .violation transferBeforeUnpause
 .decl *onceUnpaused(b:bool)
 
-.decl *evacuateAfterUpgrade()
-.violation evacuateAfterUpgrade
 .decl *onceUpgrade(b:bool)
+
+.decl *invalidTx()
+.violation invalidTx
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance

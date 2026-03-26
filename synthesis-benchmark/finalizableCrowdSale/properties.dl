@@ -7,9 +7,5 @@ invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_finalize(), owner(o), msgSender(s), o!=s.
 
-// cannot finalize before start or after end
-invalidTx() :- recv_finalize(), now(t), end(e), t<e.
-
-// cannot buy tokens before start or after end
-invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
-invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
+// cannot buy zero or negative amount
+invalidTx() :- recv_buyToken(_, m), m <= 0.

@@ -49,10 +49,12 @@ abstract class AbstractImperativeTranslator(program: Program, materializedRelati
     program.transactionRules().flatMap(_getQueryRelations)
   }
 
-  protected val views: Map[Rule, View] = program.rules.toList.zipWithIndex.map {
-    case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
-      arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection))
-  }.toMap
+  protected val views: Map[Rule, View] = program.rules.toList
+    .filterNot(r => program.functions.contains(r.head.relation))
+    .zipWithIndex.map {
+      case (r, i) => (r -> View(r, primaryKeyIndices(r.head.relation), i, primaryKeyIndices, queryRelations,
+        arithmeticOptimization=arithmeticOptimization, enableProjection=enableProjection))
+    }.toMap
 
   protected def isTransactionRule(rule: Rule): Boolean = {
     rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
@@ -206,6 +208,7 @@ class ImperativeTranslator(program: Program, materializedRelations: Set[Relation
       for (trigger <- triggers) {
 
         val triggeredRules: Set[Rule] = getTriggeredRules(trigger)
+          .filterNot(r => program.functions.contains(r.head.relation))
 
         for (rule <- triggeredRules) {
           val updateProgram = views(rule).getUpdateStatement(trigger)
@@ -236,7 +239,7 @@ class ImperativeTranslator(program: Program, materializedRelations: Set[Relation
       }
     // val statements = Statement.makeSeq((constructor::allUpdates.toList):_*)
 
-    val queryDefs = queryRelations.map(getQueryDef)
+    val queryDefs = queryRelations.filterNot(r => program.functions.contains(r)).map(getQueryDef)
 
     /** todo: check recursions on the dependency map */
     ImperativeAbstractProgram(program.name, program.relations, program.relationIndices,
@@ -264,6 +267,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
     var statements: List[OnStatement] = List()
     for (t <- triggers) {
       val triggeredRules: Set[Rule] = getTriggeredRules(t)
+        .filterNot(r => program.functions.contains(r.head.relation))
       for (r <- triggeredRules) {
         val update = getUpdate(t,r)
         val simplified = simplifier.simplify(update).asInstanceOf[OnStatement]
@@ -271,7 +275,7 @@ case class ImperativeTranslatorWithUpdateFusion(program: Program, materializedRe
       }
     }
 
-    val queryDefs = queryRelations.map(getQueryDef)
+    val queryDefs = queryRelations.filterNot(r => program.functions.contains(r)).map(getQueryDef)
 
     val constructors: Set[OnStatement] = program.relations.find(_.name=="constructor") match {
       case Some(constructorRel) => {

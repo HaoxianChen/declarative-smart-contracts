@@ -1,7 +1,7 @@
 package synthesis
 
 import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, IntExpr, Model}
-import datalog.{Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
+import datalog.{Constant, Functor, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
 import scala.collection.mutable
@@ -158,8 +158,16 @@ case class InductiveSynthesis(
 
     // val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
     // val selection = disambiguate(renamedDisambiguationTrace, candidates)
+    // Build map of already-baked-in functors per tx relation (from augmented sketch rules)
+    val existingFunctorsPerRel: Map[Relation, Set[Functor]] = {
+      sketch.rules.diff(sketch.violationRules).flatMap { r =>
+        val txLitOpt = try { Some(PredicateEnumerator.extractTxLiteral(r)) } catch { case _: Throwable => None }
+        txLitOpt.map(lit => lit.relation -> r.functors)
+      }.toMap
+    }
+
     val selection = synthesizePerRelation(renamedSafetyTrace, maxSolutions,
-      renamedDisambiguationTrace)
+      renamedDisambiguationTrace, existingFunctorsPerRel)
     makeProgram(sketch, selection)
   }
 
@@ -215,7 +223,8 @@ case class InductiveSynthesis(
   /** Synthesize predicates for each relation independently, then combine best selections. */
   private def synthesizePerRelation(evaluatedTraces: List[EvaluatedTrace],
                                        maxSolutions: Int,
-                                       disambiguationTraces: Set[EvaluatedTrace]
+                                       disambiguationTraces: Set[EvaluatedTrace],
+                                       existingFunctorsPerRel: Map[Relation, Set[Functor]] = Map.empty
                                      ): Representation = {
     // Group traces by last transaction relation
     val grouped: Map[Relation, List[EvaluatedTrace]] =
@@ -240,6 +249,51 @@ case class InductiveSynthesis(
           val otherRelations = encodings.keySet - rel
           val blockOthers = otherRelations.flatMap(encodings).map(z3ctx.mkNot)
           if (blockOthers.nonEmpty) solver.Add(z3ctx.mkAnd(blockOthers.toSeq: _*))
+
+          // Anti-contradiction constraints: two predicates that are logically contradictory
+          // cannot both be selected in the same rule.
+          def areContradictory(f1: Functor, f2: Functor): Boolean = {
+            // Check exact negation pairs (a > b / a <= b, a == b / a != b, etc.)
+            val isNegation = try { Functor.negate(f1) == f2 } catch { case _: Exception => false }
+            if (isNegation) return true
+            // Opposing strict inequalities on same operands: a > b AND a < b
+            (f1, f2) match {
+              case (datalog.Greater(a1, b1), datalog.Lesser(a2, b2)) if a1 == a2 && b1 == b2 => return true
+              case (datalog.Lesser(a1, b1), datalog.Greater(a2, b2)) if a1 == a2 && b1 == b2 => return true
+              case _ =>
+            }
+            // Strict inequality with equality on same operands (symmetric): a > b AND a == b, a < b AND a == b
+            (f1, f2) match {
+              case (datalog.Greater(a1, b1), datalog.Equal(a2, b2)) if (a1==a2&&b1==b2)||(a1==b2&&b1==a2) => return true
+              case (datalog.Equal(a1, b1),   datalog.Greater(a2, b2)) if (a2==a1&&b2==b1)||(a2==b1&&b2==a1) => return true
+              case (datalog.Lesser(a1, b1),  datalog.Equal(a2, b2)) if (a1==a2&&b1==b2)||(a1==b2&&b1==a2) => return true
+              case (datalog.Equal(a1, b1),   datalog.Lesser(a2, b2)) if (a2==a1&&b2==b1)||(a2==b1&&b2==a1) => return true
+              case _ =>
+            }
+            false
+          }
+          val predsForRel = predicates.getOrElse(rel, Set.empty).toList
+          val boolVarsForRel = encodings.getOrElse(rel, List.empty)
+          val predsWithVars = predsForRel.zip(boolVarsForRel)
+          // Candidate-vs-candidate: no two contradictory candidates can both be selected
+          for {
+            ((pi, vi), i) <- predsWithVars.zipWithIndex
+            ((pj, vj), j) <- predsWithVars.zipWithIndex
+            if i < j
+            if areContradictory(pi.functor, pj.functor)
+          } {
+            solver.Add(z3ctx.mkNot(z3ctx.mkAnd(vi, vj)))
+          }
+          // Candidate-vs-existing: exclude any candidate that contradicts a functor
+          // already baked into the sketch rule for this relation.
+          val existingFunctors = existingFunctorsPerRel.getOrElse(rel, Set.empty)
+          for {
+            (pi, vi) <- predsWithVars
+            ef <- existingFunctors
+            if areContradictory(pi.functor, ef)
+          } {
+            solver.Add(z3ctx.mkNot(vi))
+          }
 
           // Maximize permissiveness for this relation
           val permissivenessObjective = makePermissivenessObjective(disambiguationTraces, encodings, z3ctx)

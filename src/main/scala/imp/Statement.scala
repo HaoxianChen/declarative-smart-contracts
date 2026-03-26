@@ -327,6 +327,10 @@ case class Emit(event: String, parameters: List[Parameter]) extends SolidityStat
     s"emit $event($paramStr);"
   }
 }
+/** A verbatim chunk of Solidity source code to be embedded as-is in the output contract. */
+case class RawSolidity(code: String) extends SolidityStatement {
+  override def toString: String = code
+}
 
 object Statement {
   private def _makeSeq(a: Statement, b: Statement): Statement = a match {

@@ -1,6 +1,6 @@
 package synthesis
 
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Div, Equal, Expr, Functor, Geq, Greater, Leq, Lesser, Literal, Min, MsgSender, Mul, Negative, Now, NumberType, One, Param, Parameter, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Sub, SymbolType, This, Type, Unequal, UnitType, Variable, Zero}
 import synthesis.PredicateEnumerator.extractTxLiteral
 
 import scala.collection.mutable
@@ -9,6 +9,8 @@ case class State() {
   val state: mutable.Map[String, Int] = mutable.Map()
   // Refactored: mapping key is now SimpleRelation
   val maps: mutable.Map[String, mutable.Map[Vector[Int], Int]] = mutable.Map()
+  // Add tuple support
+  val tuples: mutable.Map[String, Vector[Int]] = mutable.Map()
 
 
   def lookup(variableName: String): Int = {
@@ -58,6 +60,10 @@ case class State() {
     val m = maps.getOrElseUpdate(relationName, mutable.Map())
     m(keys.toVector) = value
   }
+
+  // Tuple API
+  def updateTuple(name: String, values: Vector[Int]): Unit = tuples(name) = values
+  def lookupTuple(name: String): Vector[Int] = tuples.getOrElse(name, Vector())
 
   /** Apply bindings for the duration of `thunk`, then restore previous state. */
   def withTemporaryBindings[R](bindings: Seq[State.Binding])(thunk: => R): R = {
@@ -154,16 +160,21 @@ case class Interpreter(interpreterContext: InterpreterContext) {
     literal.relation match {
       case sr: SimpleRelation => {
         val keyIndices = relationIndices.getOrElse(sr,
-          throw new IllegalArgumentException(s"Missing indices for relation: $sr"))
+          interpreterContext.relationIndices.getOrElse(sr,
+            throw new IllegalArgumentException(s"Missing indices for relation: $sr")))
 
         val keyParams = keyIndices.map(literal.fields(_))
 
         val valueIndices = literal.fields.indices.diff(keyIndices)
-        if (valueIndices.size != 1)
+        if (valueIndices.size == 1) {
+          val valueParam = literal.fields(valueIndices.head)
+          (keyParams, valueParam)
+        } else if (valueIndices.isEmpty) {
+          // Set relation: all fields are keys, no separate value. Use first key as pseudo-value for renaming.
+          (keyParams, keyParams.head)
+        } else {
           throw new IllegalArgumentException(s"Expected exactly one value field for relation: $literal, found: ${valueIndices.size}")
-        val valueIdx = valueIndices.head
-        val valueParam = literal.fields(valueIdx)
-        (keyParams, valueParam)
+        }
       }
       case _: SingletonRelation => {
         (Seq(), literal.fields.head)

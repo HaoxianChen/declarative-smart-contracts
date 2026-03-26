@@ -9,3 +9,21 @@ negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 invalidTx() :- recv_swapOwnerTx(_,_,_), owner(o), msgSender(s), o!=s.
+
+// amounts must be positive
+invalidTx() :- recv_mint(_, n), n <= 0.
+invalidTx() :- recv_burn(_, n), n <= 0.
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.
+invalidTx() :- recv_increaseAllowance(_, _, n), n <= 0.
+
+// delay must be positive for ownership swap
+invalidTx() :- recv_swapOwnerTx(_, _, d), d <= 0.
+
+// sufficient balance for burn and transfer
+invalidTx() :- recv_burn(p, n), balanceOf(p, b), n > b.
+invalidTx() :- recv_transfer(s, _, n), balanceOf(s, b), n > b.
+
+// sufficient balance and allowance for transferFrom (o=operator/spender, s=from/owner)
+invalidTx() :- recv_transferFrom(o, _, s, n), allowance(s, o, a), n > a.
+invalidTx() :- recv_transferFrom(_, _, s, n), balanceOf(s, b), n > b.

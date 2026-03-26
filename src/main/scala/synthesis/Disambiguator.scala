@@ -98,6 +98,8 @@ case class Disambiguator(sketch: Program,
         || lname.contains("issue")
         || lname.contains("issueByPartition")
         || lname.contains("addVoter")
+        || lname.contains("deposit")
+        || (lname.contains("stake") && !lname.startsWith("un"))
       ) {
         val symbolIndices = rel.sig.zipWithIndex.collect { case (SymbolType(_), idx) => idx }
         val addressCombos = List.fill(symbolIndices.size)(addresses).foldLeft(Seq(Seq.empty[String])) {
@@ -112,6 +114,7 @@ case class Disambiguator(sketch: Program,
                 datalog.Constant(t, combo(comboIdx))
               case _ =>
                 datalog.Constant(t, "10")
+                // datalog.Constant(t, (Random.nextInt(10) + 1).toString)
             }
           }
           val implicitParameters = ImplicitParameters(0, 0)

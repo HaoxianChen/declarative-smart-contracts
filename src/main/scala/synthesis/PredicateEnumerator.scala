@@ -67,7 +67,7 @@ object InterpreterContext {
 
     val baseViewMaterializer = new BaseViewMaterializer()
     val materializedRelations = baseViewMaterializer.getMaterializedRelations(
-      imperative, program.interfaces).toSet
+      imperative, program.interfaces).toSet ++ program.functions
 
     InterpreterContext(relationIndices, materializedRelations)
   }
@@ -98,6 +98,15 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     val txViolationRules = program.violationRules.filter(
       _.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
 
+    // Build lookup: recv_* relation -> tx literal in the sketch placeholder rule.
+    // Used for positional variable remapping (property var names -> sketch var names).
+    val sketchTxLiteralByRelation: Map[Relation, Literal] = program.transactionRules().flatMap { rule =>
+      val txLits = rule.body.collect {
+        case l: Literal if imp.SolidityTranslator.isTransactionTriggerRelation(l.relation) => l
+      }
+      txLits.headOption.map(lit => lit.relation -> lit)
+    }.toMap
+
     // for each txViolation rule: recv_tx(...), p1, p2,...
     // if it has only one functor, then negate that functor, and keep p1,p2,...
     // as the binding literal, and recv_tx... as the tx literal.
@@ -109,7 +118,7 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       val bindingLiterals: Set[Literal] =
         rule.body.collect { case l: Literal if l != txLiteral => l }.toSet
 
-      if (rule.functors.size > 1) {
+      if (rule.functors.size != 1) {
         None
       }
       else if (rule.body.exists(_.relation.name.startsWith("once"))) {
@@ -119,7 +128,43 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       else {
         val f = rule.functors.head
         val negated = Functor.negate(f)
-        Some(rule -> Predicate(Context(txLiteral, bindingLiterals), negated))
+
+        // Build positional variable substitution: property tx-literal vars -> sketch tx-literal vars.
+        // This ensures extracted predicates use the same variable names as the sketch rule so
+        // they are never free (unbound) when added to the synthesized rule.
+        val varSubstitution: Map[Parameter, Parameter] =
+          sketchTxLiteralByRelation.get(txLiteral.relation).map { sketchLit =>
+            txLiteral.fields.zip(sketchLit.fields).flatMap {
+              case (propVar: Variable, sketchVar: Variable) if propVar != sketchVar =>
+                Some((propVar: Parameter) -> (sketchVar: Parameter))
+              case _ => None
+            }.toMap
+          }.getOrElse(Map.empty)
+
+        if (varSubstitution.isEmpty) {
+          Some(rule -> Predicate(Context(txLiteral, bindingLiterals), negated))
+        } else {
+          // Rename binding-literal variables whose names collide with substitution targets,
+          // preventing them from coalescing with the substituted sketch variables.
+          val sketchTargetNames: Set[String] =
+            varSubstitution.values.collect { case v: Variable => v.name }.toSet
+          val bindingVars: Set[Variable] =
+            bindingLiterals.flatMap(_.fields).collect { case v: Variable => v }.toSet
+          val collisionRename: Map[Parameter, Parameter] = bindingVars
+            .filter(v => sketchTargetNames.contains(v.name))
+            .map(v => (v: Parameter) -> (v.copy(name = v.name + "_p"): Parameter))
+            .toMap
+
+          val renamedBindings =
+            if (collisionRename.nonEmpty) bindingLiterals.map(_.rename(collisionRename))
+            else bindingLiterals
+
+          // Apply collision rename first, then positional substitution (combined in one pass).
+          val allRenames: Map[Parameter, Parameter] = collisionRename ++ varSubstitution
+          val renamedFunctor = Functor.rename(negated, allRenames)
+
+          Some(rule -> Predicate(Context(txLiteral, renamedBindings), renamedFunctor))
+        }
       }
     }.toMap
     predicates
@@ -230,9 +275,11 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
     }
     if (bindings.isEmpty) Set.empty
     else {
-      val allIdxs = indices
-      // Step 3: For each index, collect all possible parameters
-      val allParams = allIdxs.map(idx => bindings.filter(_._1 == idx).map(_._2)).filter(_.nonEmpty)
+      // Step 3: For each index, collect all possible parameters — keep only indices that have candidates
+      val indexedParams: List[(Int, Seq[Parameter])] =
+        indices.map(idx => (idx, bindings.filter(_._1 == idx).map(_._2))).filter(_._2.nonEmpty)
+      val filteredIdxs = indexedParams.map(_._1)
+      val allParams = indexedParams.map(_._2)
       // Step 4: Cartesian product of all possible parameter choices for each index
       val combos = allParams.foldLeft(Seq(Seq.empty[Parameter])) { (acc, params) =>
         for (a <- acc; p <- params) yield a :+ p
@@ -240,10 +287,9 @@ case class PredicateEnumerator(interpreterContext: InterpreterContext) {
       // Step 5: Build fields for the new literal
       val uniqueCombos = combos.filter(params => params.distinct.size == params.size)
 
-      // combos.map { paramsForIndices =>
       uniqueCombos.map { paramsForIndices =>
         val fields = indexedRelation.sig.zipWithIndex.map { case (t, i) =>
-          val idxInIndices = allIdxs.indexOf(i)
+          val idxInIndices = filteredIdxs.indexOf(i)
           if (idxInIndices >= 0) paramsForIndices(idxInIndices) else Variable(t, s"${indexedRelation.name}_x$i")
         }
         Literal(indexedRelation, fields)

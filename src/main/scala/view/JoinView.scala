@@ -198,9 +198,18 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     }
   }
 
+  /** True if the rule is a pure copy: no functors, body variable directly appears in head. */
+  private def isPureCopy(incrementValue: IncrementValue): Boolean = {
+    if (rule.functors.nonEmpty) return false
+    val lits = rule.body.filter(_.relation == incrementValue.relation)
+    if (lits.size != 1) return false
+    val bodyParam = lits.head.fields(incrementValue.valueIndex)
+    rule.head.fields.contains(bodyParam)
+  }
+
   private def isUpdatable(incrementValue: IncrementValue): Boolean = {
     /** Check that the incremented value is not matched with other fields.
-     * And is differentiable in another functor
+     * And is differentiable in another functor (or is a pure copy).
      *  */
     val literal = getInsertedLiteral(incrementValue.relation)
     val newParam = literal.fields(incrementValue.valueIndex)
@@ -212,18 +221,10 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
         case _ => ???
       }
     }
-    existDifferentiableFunctor && !isMatchedInBody
+    (existDifferentiableFunctor || isPureCopy(incrementValue)) && !isMatchedInBody
   }
 
   private def updateOnIncrementValue(incrementValue: IncrementValue): Increment = {
-    val assignment: datalog.Assign = {
-      val assignments: Set[datalog.Assign] = rule.functors.flatMap{
-        case a: datalog.Assign => Some(a)
-        case _ => None
-      }
-      require(assignments.size == 1, s"$rule\n${incrementValue}")
-      assignments.head
-    }
     val x: Param = {
       val lits = rule.body.filter(_.relation == incrementValue.relation)
       require(lits.size==1)
@@ -231,19 +232,33 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val p = lit.fields(incrementValue.valueIndex)
       Param(p)
     }
-    // todo: support more general cases, where join exists.
-    val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
-    val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_==resultIndex)
-    /** Apply the chain rule. */
-    val delta: Arithmetic = {
-      val _d = assignment.b match {
-        case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
-        case _ => ???
+    if (isPureCopy(incrementValue)) {
+      // Pure copy rule: head variable = body variable; delta is identity
+      val resultIndex: Int = rule.head.fields.indexOf(x.p)
+      val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
+      Increment(rule.head.relation, rule.head, keyIndices, resultIndex, x)
+    } else {
+      val assignment: datalog.Assign = {
+        val assignments: Set[datalog.Assign] = rule.functors.flatMap {
+          case a: datalog.Assign => Some(a)
+          case _ => None
+        }
+        require(assignments.size == 1, s"$rule\n${incrementValue}")
+        assignments.head
       }
-      val d = Arithmetic.simplify(_d)
-      d
+      // todo: support more general cases, where join exists.
+      val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
+      val keyIndices: List[Int] = rule.head.fields.indices.toList.filterNot(_ == resultIndex)
+      /** Apply the chain rule. */
+      val delta: Arithmetic = {
+        val _d = assignment.b match {
+          case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
+          case _ => ???
+        }
+        Arithmetic.simplify(_d)
+      }
+      Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
     }
-    Increment(rule.head.relation, rule.head, keyIndices, resultIndex, delta)
   }
 
 
@@ -376,14 +391,6 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   private def getUpdate(incrementValue: IncrementValue): (Int, Arithmetic) = {
-    val assignment: datalog.Assign = {
-      val assignments: Set[datalog.Assign] = rule.functors.flatMap{
-        case a: datalog.Assign => Some(a)
-        case _ => None
-      }
-      require(assignments.size == 1, s"$rule\n${incrementValue}")
-      assignments.head
-    }
     val x: Param = {
       val lits = rule.body.filter(_.relation == incrementValue.relation)
       require(lits.size==1)
@@ -391,17 +398,31 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val p = lit.fields(incrementValue.valueIndex)
       Param(p)
     }
-    val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
-    /** Apply the chain rule. */
-    val delta: Arithmetic = {
-      val _d = assignment.b match {
-        case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
-        case _ => ???
+    if (isPureCopy(incrementValue)) {
+      // Pure copy rule: head var = body var, delta is identity
+      val resultIndex = rule.head.fields.indexOf(x.p)
+      require(resultIndex >= 0, s"Pure copy rule head does not contain body var: $rule")
+      (resultIndex, x)
+    } else {
+      val assignment: datalog.Assign = {
+        val assignments: Set[datalog.Assign] = rule.functors.flatMap {
+          case a: datalog.Assign => Some(a)
+          case _ => None
+        }
+        require(assignments.size == 1, s"$rule\n${incrementValue}")
+        assignments.head
       }
-      val d = Arithmetic.simplify(_d)
-      d
+      val resultIndex: Int = rule.head.fields.indexOf(assignment.a.p)
+      /** Apply the chain rule. */
+      val delta: Arithmetic = {
+        val _d = assignment.b match {
+          case arithmetic: Arithmetic => Mul(Arithmetic.derivativeOf(arithmetic, x), x)
+          case _ => ???
+        }
+        Arithmetic.simplify(_d)
+      }
+      (resultIndex, delta)
     }
-    (resultIndex, delta)
   }
 
   def getZ3QueryConstraint(ctx: Context, z3Prefix: String): BoolExpr = {

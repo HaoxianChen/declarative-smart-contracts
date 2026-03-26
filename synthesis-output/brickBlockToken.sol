@@ -20,7 +20,9 @@ contract BrickBlockToken {
   DeadTuple dead;
   mapping(address=>BalancesTuple) balances;
   event DecreaseAllowance(address o,address s,int d);
+  event InvalidTx();
   event Pause();
+  event Unpause();
   event Upgrade(address p);
   event TransferFrom(address operator,address from,address to,int a);
   event Evacuate(address p);
@@ -28,39 +30,28 @@ contract BrickBlockToken {
   event IncreaseAllowance(address o,address s,int d);
   event Mint(address p,int n);
   event TransferBeforeUnpause();
-  event EvacuateAfterUpgrade();
-  event Unpause();
   constructor() public {
-    updateOnceUpgradeOnInsertConstructor_r19();
-    updatePausedOnInsertConstructor_r34();
-    updateOnceUnpausedOnInsertConstructor_r29();
-    updateOwnerOnInsertConstructor_r30();
+    updatePausedOnInsertConstructor_r36();
+    updateInitialSupplyOnInsertConstructor_r5();
+    updateOnceUpgradeOnInsertConstructor_r18();
+    updateOwnerOnInsertConstructor_r31();
+    updateOnceUnpausedOnInsertConstructor_r30();
   }
-  function transferFrom(address operator,address from,address to,int a) public    {
-      bool r17 = updateTransferFromOnInsertRecv_transferFrom_r17(operator,from,to,a);
-      if(r17==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function getBalances(address p) public view  returns (int) {
-      int a = balances[p].a;
-      return a;
-  }
-  function increaseAllowance(address o,address s,int d) public    {
-      bool r8 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r8(o,s,d);
-      if(r8==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function mint(address p,int n) public    {
-      bool r10 = updateMintOnInsertRecv_mint_r10(p,n);
+  function upgrade(address p) public    {
+      bool r10 = updateUpgradeOnInsertRecv_upgrade_r10(p);
       if(r10==false) {
         revert("Rule condition failed");
       }
   }
   function decreaseAllowance(address o,address s,int d) public    {
-      bool r25 = updateDecreaseAllowanceOnInsertRecv_decreaseAllowance_r25(o,s,d);
-      if(r25==false) {
+      bool r26 = updateDecreaseAllowanceOnInsertRecv_decreaseAllowance_r26(o,s,d);
+      if(r26==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function transferFrom(address operator,address from,address to,int a) public    {
+      bool r32 = updateTransferFromOnInsertRecv_transferFrom_r32(operator,from,to,a);
+      if(r32==false) {
         revert("Rule condition failed");
       }
   }
@@ -72,159 +63,143 @@ contract BrickBlockToken {
       int a = allowed[p][p2].a;
       return a;
   }
+  function transfer(address from,address to,int a) public    {
+      bool r35 = updateTransferOnInsertRecv_transfer_r35(from,to,a);
+      if(r35==false) {
+        revert("Rule condition failed");
+      }
+  }
   function getDead() public view  returns (bool) {
       bool b = dead.b;
       return b;
   }
-  function evacuate(address p) public    {
-      bool r7 = updateEvacuateOnInsertRecv_evacuate_r7(p);
-      if(r7==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function transfer(address from,address to,int a) public    {
-      bool r11 = updateTransferOnInsertRecv_transfer_r11(from,to,a);
-      if(r11==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function upgrade(address p) public    {
-      bool r12 = updateUpgradeOnInsertRecv_upgrade_r12(p);
-      if(r12==false) {
-        revert("Rule condition failed");
-      }
-  }
   function unpause() public    {
-      bool r16 = updateUnpauseOnInsertRecv_unpause_r16();
+      bool r39 = updateUnpauseOnInsertRecv_unpause_r39();
+      if(r39==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function getBalances(address p) public view  returns (int) {
+      int a = balances[p].a;
+      return a;
+  }
+  function evacuate(address p) public    {
+      bool r16 = updateEvacuateOnInsertRecv_evacuate_r16(p);
       if(r16==false) {
         revert("Rule condition failed");
       }
   }
-  function updateUnpauseOnInsertRecv_unpause_r16() private   returns (bool) {
+  function increaseAllowance(address o,address s,int d) public    {
+      bool r7 = updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r7(o,s,d);
+      if(r7==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function mint(address p,int n) public    {
+      bool r9 = updateMintOnInsertRecv_mint_r9(p,n);
+      if(r9==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function updateSpentTotalOnInsertTransferFrom_r6(address s,address f,int n) private    {
+      int delta0 = int(n);
+      updateAllowedOnIncrementSpentTotal_r37(f,s,delta0);
+  }
+  function updateUnpauseOnInsertRecv_unpause_r39() private   returns (bool) {
       updatePausedOnInsertUnpause_r13();
       emit Unpause();
       return true;
       return false;
   }
-  function updateDecreaseAllowanceOnInsertRecv_decreaseAllowance_r25(address o,address s,int d) private   returns (bool) {
-      int allowed_x2 = allowed[o][s].a;
-      if(d<=allowed_x2) {
-        updateDecreaseTotalOnInsertDecreaseAllowance_r15(o,s,d);
-        emit DecreaseAllowance(o,s,d);
-        return true;
-      }
-      return false;
-  }
-  function updateBalancesOnIncrementTotalOut_r5(address p,int o) private    {
-      balances[p].a -= o;
-  }
-  function updateTransferFromOnInsertRecv_transferFrom_r17(address s,address f,address r,int n) private   returns (bool) {
-      int allowed_x2_2 = allowed[s][f].a;
-      int balances_x1_1 = balances[f].a;
-      if(n>=0 && n<balances_x1_1 && n<allowed_x2_2) {
-        updateTransferOnInsertTransferFrom_r1(f,r,n);
-        updateSpentTotalOnInsertTransferFrom_r31(s,f,n);
-        emit TransferFrom(s,f,r,n);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalOutOnInsertTransfer_r24(address p,int n) private    {
-      int delta0 = int(n);
-      updateBalancesOnIncrementTotalOut_r5(p,delta0);
-  }
-  function updateAllowedOnIncrementAllowanceTotal_r35(address f,address s,int n) private    {
+  function updateAllowedOnIncrementAllowanceTotal_r37(address f,address s,int n) private    {
       allowed[f][s].a += n;
   }
-  function updateOnceUnpausedOnInsertConstructor_r29() private    {
-      // Empty()
-  }
-  function updatePausedOnInsertUpgrade_r23() private    {
-      paused = PausedTuple(true,true);
-  }
-  function updateOnceUpgradeOnInsertUpgrade_r27() private    {
-      // Empty()
-  }
-  function updateOnceUpgradeOnInsertConstructor_r19() private    {
-      // Empty()
-  }
-  function updateDecreaseTotalOnInsertDecreaseAllowance_r15(address f,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowedOnIncrementDecreaseTotal_r35(f,s,delta0);
-  }
-  function updateSpentTotalOnInsertTransferFrom_r31(address f,address s,int n) private    {
-      int delta0 = int(n);
-      updateAllowedOnIncrementSpentTotal_r35(f,s,delta0);
-  }
-  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r8(address o,address s,int d) private   returns (bool) {
-      if(d>0) {
-        updateAllowanceTotalOnInsertIncreaseAllowance_r20(o,s,d);
-        emit IncreaseAllowance(o,s,d);
-        return true;
-      }
-      return false;
-  }
-  function updateintByint(int x,int delta) private   returns (int) {
-      int newValue = x+delta;
-      return newValue;
-  }
-  function updateAllowedOnIncrementSpentTotal_r35(address f,address s,int l) private    {
-      allowed[f][s].a -= l;
-  }
-  function updateTransferOnInsertTransferFrom_r1(address s,address r,int n) private    {
-      updateTotalInOnInsertTransfer_r2(r,n);
-      updateTotalOutOnInsertTransfer_r24(s,n);
-      emit Transfer(s,r,n);
-  }
-  function updateTransferOnInsertRecv_transfer_r11(address s,address r,int n) private   returns (bool) {
-      bool b = paused.p;
-      int balances_x1_1 = balances[s].a;
-      if(b!=true && n>0 && n<balances_x1_1) {
-        updateTotalInOnInsertTransfer_r2(r,n);
-        updateTotalOutOnInsertTransfer_r24(s,n);
+  function updateTransferOnInsertRecv_transfer_r35(address s,address r,int n) private   returns (bool) {
+      bool b_2 = paused.p;
+      int b_1 = balances[s].a;
+      if(n>0 && n<=b_1 && b_2!=true) {
+        updateTotalOutOnInsertTransfer_r25(s,n);
+        updateTotalInOnInsertTransfer_r1(r,n);
         emit Transfer(s,r,n);
         return true;
       }
       return false;
   }
-  function updateTransferOnInsertMint_r28(address p,int n) private    {
-      updateTotalOutOnInsertTransfer_r24(address(0),n);
-      updateTotalInOnInsertTransfer_r2(p,n);
-      emit Transfer(address(0),p,n);
+  function updatePausedOnInsertConstructor_r36() private    {
+      paused = PausedTuple(true,true);
   }
-  function updateTransferOnInsertBurn_r21(address s,int n) private    {
-      updateTotalOutOnInsertTransfer_r24(s,n);
-      updateTotalInOnInsertTransfer_r2(address(0),n);
+  function updateTransferOnInsertBurn_r20(address s,int n) private    {
+      updateTotalOutOnInsertTransfer_r25(s,n);
+      updateTotalInOnInsertTransfer_r1(address(0),n);
       emit Transfer(s,address(0),n);
   }
-  function updateEvacuateOnInsertRecv_evacuate_r7(address p) private   returns (bool) {
-      bool dead_b = dead.b;
-      if(dead_b==true) {
-        updateBurnOnInsertEvacuate_r22(p);
-        emit Evacuate(p);
-        return true;
-      }
-      return false;
-  }
-  function updateTotalInOnInsertTransfer_r2(address p,int n) private    {
+  function updateTotalInOnInsertTransfer_r1(address p,int n) private    {
       int delta0 = int(n);
-      updateBalancesOnIncrementTotalIn_r5(p,delta0);
+      updateBalancesOnIncrementTotalIn_r3(p,delta0);
   }
-  function updateMintOnInsertRecv_mint_r10(address p,int n) private   returns (bool) {
-      if(n>=0) {
-        updateTransferOnInsertMint_r28(p,n);
-        emit Mint(p,n);
-        return true;
-      }
+  function updateUpgradeOnInsertRecv_upgrade_r10(address p) private   returns (bool) {
+      updatePausedOnInsertUpgrade_r24();
+      emit Upgrade(p);
+      return true;
       return false;
   }
-  function updateBurnOnInsertEvacuate_r22(address p) private    {
+  function updateBurnOnInsertEvacuate_r23(address p) private    {
       int n = balances[p].a;
-      updateTransferOnInsertBurn_r21(p,n);
+      updateTransferOnInsertBurn_r20(p,n);
   }
-  function updateAllowanceTotalOnInsertIncreaseAllowance_r20(address o,address s,int n) private    {
+  function updatePausedOnInsertUnpause_r13() private    {
+      paused = PausedTuple(false,true);
+  }
+  function updateAllowedOnIncrementSpentTotal_r37(address f,address s,int l) private    {
+      allowed[f][s].a -= l;
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r32(address s,address f,address r,int n) private   returns (bool) {
+      int b_2 = balances[f].a;
+      int a_1 = allowed[f][s].a;
+      if(n>0 && n<=a_1 && n<=b_2) {
+        updateSpentTotalOnInsertTransferFrom_r6(s,f,n);
+        updateTransferOnInsertTransferFrom_r0(f,r,n);
+        emit TransferFrom(s,f,r,n);
+        return true;
+      }
+      return false;
+  }
+  function updateOwnerOnInsertConstructor_r31() private    {
+      address s = msg.sender;
+      // Empty()
+  }
+  function updatePausedOnInsertUpgrade_r24() private    {
+      paused = PausedTuple(true,true);
+  }
+  function updateEvacuateOnInsertRecv_evacuate_r16(address p) private   returns (bool) {
+      updateBurnOnInsertEvacuate_r23(p);
+      emit Evacuate(p);
+      return true;
+      return false;
+  }
+  function updateTransferOnInsertTransferFrom_r0(address s,address r,int n) private    {
+      updateTotalOutOnInsertTransfer_r25(s,n);
+      updateTotalInOnInsertTransfer_r1(r,n);
+      emit Transfer(s,r,n);
+  }
+  function updateDecreaseTotalOnInsertDecreaseAllowance_r14(address f,address s,int n) private    {
       int delta0 = int(n);
-      updateAllowedOnIncrementAllowanceTotal_r35(o,s,delta0);
+      updateAllowedOnIncrementDecreaseTotal_r37(f,s,delta0);
+  }
+  function updateOnceUpgradeOnInsertConstructor_r18() private    {
+      // Empty()
+  }
+  function updateInitialSupplyOnInsertConstructor_r5() private    {
+      // Empty()
+  }
+  function updateTransferOnInsertMint_r29(address p,int n) private    {
+      updateTotalOutOnInsertTransfer_r25(address(0),n);
+      updateTotalInOnInsertTransfer_r1(p,n);
+      emit Transfer(address(0),p,n);
+  }
+  function updateTotalOutOnInsertTransfer_r25(address p,int n) private    {
+      int delta0 = int(n);
+      updateBalancesOnIncrementTotalOut_r3(p,delta0);
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -232,31 +207,49 @@ contract BrickBlockToken {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function updateBalancesOnIncrementTotalIn_r5(address p,int i) private    {
-      balances[p].a += i;
-  }
-  function updateDeadOnInsertUpgrade_r32() private    {
-      dead = DeadTuple(true,true);
-  }
-  function updatePausedOnInsertConstructor_r34() private    {
-      paused = PausedTuple(true,true);
-  }
-  function updateOwnerOnInsertConstructor_r30() private    {
-      address s = msg.sender;
+  function updateOnceUnpausedOnInsertConstructor_r30() private    {
       // Empty()
   }
-  function updatePausedOnInsertUnpause_r13() private    {
-      paused = PausedTuple(false,true);
+  function updateintByint(int x,int delta) private   returns (int) {
+      int newValue = x+delta;
+      return newValue;
   }
-  function updateAllowedOnIncrementDecreaseTotal_r35(address f,address s,int d) private    {
-      allowed[f][s].a -= d;
-  }
-  function updateUpgradeOnInsertRecv_upgrade_r12(address p) private   returns (bool) {
-      updateDeadOnInsertUpgrade_r32();
-      updatePausedOnInsertUpgrade_r23();
-      updateOnceUpgradeOnInsertUpgrade_r27();
-      emit Upgrade(p);
-      return true;
+  function updateMintOnInsertRecv_mint_r9(address p,int n) private   returns (bool) {
+      if(n>=0) {
+        updateTransferOnInsertMint_r29(p,n);
+        emit Mint(p,n);
+        return true;
+      }
       return false;
+  }
+  function updateBalancesOnIncrementTotalIn_r3(address p,int i) private    {
+      balances[p].a += i;
+  }
+  function updateBalancesOnIncrementTotalOut_r3(address p,int o) private    {
+      balances[p].a -= o;
+  }
+  function updateDecreaseAllowanceOnInsertRecv_decreaseAllowance_r26(address o,address s,int d) private   returns (bool) {
+      int allowed_x2 = allowed[o][s].a;
+      if(d<=allowed_x2) {
+        updateDecreaseTotalOnInsertDecreaseAllowance_r14(o,s,d);
+        emit DecreaseAllowance(o,s,d);
+        return true;
+      }
+      return false;
+  }
+  function updateAllowanceTotalOnInsertIncreaseAllowance_r19(address o,address s,int n) private    {
+      int delta0 = int(n);
+      updateAllowedOnIncrementAllowanceTotal_r37(o,s,delta0);
+  }
+  function updateIncreaseAllowanceOnInsertRecv_increaseAllowance_r7(address o,address s,int d) private   returns (bool) {
+      if(d>0) {
+        updateAllowanceTotalOnInsertIncreaseAllowance_r19(o,s,d);
+        emit IncreaseAllowance(o,s,d);
+        return true;
+      }
+      return false;
+  }
+  function updateAllowedOnIncrementDecreaseTotal_r37(address f,address s,int d) private    {
+      allowed[f][s].a -= d;
   }
 }

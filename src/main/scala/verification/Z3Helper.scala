@@ -95,11 +95,10 @@ object Z3Helper {
         val values = valueIndices.map(i=>lit.fields(i))
         val fieldNames = valueIndices.map(i => lit.relation.memberNames(i))
 
-        if (keys.nonEmpty) {
+        if (keys.nonEmpty && values.nonEmpty) {
           val (valueConst, _) = fieldsToConst(ctx, lit.relation, values, fieldNames, prefix)
           val sort = getSort(ctx, lit.relation, indices)
           val arrayConst = ctx.mkConst(name, sort)
-          // val keyConsts: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, prefix)._1)
           // build key expr(s) from the key fields
           val keyExpr: Expr[_ <: Sort] = {
             val arrSort = sort.asInstanceOf[ArraySort[Sort, Sort]]
@@ -110,7 +109,9 @@ object Z3Helper {
           ctx.mkEq(ctx.mkSelect(arrayConst.asInstanceOf[Expr[ArraySort[Sort,Sort]]], keyExpr.asInstanceOf[Expr[Sort]]), valueConst)
         }
         else {
-          ???
+          // No keys (e.g. recv_* transaction-input relations) or all-key set relations:
+          // these are not persistent state variables, so contribute no state constraint.
+          ctx.mkTrue()
         }
       }
       case SingletonRelation(name, sig, memberNames) => {

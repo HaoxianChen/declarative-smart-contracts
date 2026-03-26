@@ -70,7 +70,8 @@ object Misc {
     val rulesPath = dir.resolve("rules.dl").toString
     val propsPath = dir.resolve("properties.dl").toString
 
-    val parts = Seq(schemaPath, rulesPath, propsPath).flatMap { p =>
+    val functionsPath = dir.resolve("functions.dl").toString
+    val parts = Seq(schemaPath, rulesPath, functionsPath, propsPath).flatMap { p =>
       if (isFileExists(p)) {
         val content = fileToString(p)
         val withNewline = if (content.endsWith("\n")) content else content + "\n"

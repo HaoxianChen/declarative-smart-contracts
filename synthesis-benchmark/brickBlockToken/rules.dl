@@ -3,6 +3,7 @@ owner(s) :- constructor(), msgSender(s).
 paused(true) :- constructor().
 onceUpgrade(false) :- constructor().
 onceUnpaused(false) :- constructor().
+initialSupply(0) :- constructor().
 
 paused(a) :- pause(), a:=true.
 
@@ -13,7 +14,7 @@ totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
 totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 balances(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
 
-spentTotal(f,s,m) :- transferFrom(f,s,_,_), m = sum n: transferFrom(f,s,_,n).
+spentTotal(f,s,m) :- transferFrom(s,f,_,_), m = sum n: transferFrom(s,f,_,n).
 allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
 decreaseTotal(f,s,m) :- decreaseAllowance(f,s,_), m = sum n: decreaseAllowance(f,s,n).
 allowed(f,s,m) :- allowanceTotal(f,s,n), spentTotal(f,s,l), decreaseTotal(f,s,d), m := n-l-d.
@@ -23,7 +24,6 @@ totalSupply(n) :- initialSupply(i), burnTotal(b), n:=i-b.
 
 paused(false) :- unpause().
 
-dead(true) :- upgrade(_).
 paused(true):- upgrade(_).
 burn(p,n) :- evacuate(p), balances(p,n).
 
