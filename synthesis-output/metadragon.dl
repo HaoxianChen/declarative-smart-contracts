@@ -1,1 +1,0 @@
-update(user,to,value) :- to==t_1,recv_update(to,value),value>=30001,this(t_1),msgSender(user).

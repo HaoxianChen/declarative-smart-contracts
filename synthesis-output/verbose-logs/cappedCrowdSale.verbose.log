@@ -1,0 +1,2901 @@
+[Audit] BenchmarkStart: name=cappedCrowdSale.dl, benchDir=synthesis-benchmark/cappedCrowdSale
+[Audit] InputSpecFiles: schema=synthesis-benchmark/cappedCrowdSale/schema.dl, rules=synthesis-benchmark/cappedCrowdSale/rules.dl, properties=synthesis-benchmark/cappedCrowdSale/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/cappedCrowdSale.dl, stats=synthesis-output/synthesis_stats.csv
+[cappedCrowdSale.dl] BenchmarkStart: program=CappedCrowdSale, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[cappedCrowdSale.dl] SeededPredicatesFromTxProperties: Map(finalize() :- recv_finalize(). -> Set(Predicate(context: tx: recv_finalize(), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[cappedCrowdSale.dl] InitialTransactionRules:
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+burn(p,n) :- recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#0 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+burn(p,n) :- recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#0 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[cappedCrowdSale.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 0, value: 0]
+[1] recv_burn(address(9),1) [msgSender: 0, value: 0]
+[cappedCrowdSale.dl] Iteration#0 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[cappedCrowdSale.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=burn
+[cappedCrowdSale.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+mint(p,n) :- recv_mint(p,n).
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[cappedCrowdSale.dl] Iteration#1 ProgramBeforeBMC:
+mint(p,n) :- recv_mint(p,n).
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#1 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[cappedCrowdSale.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 0, value: 0]
+[1] recv_mint(address(8),-1) [msgSender: 0, value: 0]
+[cappedCrowdSale.dl] Iteration#1 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[cappedCrowdSale.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#1 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#2 ProgramBeforeBMC:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[cappedCrowdSale.dl] Iteration#2 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[cappedCrowdSale.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 0, value: 0]
+[1] recv_transferFrom(address(4),address(4),address(5),1) [msgSender: 0, value: 0]
+[cappedCrowdSale.dl] Iteration#2 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[cappedCrowdSale.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=transferFrom
+[cappedCrowdSale.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[cappedCrowdSale.dl] Iteration#3 ProgramBeforeBMC:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#3 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[cappedCrowdSale.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(2),address(3),-1) [msgSender: 0, value: 0]
+[cappedCrowdSale.dl] Iteration#3 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[cappedCrowdSale.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#3 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#4 ProgramBeforeBMC:
+finalize() :- recv_finalize(),owner(o),msgSender(s),s==o.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#4 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=illegalFinalization, k=1
+[BMC] CounterexampleReturned: rule=illegalFinalization, k=1
+[cappedCrowdSale.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 0, value: 0]
+[1] recv_finalize() [msgSender: 0, value: 0]
+[cappedCrowdSale.dl] Iteration#4 RestrictedSolveStatus: relation=recv_finalize, status=UNSAT
+[cappedCrowdSale.dl] Iteration#4 FallbackToFull: reason=UNSAT, relations=finalize
+[cappedCrowdSale.dl] Iteration#4 ProgramAfterFallbackSynthesis:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#4 SynthesisResult: updated-by-fallback
+[cappedCrowdSale.dl] Iteration#5 ProgramBeforeBMC:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#5 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[cappedCrowdSale.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 7, value: 0]
+[1] recv_mint(address(17),32275) [msgSender: 7, value: 0]
+[2] recv_burn(address(17),64551) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#5 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[cappedCrowdSale.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#5 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#6 ProgramBeforeBMC:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#6 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(4),address(4),1) [msgSender: 5, value: 0]
+[2] recv_transferFrom(address(4),address(4),address(8),27570) [msgSender: 8, value: 0]
+[cappedCrowdSale.dl] Iteration#6 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#6 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#7 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#7 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(7),address(7),1) [msgSender: 8, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(10),1) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#7 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+[cappedCrowdSale.dl] Iteration#7 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#8 ProgramBeforeBMC:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+[cappedCrowdSale.dl] Iteration#8 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(7),address(7),29587) [msgSender: 8, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(10),29586) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#8 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#8 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#9 ProgramBeforeBMC:
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#9 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 6, value: 0]
+[1] recv_increaseAllowance(address(5),address(6),1) [msgSender: 6, value: 0]
+[2] recv_transferFrom(address(5),address(5),address(6),91418) [msgSender: 6, value: 0]
+[cappedCrowdSale.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#9 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#10 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#10 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=illegalFinalization, k=2
+[BMC] CounterexampleReturned: rule=illegalFinalization, k=2
+[cappedCrowdSale.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 7, value: 0]
+[1] recv_mint(address(7),29364) [msgSender: 7, value: 0]
+[2] recv_finalize() [msgSender: 7, value: 0]
+[cappedCrowdSale.dl] Iteration#10 RestrictedSolveStatus: relation=recv_finalize, status=SAT
+[cappedCrowdSale.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#10 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#11 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#11 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[cappedCrowdSale.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 8, value: 0]
+[1] recv_transfer(address(3),address(3),0) [msgSender: 8, value: 0]
+[2] recv_mint(address(19),90368) [msgSender: 18, value: 0]
+[3] recv_transfer(address(19),address(3),-120086) [msgSender: 19, value: 0]
+[cappedCrowdSale.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[cappedCrowdSale.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),0!=n.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#11 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#12 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),0!=n.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#12 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[cappedCrowdSale.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_transfer(address(6),address(6),154455) [msgSender: 10, value: 0]
+[2] recv_mint(address(19),154454) [msgSender: 12, value: 0]
+[3] recv_transfer(address(6),address(19),-154455) [msgSender: 6, value: 0]
+[cappedCrowdSale.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[cappedCrowdSale.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#12 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#13 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#13 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[cappedCrowdSale.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 6, value: 0]
+[1] recv_mint(address(23),16531) [msgSender: 6, value: 0]
+[2] recv_mint(address(19),217773) [msgSender: 7, value: 0]
+[3] recv_transfer(address(19),address(23),435547) [msgSender: 19, value: 0]
+[cappedCrowdSale.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[cappedCrowdSale.dl] Iteration#13 FallbackToFull: reason=UNSAT, relations=transfer
+[cappedCrowdSale.dl] Iteration#13 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#13 SynthesisResult: updated-by-fallback
+[cappedCrowdSale.dl] Iteration#14 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#14 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[cappedCrowdSale.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_mint(address(31),1) [msgSender: 10, value: 0]
+[2] recv_mint(address(17),9156) [msgSender: 5, value: 0]
+[3] recv_transfer(address(17),address(31),-46224) [msgSender: 17, value: 0]
+[cappedCrowdSale.dl] Iteration#14 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[cappedCrowdSale.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#14 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#15 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#15 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[cappedCrowdSale.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 6, value: 0]
+[1] recv_mint(address(15),176810) [msgSender: 6, value: 0]
+[2] recv_mint(address(20),40670) [msgSender: 11, value: 0]
+[3] recv_transfer(address(20),address(15),176809) [msgSender: 20, value: 0]
+[cappedCrowdSale.dl] Iteration#15 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[cappedCrowdSale.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#15 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#16 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#16 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 7, value: 0]
+[1] recv_increaseAllowance(address(17),address(18),71455) [msgSender: 7, value: 0]
+[2] recv_mint(address(26),7472) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(17),address(17),address(18),71455) [msgSender: 18, value: 0]
+[4] recv_transferFrom(address(17),address(26),address(18),-78928) [msgSender: 18, value: 0]
+[cappedCrowdSale.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1),n<balanceOf_x1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#16 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#17 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1),n<balanceOf_x1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#17 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 13, value: 0]
+[1] recv_mint(address(10),12064) [msgSender: 13, value: 0]
+[2] recv_transferFrom(address(12),address(12),address(10),1) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#17 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,o,allowance_x2),0!=allowance_x2.
+buyToken(p,m) :- recv_buyToken(p,m).
+[cappedCrowdSale.dl] Iteration#17 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#18 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,o,allowance_x2),0!=allowance_x2.
+buyToken(p,m) :- recv_buyToken(p,m).
+[cappedCrowdSale.dl] Iteration#18 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_increaseAllowance(address(8),address(9),1) [msgSender: 10, value: 0]
+[2] recv_transferFrom(address(9),address(9),address(8),11820) [msgSender: 8, value: 0]
+[cappedCrowdSale.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#18 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#19 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#19 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 6, value: 0]
+[1] recv_increaseAllowance(address(22),address(11),21513) [msgSender: 6, value: 0]
+[2] recv_mint(address(17),60647) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(22),address(22),address(11),1) [msgSender: 11, value: 0]
+[4] recv_transferFrom(address(17),address(22),address(11),-64973) [msgSender: 11, value: 0]
+[cappedCrowdSale.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,o,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#19 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#20 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,o,allowance_x2),n<=allowance_x2.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#20 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 9, value: 0]
+[1] recv_increaseAllowance(address(9),address(8),68992) [msgSender: 9, value: 0]
+[2] recv_transferFrom(address(8),address(8),address(9),68992) [msgSender: 9, value: 0]
+[cappedCrowdSale.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),n<allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#20 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#21 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),n<allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#21 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 15, value: 0]
+[1] recv_increaseAllowance(address(10),address(14),2) [msgSender: 15, value: 0]
+[2] recv_transferFrom(address(14),address(14),address(10),1) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#21 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#22 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#22 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_mint(address(9),36468) [msgSender: 10, value: 0]
+[2] recv_transferFrom(address(9),address(9),address(10),36348) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_1),n>0,n<allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#22 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#23 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_1),n>0,n<allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#23 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_increaseAllowance(address(23),address(24),46402) [msgSender: 10, value: 0]
+[2] recv_mint(address(26),302) [msgSender: 4, value: 0]
+[3] recv_mint(address(23),303) [msgSender: 16, value: 0]
+[4] recv_transferFrom(address(23),address(26),address(24),36531) [msgSender: 24, value: 0]
+[cappedCrowdSale.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#23 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#24 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#24 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 7, value: 0]
+[1] recv_mint(address(23),11302) [msgSender: 7, value: 0]
+[2] recv_increaseAllowance(address(23),address(23),73773) [msgSender: 23, value: 0]
+[3] recv_mint(address(29),30897) [msgSender: 16, value: 0]
+[4] recv_transferFrom(address(29),address(23),address(23),73773) [msgSender: 23, value: 0]
+[cappedCrowdSale.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#24 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#25 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#25 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 7, value: 0]
+[1] recv_increaseAllowance(address(19),address(19),23208) [msgSender: 7, value: 0]
+[2] recv_mint(address(19),5221) [msgSender: 18, value: 0]
+[3] recv_mint(address(18),5222) [msgSender: 19, value: 0]
+[4] recv_transferFrom(address(18),address(19),address(19),23207) [msgSender: 19, value: 0]
+[cappedCrowdSale.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),n<allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#25 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#26 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),n<allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#26 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(12),address(17),38727) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(12),address(12),107040) [msgSender: 12, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(17),77531) [msgSender: 17, value: 0]
+[cappedCrowdSale.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(r,s,allowance_x2_1),allowance(o,r,allowance_x2_0),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#26 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#27 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(r,s,allowance_x2_1),allowance(o,r,allowance_x2_0),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#27 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 9, value: 0]
+[1] recv_mint(address(30),163590) [msgSender: 9, value: 0]
+[2] recv_increaseAllowance(address(30),address(31),13132) [msgSender: 31, value: 0]
+[3] recv_increaseAllowance(address(29),address(30),13131) [msgSender: 30, value: 0]
+[4] recv_mint(address(29),206003) [msgSender: 27, value: 0]
+[5] recv_transferFrom(address(29),address(30),address(31),-390637) [msgSender: 31, value: 0]
+[cappedCrowdSale.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- balanceOf(s,balanceOf_x1_1),allowance(s,o,allowance_x2_0),n<allowance_x2_0,0!=balanceOf_x1_1,recv_transferFrom(o,r,s,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#27 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#28 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- balanceOf(s,balanceOf_x1_1),allowance(s,o,allowance_x2_0),n<allowance_x2_0,0!=balanceOf_x1_1,recv_transferFrom(o,r,s,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#28 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#28 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 4, value: 0]
+[1] recv_mint(address(15),14022) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(15),address(14),2) [msgSender: 14, value: 0]
+[3] recv_transferFrom(address(14),address(14),address(15),1) [msgSender: 15, value: 0]
+[cappedCrowdSale.dl] Iteration#28 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#28 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(s,o,allowance_x2_0),allowance_x2_0>0,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1_1).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#28 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#29 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(s,o,allowance_x2_0),allowance_x2_0>0,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),balanceOf(r,balanceOf_x1_1).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#29 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#29 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 2, value: 0]
+[1] recv_mint(address(9),41556) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(10),address(9),20253) [msgSender: 9, value: 0]
+[3] recv_transferFrom(address(9),address(9),address(10),13704) [msgSender: 10, value: 0]
+[cappedCrowdSale.dl] Iteration#29 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#29 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_0),allowance_x2_0>0.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#29 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#30 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_0),allowance_x2_0>0.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#30 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#30 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 4, value: 0]
+[1] recv_mint(address(14),86292) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(14),address(15),1431) [msgSender: 15, value: 0]
+[3] recv_transferFrom(address(14),address(14),address(15),86291) [msgSender: 15, value: 0]
+[cappedCrowdSale.dl] Iteration#30 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#30 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+transferFrom(o,r,s,n) :- balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,balanceOf_x1_0>0,recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1_0).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#30 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#31 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+transferFrom(o,r,s,n) :- balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,balanceOf_x1_0>0,recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1_0).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#31 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#31 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 12, value: 0]
+[1] recv_mint(address(11),2806) [msgSender: 12, value: 0]
+[2] recv_transferFrom(address(11),address(11),address(11),2805) [msgSender: 11, value: 0]
+[cappedCrowdSale.dl] Iteration#31 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#31 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n<balanceOf_x1_0,allowance(r,o,allowance_x2_1),allowance_x2_1>0,recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_0).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#31 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#32 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n<balanceOf_x1_0,allowance(r,o,allowance_x2_1),allowance_x2_1>0,recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_0).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#32 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#32 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 2, value: 0]
+[1] recv_mint(address(13),73805) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(13),address(13),24054) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(15),19503) [msgSender: 15, value: 0]
+[cappedCrowdSale.dl] Iteration#32 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#32 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(r,s,allowance_x2_1),allowance(s,o,allowance_x2_0),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#32 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#33 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(r,s,allowance_x2_1),allowance(s,o,allowance_x2_0),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#33 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#33 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 4, value: 0]
+[1] recv_mint(address(19),130600) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(18),address(19),31612) [msgSender: 19, value: 0]
+[3] recv_mint(address(18),177210) [msgSender: 15, value: 0]
+[4] recv_increaseAllowance(address(19),address(19),831) [msgSender: 19, value: 0]
+[5] recv_transferFrom(address(19),address(18),address(19),-364540) [msgSender: 19, value: 0]
+[cappedCrowdSale.dl] Iteration#33 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#33 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2,allowance(o,r,allowance_x2_1),balanceOf(s,balanceOf_x1_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#33 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#34 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2,allowance(o,r,allowance_x2_1),balanceOf(s,balanceOf_x1_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#34 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#34 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(7),address(7),7238) [msgSender: 2, value: 0]
+[2] recv_mint(address(14),22592) [msgSender: 7, value: 0]
+[3] recv_transferFrom(address(7),address(7),address(14),1898) [msgSender: 14, value: 0]
+[cappedCrowdSale.dl] Iteration#34 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#34 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_1),n<allowance_x2_1,0!=allowance_x2_0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#34 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#35 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_1),n<allowance_x2_1,0!=allowance_x2_0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#35 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#35 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(12),address(12),113371) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(13),address(12),29307) [msgSender: 12, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(13),113370) [msgSender: 13, value: 0]
+[cappedCrowdSale.dl] Iteration#35 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#35 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- 0!=allowance_x2_0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#35 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#36 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- 0!=allowance_x2_0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#36 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[cappedCrowdSale.dl] Iteration#36 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 10, value: 0]
+[1] recv_increaseAllowance(address(9),address(9),1) [msgSender: 10, value: 0]
+[2] recv_transferFrom(address(9),address(9),address(9),2) [msgSender: 9, value: 0]
+[cappedCrowdSale.dl] Iteration#36 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#36 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#36 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#37 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#37 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#37 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(22),address(25),141310) [msgSender: 8, value: 0]
+[2] recv_mint(address(25),11171) [msgSender: 2, value: 0]
+[3] recv_mint(address(22),54624) [msgSender: 13, value: 0]
+[4] recv_transferFrom(address(22),address(25),address(25),122711) [msgSender: 25, value: 0]
+[cappedCrowdSale.dl] Iteration#37 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#37 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,0!=allowance_x2_2,allowance(o,s,allowance_x2_1),allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#37 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#38 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,0!=allowance_x2_2,allowance(o,s,allowance_x2_1),allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#38 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#38 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(14),address(18),189292) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(18),address(18),189291) [msgSender: 18, value: 0]
+[3] recv_mint(address(14),2180) [msgSender: 14, value: 0]
+[4] recv_transferFrom(address(18),address(18),address(18),29839) [msgSender: 18, value: 0]
+[5] recv_transferFrom(address(18),address(14),address(18),29840) [msgSender: 18, value: 0]
+[cappedCrowdSale.dl] Iteration#38 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#38 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- n>0,n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(s,r,allowance_x2_1),allowance(r,o,allowance_x2_2).
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#38 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#39 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- n>0,n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(s,r,allowance_x2_1),allowance(r,o,allowance_x2_2).
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#39 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#39 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(16),address(15),1) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(15),address(15),2) [msgSender: 15, value: 0]
+[3] recv_transferFrom(address(15),address(15),address(16),1) [msgSender: 16, value: 0]
+[cappedCrowdSale.dl] Iteration#39 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#39 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_2,n<allowance_x2_1,allowance(s,r,allowance_x2_1),allowance(r,o,allowance_x2_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#39 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#40 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_2,n<allowance_x2_1,allowance(s,r,allowance_x2_1),allowance(r,o,allowance_x2_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#40 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[cappedCrowdSale.dl] Iteration#40 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(13),address(13),120486) [msgSender: 3, value: 0]
+[2] recv_increaseAllowance(address(15),address(13),120487) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(15),120484) [msgSender: 15, value: 0]
+[cappedCrowdSale.dl] Iteration#40 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#40 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(s,r,allowance_x2_0).
+[cappedCrowdSale.dl] Iteration#40 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#41 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(s,r,allowance_x2_0).
+[cappedCrowdSale.dl] Iteration#41 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#41 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(24),address(24),35185) [msgSender: 5, value: 0]
+[2] recv_mint(address(29),88884) [msgSender: 9, value: 0]
+[3] recv_increaseAllowance(address(24),address(29),2710) [msgSender: 29, value: 0]
+[4] recv_transferFrom(address(24),address(24),address(24),-88883) [msgSender: 24, value: 0]
+[5] recv_transferFrom(address(24),address(29),address(24),99545) [msgSender: 24, value: 0]
+[cappedCrowdSale.dl] Iteration#41 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#41 ProgramAfterRestrictedSynthesis:
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+[cappedCrowdSale.dl] Iteration#41 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#42 ProgramBeforeBMC:
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+[cappedCrowdSale.dl] Iteration#42 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[cappedCrowdSale.dl] Iteration#42 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(19),address(19),43855) [msgSender: 5, value: 0]
+[2] recv_mint(address(19),80608) [msgSender: 7, value: 0]
+[3] recv_mint(address(18),19148) [msgSender: 19, value: 0]
+[4] recv_transferFrom(address(18),address(19),address(19),43854) [msgSender: 19, value: 0]
+[cappedCrowdSale.dl] Iteration#42 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#42 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,allowance(o,r,allowance_x2_1),allowance_x2_1>0,n<=allowance_x2_2,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#42 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#43 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,allowance(o,r,allowance_x2_1),allowance_x2_1>0,n<=allowance_x2_2,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#43 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#43 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(23),address(23),95760) [msgSender: 5, value: 0]
+[2] recv_mint(address(22),22527) [msgSender: 6, value: 0]
+[3] recv_transferFrom(address(23),address(23),address(23),22526) [msgSender: 23, value: 0]
+[4] recv_increaseAllowance(address(22),address(23),50704) [msgSender: 23, value: 0]
+[5] recv_transferFrom(address(22),address(23),address(23),73232) [msgSender: 23, value: 0]
+[cappedCrowdSale.dl] Iteration#43 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#43 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,balanceOf(o,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#43 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#44 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- n>0,balanceOf(o,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#44 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=4
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=4
+[cappedCrowdSale.dl] Iteration#44 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 8, value: 0]
+[1] recv_mint(address(17),1) [msgSender: 8, value: 0]
+[2] recv_increaseAllowance(address(17),address(18),28730) [msgSender: 18, value: 0]
+[3] recv_mint(address(21),10608) [msgSender: 18, value: 0]
+[4] recv_transferFrom(address(21),address(17),address(18),3375) [msgSender: 18, value: 0]
+[cappedCrowdSale.dl] Iteration#44 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#44 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance_x2_1>0,n<=allowance_x2_2,allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#44 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#45 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance_x2_1>0,n<=allowance_x2_2,allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n).
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#45 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[cappedCrowdSale.dl] Iteration#45 Counterexample:
+Trace:
+[0] constructor(1,0) [msgSender: 5, value: 0]
+[1] recv_mint(address(32),40187) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(25),address(25),119777) [msgSender: 25, value: 0]
+[3] recv_mint(address(25),40186) [msgSender: 25, value: 0]
+[4] recv_increaseAllowance(address(32),address(25),79590) [msgSender: 25, value: 0]
+[5] recv_transferFrom(address(32),address(25),address(25),76879) [msgSender: 25, value: 0]
+[cappedCrowdSale.dl] Iteration#45 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[cappedCrowdSale.dl] Iteration#45 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#45 SynthesisResult: updated
+[cappedCrowdSale.dl] Iteration#46 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[cappedCrowdSale.dl] Iteration#46 BMCInput: bound=5, violationRules=buyAfterFinalize,finalizeNotByOwner,illegalFinalization,negativeAllowance,negativeBalance,raisedAboveCap
+[BMC] TransitionSystemReady: program=CappedCrowdSale
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=raisedAboveCap, formula=(and (= raised kv_r) (= cap kv_c) (not (<= kv_r kv_c)))
+[BMC] TemporalSpec(state): rule=illegalFinalization, formula=(and onceFinalize (= raised kv_r) (= cap kv_c) (not (<= kv_c kv_r)))
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=finalizeNotByOwner, formula=(and (or (= recv_finalize0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=finalizeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=finalizeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=finalizeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=finalizeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=raisedAboveCap, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalFinalization, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[cappedCrowdSale.dl] Iteration#46 BMCResult: no-counterexample
+[cappedCrowdSale.dl] BenchmarkEnd: reason=sat, totalTimeMs=44260, bmcTimeMs=15197, cegisIterations=46, finalRules=
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+finalize() :- msgSender(s),0!=end_time,owner(o),end(end_time),s==o,recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.

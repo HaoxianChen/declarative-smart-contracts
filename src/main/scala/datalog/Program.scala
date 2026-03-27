@@ -25,6 +25,21 @@ case class Variable(_type: Type, name: String) extends Parameter {
   def setType(newType: Type): Variable = this.copy(_type=newType)
 }
 
+sealed trait FieldConstraint {
+  override def toString: String = this match {
+    case FieldNonZero     => "<> 0"
+    case FieldPositive    => "> 0"
+    case FieldZero        => "== 0"
+    case FieldNonNegative => ">= 0"
+  }
+}
+case object FieldNonZero extends FieldConstraint
+case object FieldPositive extends FieldConstraint
+case object FieldZero extends FieldConstraint
+case object FieldNonNegative extends FieldConstraint
+
+case class SchemaField(name: String, typeName: String, constraints: List[FieldConstraint] = Nil)
+
 sealed abstract class Relation {
   def name: String
   def sig: List[Type]
@@ -137,9 +152,16 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
                    violations: Set[Relation],
                    /** User-defined function relations declared via `.udf` (treated as external calls). */
                    udfs: Set[Relation] = Set(),
+                   relationFieldConstraints: Map[String, List[List[FieldConstraint]]] = Map.empty,
                    name: String = "Contract0") {
   val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation) ++ interfaces.map(_.relation)
   val violationRules: Set[Rule] = rules.filter(r => violations.contains(r.head.relation))
+
+  def fieldConstraints(relation: Relation): List[List[FieldConstraint]] =
+    relationFieldConstraints.getOrElse(relation.name, List.fill(relation.arity)(Nil))
+
+  def fieldConstraints(relationName: String, arity: Int): List[List[FieldConstraint]] =
+    relationFieldConstraints.getOrElse(relationName, List.fill(arity)(Nil))
 
   override def toString: String = {
     var ret: String = s""

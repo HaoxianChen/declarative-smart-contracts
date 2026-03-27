@@ -1,0 +1,1577 @@
+[Audit] BenchmarkStart: name=shib.dl, benchDir=synthesis-benchmark/shib
+[Audit] InputSpecFiles: schema=synthesis-benchmark/shib/schema.dl, rules=synthesis-benchmark/shib/rules.dl, properties=synthesis-benchmark/shib/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/shib.dl, stats=synthesis-output/synthesis_stats.csv
+[shib.dl] BenchmarkStart: program=Shib, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[shib.dl] SeededPredicatesFromTxProperties: Map(mint(p,n) :- recv_mint(p,n). -> Set(Predicate(context: tx: recv_mint(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)), burn(p,n) :- recv_burn(p,n). -> Set(Predicate(context: tx: recv_burn(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[shib.dl] InitialTransactionRules:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#0 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#0 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[shib.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_burn(address(6),1) [msgSender: 3, value: 0]
+[shib.dl] Iteration#0 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[shib.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=burn
+[shib.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[shib.dl] Iteration#1 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#1 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[shib.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(6),-1) [msgSender: 2, value: 0]
+[shib.dl] Iteration#1 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[shib.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#1 SynthesisResult: updated
+[shib.dl] Iteration#2 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#2 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[shib.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_burnFrom(address(4),address(4),1) [msgSender: 0, value: 0]
+[shib.dl] Iteration#2 RestrictedSolveStatus: relation=recv_burnFrom, status=UNSAT
+[shib.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=burnFrom
+[shib.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[shib.dl] Iteration#3 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#3 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[shib.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_transferFrom(address(2),address(2),address(3),1) [msgSender: 0, value: 0]
+[shib.dl] Iteration#3 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[shib.dl] Iteration#3 FallbackToFull: reason=UNSAT, relations=transferFrom
+[shib.dl] Iteration#3 ProgramAfterFallbackSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#3 SynthesisResult: updated-by-fallback
+[shib.dl] Iteration#4 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#4 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[shib.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(3),address(4),-1) [msgSender: 0, value: 0]
+[shib.dl] Iteration#4 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[shib.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#4 SynthesisResult: updated
+[shib.dl] Iteration#5 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#5 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[shib.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(10),31675) [msgSender: 2, value: 0]
+[2] recv_burnFrom(address(10),address(10),107527) [msgSender: 0, value: 0]
+[shib.dl] Iteration#5 RestrictedSolveStatus: relation=recv_burnFrom, status=SAT
+[shib.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#5 SynthesisResult: updated
+[shib.dl] Iteration#6 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),owner(o),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1,s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#6 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[shib.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_mint(address(0),66902) [msgSender: 0, value: 0]
+[2] recv_burn(address(9),66901) [msgSender: 0, value: 0]
+[shib.dl] Iteration#6 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[shib.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),balanceOf(p,balanceOf_x1),balanceOf_x1>0,owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#6 SynthesisResult: updated
+[shib.dl] Iteration#7 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),balanceOf(p,balanceOf_x1),balanceOf_x1>0,owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#7 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[shib.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_mint(address(14),2) [msgSender: 10, value: 0]
+[2] recv_burn(address(14),3) [msgSender: 10, value: 0]
+[shib.dl] Iteration#7 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[shib.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),n==balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#7 SynthesisResult: updated
+[shib.dl] Iteration#8 ProgramBeforeBMC:
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- msgSender(s),n==balanceOf_x1,msgSender(msgSender),owner(o),balanceOf(msgSender,balanceOf_x1),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#8 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[shib.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_mint(address(7),26534) [msgSender: 7, value: 0]
+[2] recv_burn(address(9),26534) [msgSender: 7, value: 0]
+[shib.dl] Iteration#8 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[shib.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#8 SynthesisResult: updated
+[shib.dl] Iteration#9 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#9 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(8),address(8),977) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(8),address(8),address(7),32528) [msgSender: 8, value: 0]
+[shib.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#9 SynthesisResult: updated
+[shib.dl] Iteration#10 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#10 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(6),address(6),1) [msgSender: 5, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(7),1) [msgSender: 8, value: 0]
+[shib.dl] Iteration#10 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#10 SynthesisResult: updated
+[shib.dl] Iteration#11 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#11 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(11),address(11),59969) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(11),address(11),address(10),59968) [msgSender: 11, value: 0]
+[shib.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#11 SynthesisResult: updated
+[shib.dl] Iteration#12 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#12 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(3),address(8),1) [msgSender: 4, value: 0]
+[2] recv_transferFrom(address(3),address(3),address(8),38429) [msgSender: 9, value: 0]
+[shib.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#12 SynthesisResult: updated
+[shib.dl] Iteration#13 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[shib.dl] Iteration#13 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(13),7531) [msgSender: 5, value: 0]
+[2] recv_transfer(address(8),address(8),-5178) [msgSender: 9, value: 0]
+[3] recv_transfer(address(8),address(13),-17888) [msgSender: 9, value: 0]
+[shib.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[shib.dl] Iteration#13 ProgramAfterRestrictedSynthesis:
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#13 SynthesisResult: updated
+[shib.dl] Iteration#14 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#14 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_mint(address(10),17412) [msgSender: 10, value: 0]
+[2] recv_transfer(address(6),address(6),22003) [msgSender: 7, value: 0]
+[3] recv_transfer(address(10),address(6),34825) [msgSender: 11, value: 0]
+[shib.dl] Iteration#14 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[shib.dl] Iteration#14 FallbackToFull: reason=UNSAT, relations=transfer
+[shib.dl] Iteration#14 ProgramAfterFallbackSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+[shib.dl] Iteration#14 SynthesisResult: updated-by-fallback
+[shib.dl] Iteration#15 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+[shib.dl] Iteration#15 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(5),4819) [msgSender: 5, value: 0]
+[2] recv_mint(address(7),139672) [msgSender: 5, value: 0]
+[3] recv_burnFrom(address(5),address(7),67249) [msgSender: 6, value: 0]
+[shib.dl] Iteration#15 RestrictedSolveStatus: relation=recv_burnFrom, status=SAT
+[shib.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#15 SynthesisResult: updated
+[shib.dl] Iteration#16 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#16 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_mint(address(10),32610) [msgSender: 0, value: 0]
+[2] recv_mint(address(11),65350) [msgSender: 0, value: 0]
+[3] recv_transfer(address(10),address(11),96103) [msgSender: 11, value: 0]
+[shib.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[shib.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#16 SynthesisResult: updated
+[shib.dl] Iteration#17 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#17 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_mint(address(10),131986) [msgSender: 0, value: 0]
+[2] recv_mint(address(0),163590) [msgSender: 0, value: 0]
+[3] recv_transfer(address(10),address(0),163590) [msgSender: 11, value: 0]
+[shib.dl] Iteration#17 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[shib.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#17 SynthesisResult: updated
+[shib.dl] Iteration#18 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[shib.dl] Iteration#18 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[shib.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(6),295673) [msgSender: 2, value: 0]
+[2] recv_mint(address(11),128178) [msgSender: 2, value: 0]
+[3] recv_transfer(address(11),address(6),295672) [msgSender: 12, value: 0]
+[shib.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[shib.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#18 SynthesisResult: updated
+[shib.dl] Iteration#19 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#19 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[shib.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(14),address(14),76015) [msgSender: 0, value: 0]
+[2] recv_mint(address(0),1) [msgSender: 0, value: 0]
+[3] recv_transferFrom(address(14),address(14),address(14),0) [msgSender: 15, value: 0]
+[4] recv_transferFrom(address(14),address(0),address(14),48917) [msgSender: 15, value: 0]
+[shib.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#19 SynthesisResult: updated
+[shib.dl] Iteration#20 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#20 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[shib.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(0),531118) [msgSender: 2, value: 0]
+[2] recv_mint(address(9),531118) [msgSender: 2, value: 0]
+[3] recv_burnFrom(address(9),address(9),263768) [msgSender: 10, value: 0]
+[4] recv_transferFrom(address(0),address(9),address(0),-531119) [msgSender: 1, value: 0]
+[shib.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#20 SynthesisResult: updated
+[shib.dl] Iteration#21 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#21 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(7),address(9),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(9),address(9),address(7),25984) [msgSender: 8, value: 0]
+[shib.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#21 SynthesisResult: updated
+[shib.dl] Iteration#22 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#22 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[shib.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_mint(address(4),29066) [msgSender: 0, value: 0]
+[2] recv_mint(address(17),29068) [msgSender: 0, value: 0]
+[3] recv_increaseAllowance(address(17),address(17),86029) [msgSender: 18, value: 0]
+[4] recv_transferFrom(address(17),address(4),address(17),70869) [msgSender: 18, value: 0]
+[shib.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#22 SynthesisResult: updated
+[shib.dl] Iteration#23 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#23 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[shib.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(0),1) [msgSender: 5, value: 0]
+[2] recv_mint(address(5),190229) [msgSender: 5, value: 0]
+[3] recv_burnFrom(address(0),address(5),-380459) [msgSender: 1, value: 0]
+[4] recv_transferFrom(address(5),address(0),address(0),190230) [msgSender: 1, value: 0]
+[shib.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#23 SynthesisResult: updated
+[shib.dl] Iteration#24 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#24 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(7),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(8),1) [msgSender: 9, value: 0]
+[shib.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#24 SynthesisResult: updated
+[shib.dl] Iteration#25 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#25 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(6),4685) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(7),1) [msgSender: 8, value: 0]
+[shib.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),0!=allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#25 SynthesisResult: updated
+[shib.dl] Iteration#26 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),0!=allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#26 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[shib.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(2),address(2),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(2),address(2),address(2),18749) [msgSender: 3, value: 0]
+[shib.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,n<allowance_x2_1,recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,allowance(s,r,allowance_x2_1),balanceOf(o,balanceOf_x1_2).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#26 SynthesisResult: updated
+[shib.dl] Iteration#27 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,n<allowance_x2_1,recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,allowance(s,r,allowance_x2_1),balanceOf(o,balanceOf_x1_2).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#27 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[shib.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(3),65454) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(14),address(3),11155) [msgSender: 4, value: 0]
+[3] recv_transferFrom(address(3),address(3),address(14),873) [msgSender: 15, value: 0]
+[shib.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[shib.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#27 SynthesisResult: updated
+[shib.dl] Iteration#28 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[shib.dl] Iteration#28 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint
+[BMC] TransitionSystemReady: program=Shib
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedBurn, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[shib.dl] Iteration#28 BMCResult: no-counterexample
+[shib.dl] BenchmarkEnd: reason=sat, totalTimeMs=16511, bmcTimeMs=4315, cegisIterations=28, finalRules=
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+burnFrom(s,p,n) :- recv_burnFrom(s,p,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.

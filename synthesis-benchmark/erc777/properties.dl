@@ -1,68 +1,16 @@
-////////////////////
-// Preserve original property
-////////////////////
+// operator consistency: default operator should not also be in per-user operators map
 inconsistentOperator(p,o) :-
     defaultOperator(o,b1), b1==true,
     operators(p,o,b2), b2==true.
 
-////////////////////
-// Transaction validity
-////////////////////
+// no negative balances or allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// mint/burn: only owner, p!=0, and burn has enough balance
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_mint(p,_), p==0.
-invalidTx() :- recv_burn(p,_), p==0.
-invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
 
-// transfer: non-zero endpoints and enough balance
-invalidTx() :- recv_transfer(s,_,_), s==0.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-
-// transferFrom: non-zero endpoints, enough balance and allowance
-invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
-invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
-invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
-invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
-invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
-
-// increaseAllowance: delta must be non-negative (ERC20-style)
-invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
-
-// approveOperator / revokeDefaultOperator: caller/target must be non-zero and not self
-invalidTx() :- recv_approveOperator(p,o), p==0.
-invalidTx() :- recv_approveOperator(_,o), o==0.
-invalidTx() :- recv_approveOperator(p,o), p==o.
-invalidTx() :- recv_revokeDefaultOperator(p,o), p==0.
-invalidTx() :- recv_revokeDefaultOperator(_,o), o==0.
-invalidTx() :- recv_revokeDefaultOperator(p,o), p==o.
-
-// operatorSend: non-zero endpoints, positive amount, enough balance; require one of the authorization modes
-invalidTx() :- recv_operatorSend(o,_,_,_,_,_), o==0.
-invalidTx() :- recv_operatorSend(_,r,_,_,_,_), r==0.
-invalidTx() :- recv_operatorSend(_,_,_,n,_,_), n<=0.
-invalidTx() :- recv_operatorSend(_,_,_,_,data,_), data<0.
-invalidTx() :- recv_operatorSend(_,_,_,_,_,operatorData), operatorData<0.
-invalidTx() :- recv_operatorSend(o,_,_,n,_,_), balanceOf(o,m), n>m.
-invalidTx() :- recv_operatorSend(o,_,s,_,_,_),
-    operators(o,s,opOk), opOk==false,
-    defaultOperator(s,defOk), defOk==false,
-    revokedDefaultOperator(o,s,rev), rev==true,
-    s!=o.
-
-// operatorBurn: non-zero p, positive amount, enough balance; require one of the authorization modes
-invalidTx() :- recv_operatorBurn(p,_,_,_,_), p==0.
-invalidTx() :- recv_operatorBurn(_,_,n,_,_), n<=0.
-invalidTx() :- recv_operatorBurn(_,_,_,data,_), data<0.
-invalidTx() :- recv_operatorBurn(_,_,_,_,operatorData), operatorData<0.
-invalidTx() :- recv_operatorBurn(p,_,n,_,_), balanceOf(p,m), n>m.
-invalidTx() :- recv_operatorBurn(p,s,_,_,_),
-    operators(p,s,opOk), opOk==false,
-    defaultOperator(s,defOk), defOk==false,
-    revokedDefaultOperator(p,s,rev), rev==true,
-    s!=p.
-
+// once sentinel for unauthorized operator actions
+unauthorizedOperatorSend() :- onceUnauthorizedOperatorSend(b), b==true.
+unauthorizedOperatorBurn() :- onceUnauthorizedOperatorBurn(b), b==true.

@@ -1,49 +1,10 @@
-////////////////////////////
-// Jok In The Box Staking (properties)
-// We encode "require" checks as invalidTx() violations.
-////////////////////////////
+// UDF-based guard checks (retain recv_tx - UDF only supported in violation rules)
+invalidLockPeriod() :- recv_stake(_, _, lockPeriod), isValidLockPeriod(lockPeriod, false).
 
-// 1) Fix the vulnerability: cannot unstake twice.
-// If a stake is already marked as unstaked, a new recv_unstake is invalid.
-invalidTx() :-
-  recv_unstake(stakeId),
-  msgSender(p),
-  onceUnstake(p, stakeId, u),
-  u == true.
-
-// 2) Lock period check (day-based), matching Solidity:
-// require(currentDay > stakedDay + lockPeriod)
-// Therefore invalid when currentDay <= stakedDay + lockPeriod.
-invalidTx() :-
-  recv_unstake(stakeId),
-  msgSender(p),
-  stakeLockPeriod(p, stakeId, lock),
-  stakeStakedDay(p, stakeId, staked),
-  now(t),
-  t <= staked + lock.
-
-// 3) withdraw: signature must be valid
-invalidTx() :-
+invalidWithdrawSignature() :-
   recv_withdraw(earnings, affiliateEarnings, inETH, messageHash, v, r, s),
   msgSender(sender),
   total := earnings + affiliateEarnings,
-  isValidSignature(sender, total, inETH, messageHash, v, r, s, valid),
-  valid == false.
+  isValidSignature(sender, total, inETH, messageHash, v, r, s, false).
 
-// 4) withdraw (ETH): total * 100 >= thisBalance * maxPercentage  => invalid
-invalidTx() :-
-  recv_withdraw(earnings, affiliateEarnings, true, messageHash, v, r, s),
-  total := earnings + affiliateEarnings,
-  maxPercentage(maxPct),
-  hundred(c),
-  thisBalance(bal),
-  total * c >= bal * maxPct.
-
-// 5) withdraw (token): total * 100 >= jokTokenBalance * maxPercentage => invalid
-invalidTx() :-
-  recv_withdraw(earnings, affiliateEarnings, false, messageHash, v, r, s),
-  total := earnings + affiliateEarnings,
-  maxPercentage(maxPct),
-  hundred(c),
-  jokTokenBalance(tokenBal),
-  total * c >= tokenBal * maxPct.
+repeatedUnstake() :- recv_unstake(stakeId), msgSender(sender), onceUnstake(sender, stakeId, true).

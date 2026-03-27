@@ -1,0 +1,305 @@
+[Audit] BenchmarkStart: name=crowdFunding.dl, benchDir=synthesis-benchmark/crowdFunding
+[Audit] InputSpecFiles: schema=synthesis-benchmark/crowdFunding/schema.dl, rules=synthesis-benchmark/crowdFunding/rules.dl, properties=synthesis-benchmark/crowdFunding/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/crowdFunding/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/crowdFunding.dl, stats=synthesis-output/synthesis_stats.csv
+[crowdFunding.dl] BenchmarkStart: program=CrowdFunding, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[crowdFunding.dl] SeededPredicatesFromTxProperties: Map(close() :- recv_close(). -> Set(Predicate(context: tx: recv_close(), bindings: [owner(o), msgSender(s)], functor: s==o)), withdraw(p,r) :- recv_withdraw(p,r). -> Set(Predicate(context: tx: recv_withdraw(p,_), bindings: [beneficiary(b)], functor: p==b)))
+[crowdFunding.dl] InitialTransactionRules:
+refund(p,n) :- recv_refund(p,n).
+withdraw(p,r) :- recv_withdraw(p,r),beneficiary(b),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#0 ProgramBeforeBMC:
+refund(p,n) :- recv_refund(p,n).
+withdraw(p,r) :- recv_withdraw(p,r),beneficiary(b),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#0 BMCInput: bound=5, violationRules=closeNotByOwner,illegalRefund,investAfterClose,missingFund,negativeBalance,refundAndWithdraw,refundBeforeClose,withdrawBeforeTarget,withdrawNotByBeneficiary
+[BMC] TransitionSystemReady: program=CrowdFunding
+[BMC] TemporalSpec(state): rule=missingFund, formula=(and (= totalBalance kv_m)
+     (= raised kv_r)
+     (= closed kv_b)
+     (not (= kv_m kv_r))
+     (not kv_b))
+[BMC] TemporalSpec(state): rule=withdrawBeforeTarget, formula=(and (= onceWithdrawBeforeTarget kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=illegalRefund, formula=(and onceRefund (= raised kv_r) (= target kv_t) (>= kv_r kv_t))
+[BMC] TemporalSpec(state): rule=refundBeforeClose, formula=(and (= onceRefundBeforeClose kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=refundAndWithdraw, formula=(and onceWithdraw onceRefund)
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select investTotal kv_p) kv_i)
+     (select investTotal__exists kv_p)
+     (= (select refundTotal kv_p) kv_r)
+     (select refundTotal__exists kv_p)
+     (not (<= kv_r kv_i)))
+[BMC] TemporalSpec(state): rule=investAfterClose, formula=(and (= onceInvestAfterClose kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=closeNotByOwner, formula=(and (or (= recv_close0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=withdrawNotByBeneficiary, formula=(and (or (= recv_withdraw0 1)) (= beneficiary kv_b) (not (= i0_p kv_b)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=missingFund, k=1
+[BMC] CounterexampleReturned: rule=missingFund, k=1
+[crowdFunding.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(1,address(0)) [msgSender: 3, value: 0]
+[1] recv_refund(address(2),1) [msgSender: 3, value: 0]
+[crowdFunding.dl] Iteration#0 RestrictedSolveStatus: relation=recv_refund, status=UNSAT
+[crowdFunding.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=refund
+[crowdFunding.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- recv_withdraw(p,r),beneficiary(b),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[crowdFunding.dl] Iteration#1 ProgramBeforeBMC:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- recv_withdraw(p,r),beneficiary(b),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#1 BMCInput: bound=5, violationRules=closeNotByOwner,illegalRefund,investAfterClose,missingFund,negativeBalance,refundAndWithdraw,refundBeforeClose,withdrawBeforeTarget,withdrawNotByBeneficiary
+[BMC] TransitionSystemReady: program=CrowdFunding
+[BMC] TemporalSpec(state): rule=missingFund, formula=(and (= totalBalance kv_m)
+     (= raised kv_r)
+     (= closed kv_b)
+     (not (= kv_m kv_r))
+     (not kv_b))
+[BMC] TemporalSpec(state): rule=withdrawBeforeTarget, formula=(and (= onceWithdrawBeforeTarget kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=illegalRefund, formula=(and onceRefund (= raised kv_r) (= target kv_t) (>= kv_r kv_t))
+[BMC] TemporalSpec(state): rule=refundBeforeClose, formula=(and (= onceRefundBeforeClose kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=refundAndWithdraw, formula=(and onceWithdraw onceRefund)
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select investTotal kv_p) kv_i)
+     (select investTotal__exists kv_p)
+     (= (select refundTotal kv_p) kv_r)
+     (select refundTotal__exists kv_p)
+     (not (<= kv_r kv_i)))
+[BMC] TemporalSpec(state): rule=investAfterClose, formula=(and (= onceInvestAfterClose kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=closeNotByOwner, formula=(and (or (= recv_close0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=withdrawNotByBeneficiary, formula=(and (or (= recv_withdraw0 1)) (= beneficiary kv_b) (not (= i0_p kv_b)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=withdrawBeforeTarget, k=1
+[BMC] CounterexampleReturned: rule=withdrawBeforeTarget, k=1
+[crowdFunding.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor(1,address(0)) [msgSender: 0, value: 0]
+[1] recv_withdraw(address(0),0) [msgSender: 0, value: 0]
+[crowdFunding.dl] Iteration#1 RestrictedSolveStatus: relation=recv_withdraw, status=UNSAT
+[crowdFunding.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=withdraw
+[crowdFunding.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- beneficiary(b),closed(closed_b),closed_b==true,recv_withdraw(p,r),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[crowdFunding.dl] Iteration#2 ProgramBeforeBMC:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- beneficiary(b),closed(closed_b),closed_b==true,recv_withdraw(p,r),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#2 BMCInput: bound=5, violationRules=closeNotByOwner,illegalRefund,investAfterClose,missingFund,negativeBalance,refundAndWithdraw,refundBeforeClose,withdrawBeforeTarget,withdrawNotByBeneficiary
+[BMC] TransitionSystemReady: program=CrowdFunding
+[BMC] TemporalSpec(state): rule=missingFund, formula=(and (= totalBalance kv_m)
+     (= raised kv_r)
+     (= closed kv_b)
+     (not (= kv_m kv_r))
+     (not kv_b))
+[BMC] TemporalSpec(state): rule=withdrawBeforeTarget, formula=(and (= onceWithdrawBeforeTarget kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=illegalRefund, formula=(and onceRefund (= raised kv_r) (= target kv_t) (>= kv_r kv_t))
+[BMC] TemporalSpec(state): rule=refundBeforeClose, formula=(and (= onceRefundBeforeClose kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=refundAndWithdraw, formula=(and onceWithdraw onceRefund)
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select investTotal kv_p) kv_i)
+     (select investTotal__exists kv_p)
+     (= (select refundTotal kv_p) kv_r)
+     (select refundTotal__exists kv_p)
+     (not (<= kv_r kv_i)))
+[BMC] TemporalSpec(state): rule=investAfterClose, formula=(and (= onceInvestAfterClose kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=closeNotByOwner, formula=(and (or (= recv_close0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=withdrawNotByBeneficiary, formula=(and (or (= recv_withdraw0 1)) (= beneficiary kv_b) (not (= i0_p kv_b)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=withdrawBeforeTarget, k=2
+[BMC] CounterexampleReturned: rule=withdrawBeforeTarget, k=2
+[crowdFunding.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor(1,address(0)) [msgSender: 0, value: 0]
+[1] recv_close() [msgSender: 0, value: 0]
+[2] recv_withdraw(address(0),0) [msgSender: 0, value: 0]
+[crowdFunding.dl] Iteration#2 RestrictedSolveStatus: relation=recv_withdraw, status=SAT
+[crowdFunding.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- beneficiary(b),target(target_x),target_x==raised_x,raised(raised_x),recv_withdraw(p,r),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#2 SynthesisResult: updated
+[crowdFunding.dl] Iteration#3 ProgramBeforeBMC:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+withdraw(p,r) :- beneficiary(b),target(target_x),target_x==raised_x,raised(raised_x),recv_withdraw(p,r),p==b.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+invest(p,n) :- recv_invest(p,n).
+[crowdFunding.dl] Iteration#3 BMCInput: bound=5, violationRules=closeNotByOwner,illegalRefund,investAfterClose,missingFund,negativeBalance,refundAndWithdraw,refundBeforeClose,withdrawBeforeTarget,withdrawNotByBeneficiary
+[BMC] TransitionSystemReady: program=CrowdFunding
+[BMC] TemporalSpec(state): rule=missingFund, formula=(and (= totalBalance kv_m)
+     (= raised kv_r)
+     (= closed kv_b)
+     (not (= kv_m kv_r))
+     (not kv_b))
+[BMC] TemporalSpec(state): rule=withdrawBeforeTarget, formula=(and (= onceWithdrawBeforeTarget kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=illegalRefund, formula=(and onceRefund (= raised kv_r) (= target kv_t) (>= kv_r kv_t))
+[BMC] TemporalSpec(state): rule=refundBeforeClose, formula=(and (= onceRefundBeforeClose kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=refundAndWithdraw, formula=(and onceWithdraw onceRefund)
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select investTotal kv_p) kv_i)
+     (select investTotal__exists kv_p)
+     (= (select refundTotal kv_p) kv_r)
+     (select refundTotal__exists kv_p)
+     (not (<= kv_r kv_i)))
+[BMC] TemporalSpec(state): rule=investAfterClose, formula=(and (= onceInvestAfterClose kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=closeNotByOwner, formula=(and (or (= recv_close0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=withdrawNotByBeneficiary, formula=(and (or (= recv_withdraw0 1)) (= beneficiary kv_b) (not (= i0_p kv_b)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=investAfterClose, k=2
+[BMC] CounterexampleReturned: rule=investAfterClose, k=2
+[crowdFunding.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor(0,address(0)) [msgSender: 0, value: 0]
+[1] recv_close() [msgSender: 0, value: 0]
+[2] recv_invest(address(0),0) [msgSender: 0, value: 0]
+[crowdFunding.dl] Iteration#3 RestrictedSolveStatus: relation=recv_invest, status=UNSAT
+[crowdFunding.dl] Iteration#3 FallbackToFull: reason=UNSAT, relations=invest
+[crowdFunding.dl] Iteration#3 ProgramAfterFallbackSynthesis:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+invest(p,n) :- recv_invest(p,n),closed(closed_b),closed_b==false.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+withdraw(p,r) :- target(target_x),raised(raised_x),target_x<raised_x,beneficiary(b),recv_withdraw(p,r),p==b.
+[crowdFunding.dl] Iteration#3 SynthesisResult: updated-by-fallback
+[crowdFunding.dl] Iteration#4 ProgramBeforeBMC:
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+invest(p,n) :- recv_invest(p,n),closed(closed_b),closed_b==false.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+withdraw(p,r) :- target(target_x),raised(raised_x),target_x<raised_x,beneficiary(b),recv_withdraw(p,r),p==b.
+[crowdFunding.dl] Iteration#4 BMCInput: bound=5, violationRules=closeNotByOwner,illegalRefund,investAfterClose,missingFund,negativeBalance,refundAndWithdraw,refundBeforeClose,withdrawBeforeTarget,withdrawNotByBeneficiary
+[BMC] TransitionSystemReady: program=CrowdFunding
+[BMC] TemporalSpec(state): rule=missingFund, formula=(and (= totalBalance kv_m)
+     (= raised kv_r)
+     (= closed kv_b)
+     (not (= kv_m kv_r))
+     (not kv_b))
+[BMC] TemporalSpec(state): rule=withdrawBeforeTarget, formula=(and (= onceWithdrawBeforeTarget kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=illegalRefund, formula=(and onceRefund (= raised kv_r) (= target kv_t) (>= kv_r kv_t))
+[BMC] TemporalSpec(state): rule=refundBeforeClose, formula=(and (= onceRefundBeforeClose kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=refundAndWithdraw, formula=(and onceWithdraw onceRefund)
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select investTotal kv_p) kv_i)
+     (select investTotal__exists kv_p)
+     (= (select refundTotal kv_p) kv_r)
+     (select refundTotal__exists kv_p)
+     (not (<= kv_r kv_i)))
+[BMC] TemporalSpec(state): rule=investAfterClose, formula=(and (= onceInvestAfterClose kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=closeNotByOwner, formula=(and (or (= recv_close0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=withdrawNotByBeneficiary, formula=(and (or (= recv_withdraw0 1)) (= beneficiary kv_b) (not (= i0_p kv_b)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=withdrawNotByBeneficiary, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=closeNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=missingFund, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawBeforeTarget, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalRefund, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundBeforeClose, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=refundAndWithdraw, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=investAfterClose, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[crowdFunding.dl] Iteration#4 BMCResult: no-counterexample
+[crowdFunding.dl] BenchmarkEnd: reason=sat, totalTimeMs=858, bmcTimeMs=318, cegisIterations=4, finalRules=
+refund(p,n) :- recv_refund(p,n),closed(closed_b),closed_b==true.
+invest(p,n) :- recv_invest(p,n),closed(closed_b),closed_b==false.
+close() :- recv_close(),owner(o),msgSender(s),s==o.
+withdraw(p,r) :- target(target_x),raised(raised_x),target_x<raised_x,beneficiary(b),recv_withdraw(p,r),p==b.

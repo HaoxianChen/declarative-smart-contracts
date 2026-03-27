@@ -3,6 +3,7 @@ package imp
 import datalog._
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
+import util.SolcAst.UdfAstInfo
 import view.View
 import viewMaterializer.BaseViewMaterializer
 
@@ -29,7 +30,7 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
                               monitorViolation: Boolean,
                               enableProjection: Boolean,
                               /** Optional UDF integration: (importPath, baseContractName). */
-                              udfInfoOpt: Option[(String, String)] = None)
+                              udfInfoOpt: Option[(String, UdfAstInfo)] = None)
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -62,6 +63,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private val dependentFunctions: Map[Relation, Set[FunctionHelper]] = functionHelpers.values.toSet.groupBy(_.inRel)
 
   private val violationHelper = ViolationHelper(violations, program.indices)
+  private val udfAstInfoOpt: Option[UdfAstInfo] = udfInfoOpt.map(_._2)
+  private val udfOwnedRelations: Set[String] = udfAstInfoOpt.map(_.ownedRelationNames).getOrElse(Set.empty)
+  private val externalUdfFunctions: Set[String] = udfAstInfoOpt.map(_.externalFunctions).getOrElse(Set.empty)
 
   private val tupleTypes :Map[Relation, Type] = {
     relations.filterNot(_.name.startsWith(transactionRelationPrefix)).diff(Relation.reservedRelations)
@@ -94,10 +98,10 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
     val simplified = simplifier.simplify(definitions)
     udfInfoOpt match {
-      case Some((importPath, baseName)) =>
+      case Some((importPath, udfAstInfo)) =>
         // Avoid changing DeclContract signature: encode inheritance in the name string.
         // This is safe for codegen and keeps the rest of the pipeline (e.g., Inliner) working.
-        Statement.makeSeq(Import(importPath), DeclContract(s"$name is $baseName", simplified))
+        Statement.makeSeq(Import(importPath), DeclContract(s"$name is ${udfAstInfo.baseContractName}", simplified))
       case None =>
         DeclContract(name, simplified)
     }
@@ -126,17 +130,19 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private def getRelationDeclarations(): Statement = {
     var stmt: Statement = Empty()
     for (rel <- materializedRelations) {
-      rel match {
-        case _: SingletonRelation => {
-          val declRelation = DeclVariable(rel.name, getStructType(rel))
-          stmt = Statement.makeSeq(stmt, declRelation)
+      if (!udfOwnedRelations.contains(rel.name)) {
+        rel match {
+          case _: SingletonRelation => {
+            val declRelation = DeclVariable(rel.name, getStructType(rel))
+            stmt = Statement.makeSeq(stmt, declRelation)
+          }
+          case sr: SimpleRelation => {
+            val mapType = dataStructureHelper(sr)._type
+            val declRelation = DeclVariable(rel.name, mapType)
+            stmt = Statement.makeSeq(stmt, declRelation)
+          }
+          case _: ReservedRelation => Empty()
         }
-        case sr: SimpleRelation => {
-          val mapType = dataStructureHelper(sr)._type
-          val declRelation = DeclVariable(rel.name, mapType)
-          stmt = Statement.makeSeq(stmt, declRelation)
-        }
-        case _: ReservedRelation => Empty()
       }
     }
     stmt = if (monitorViolation) {
@@ -152,7 +158,9 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   private def makeStructDefinitions(): Statement = {
     val tupleStructDefs  = tupleTypes.map{
       case (rel, _type)=> _type match {
-        case st: StructType => if (materializedRelations.contains(rel)) DefineStruct(getStructName(rel), st) else Empty()
+        case st: StructType =>
+          if (materializedRelations.contains(rel) && !udfOwnedRelations.contains(rel.name)) DefineStruct(getStructName(rel), st)
+          else Empty()
         case _ => Empty()
       }
     }.toList
@@ -179,6 +187,12 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
     case u: UpdateStatement => translateUpdateStatement(u)
     case UpdateDependentRelations(u) => getCallDependentFunctionsStatement(u)
     case query: Query => ???
+    case Call(functionName, params, optReturnVar) if externalUdfFunctions.contains(functionName) =>
+      val paramStrs = params.map {
+        case v: Variable => v.name
+        case c: Constant => s"${c._type}(${c.name})"
+      }
+      CallObjectMethod("this", functionName, paramStrs, optReturnVar)
     case _:Empty|_:imp.Assign|_:GroundVar|_:ReadTuple|_:SolidityStatement => statement
   }
 

@@ -1,6 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner, SolidityTranslator, Translator}
-import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
+import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, ForbiddenSpec, InductiveSynthesis, Interpreter, Predicate, VerboseLogSink}
 import util.Misc
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames, combineSplitFilesToFile, parseProgramFromSplitDir, parseAllProgramsFromSplitParent}
 import util.SolcAst
@@ -81,6 +81,26 @@ object Main extends App {
     }
   }
 
+  private def parseOptionalFlagArgs(list: List[String], knownFlags: Set[String]): Map[String, String] = list match {
+    case Nil => Map.empty
+    case flag :: value :: tail if knownFlags.contains(flag) =>
+      parseOptionalFlagArgs(tail, knownFlags) + (flag -> value)
+    case flag :: Nil if knownFlags.contains(flag) =>
+      throw new IllegalArgumentException(s"Missing value for option: $flag")
+    case unknown :: _ =>
+      throw new IllegalArgumentException(s"Unknown option: $unknown")
+  }
+
+  private def loadForbiddenSpec(pathOpt: Option[String]): ForbiddenSpec = {
+    pathOpt match {
+      case Some(path) =>
+        println(s"[forbid] Loading forbidden predicate config: $path")
+        ForbiddenSpec.fromJsonFile(path)
+      case None =>
+        ForbiddenSpec.empty
+    }
+  }
+
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
           consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
           arithmeticOptimization: Boolean = true): Unit = {
@@ -95,13 +115,13 @@ object Main extends App {
     }
 
     // --- Optional UDF integration for `compile`/`compile-all-*` paths ---
-    val udfInfoOpt: Option[(String, String)] = {
+    val udfInfoOpt: Option[(String, SolcAst.UdfAstInfo)] = {
       if (dl.udfs.nonEmpty) {
         val udfPath = resolveUdfPath(filepath, f, dl)
         if (!isFileExists(udfPath)) {
           throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
         }
-        val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
+        val (udfAstInfo, errors) = SolcAst.checkUdfsAgainstUdfSol(dl, udfPath)
         if (errors.nonEmpty) {
           val msg = errors.mkString("\n  - ", "\n  - ", "\n")
           throw new Exception(s"udf.sol AST check failed:$msg")
@@ -109,7 +129,7 @@ object Main extends App {
         val outUdfFileName = s"${filename}_udf.sol"
         val outUdfPath = Paths.get(outDir, outUdfFileName).toString
         Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
-        Some((s"./$outUdfFileName", baseContractName))
+        Some((s"./$outUdfFileName", udfAstInfo))
       } else None
     }
 
@@ -171,7 +191,8 @@ object Main extends App {
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true,
       enableProjection = true, monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
-    val verifier = new Verifier(dl, imperative)
+    // Single-file benchmarks do not carry a udf.sol path; Verifier falls back to UF semantics.
+    val verifier = new Verifier(dl, imperative, udfSolPath = "")
     verifier.check()
   }
 
@@ -251,7 +272,7 @@ object Main extends App {
     val filepath = args(1)
     val f = new File(filepath)
     val dl = if (f.exists() && f.isDirectory) parseProgramFromSplitDir(filepath) else parseProgram(filepath)
-    if (dl.udfs.nonEmpty) {
+    val effectiveUdfPath: String = if (dl.udfs.nonEmpty) {
       val udfPath = resolveUdfPath(filepath, f, dl)
       if (!isFileExists(udfPath)) {
         throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
@@ -261,13 +282,14 @@ object Main extends App {
         val msg = errors.mkString("\n  - ", "\n  - ", "\n")
         throw new Exception(s"udf.sol AST check failed:$msg")
       }
-    }
+      udfPath
+    } else ""
     val materializedRelations: Set[Relation] = Set()
     val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
       monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
     // println(imperative)
-    val verifier = new Verifier(dl, imperative)
+    val verifier = new Verifier(dl, imperative, udfSolPath = effectiveUdfPath)
     verifier.check()
 
   }
@@ -289,14 +311,16 @@ object Main extends App {
      *  */
     val datalog_filepath = args(1)
     val program = parseProgram(datalog_filepath)
+    val synthesisOpts = parseOptionalFlagArgs(args.drop(2).toList, Set("--forbid-config"))
+    val forbiddenSpec = loadForbiddenSpec(synthesisOpts.get("--forbid-config"))
     val interpreterContext = synthesis.InterpreterContext.makeContext(program)
     val enumerator = synthesis.PredicateEnumerator(interpreterContext)
-    val candidates = enumerator.enumeratePredicates(program)
+    val candidates = forbiddenSpec.filterCandidateMap(enumerator.enumeratePredicates(program))
     println(s"[synthesis] program: ${program.name}")
     println(s"[synthesis] candidate predicates: ${candidates.size}")
 
     /** Synthesize by adding validation condition */
-    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext, forbiddenSpec)
     val testTrace = EvaluatedTrace.testTrace1(program)
     val synthesisOutput = synthesizer.synthesize(program, List(testTrace),
       maxSolutions = 1, disambiguationTraces = Set())
@@ -304,6 +328,8 @@ object Main extends App {
   }
 
   else if (args(0) == "cegis") {
+    val cegisOpts = parseOptionalFlagArgs(args.tail.toList, Set("--forbid-config"))
+    val forbiddenSpec = loadForbiddenSpec(cegisOpts.get("--forbid-config"))
     val synthesisBenchmarks: List[String] = List(
       // "wallet.dl",
       // "erc20.dl",
@@ -345,7 +371,7 @@ object Main extends App {
           val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
           val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-          val cegis = Cegis(sketch)
+          val cegis = Cegis(sketch, forbiddenSpec = forbiddenSpec)
           val (program, stat) = cegis.run() // Capture both result and stats
 
           println(s"Synthesis output:\n${program}")
@@ -381,6 +407,7 @@ object Main extends App {
     /** Optional flags:
       *   --bench-dir <dir>  (default: synthesis-benchmark)
       *   --out-dir   <dir>  (default: synthesis-output)
+      *   --forbid-config <path>
       *
       * Notes:
       * - When bench-dir is not the default, we run over all subdirectories under bench-dir.
@@ -392,6 +419,7 @@ object Main extends App {
       case Nil => Map.empty
       case "--bench-dir" :: value :: tail => parseSynthesisAllArgs(tail) + ("bench-dir" -> value)
       case "--out-dir" :: value :: tail   => parseSynthesisAllArgs(tail) + ("out-dir" -> value)
+      case "--forbid-config" :: value :: tail => parseSynthesisAllArgs(tail) + ("forbid-config" -> value)
       case unknown :: _ =>
         println(s"Unknown option for synthesis-all: $unknown")
         exit(1)
@@ -436,10 +464,13 @@ object Main extends App {
 
     val test = false
     val opts = parseSynthesisAllArgs(args.tail.toList)
+    val forbiddenSpec = loadForbiddenSpec(opts.get("forbid-config"))
     val synthesisBenchmarkDir = opts.getOrElse("bench-dir", "synthesis-benchmark")
     val datalogOutDir = opts.getOrElse("out-dir", "synthesis-output")
+    val verboseLogDir = Paths.get(datalogOutDir, "verbose-logs").toString
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
     createDirectory(datalogOutDir)
+    createDirectory(verboseLogDir)
     if (!isFileExists(statsFile)) {
       Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
     }
@@ -482,7 +513,41 @@ object Main extends App {
         val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
         val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
 
-        val cegis = Cegis(sketch)
+        // Resolve benchmark directory (used for both udf.sol and per-benchmark forbid.json).
+        val benchDir =
+          if (isSplitBenchmarkDir(synthesisBenchmarkDir)) synthesisBenchmarkDir
+          else Paths.get(synthesisBenchmarkDir, filenameNoExt).toString
+
+        // Per-benchmark forbid.json overrides the global --forbid-config when present.
+        val perBenchForbidPath = Paths.get(benchDir, "forbid.json").toString
+        val effectiveForbidSpec =
+          if (isFileExists(perBenchForbidPath)) ForbiddenSpec.fromJsonFile(perBenchForbidPath)
+          else forbiddenSpec
+
+        val verboseLogPath = Paths.get(verboseLogDir, s"${filenameNoExt}.verbose.log").toString
+        val verboseSink = VerboseLogSink.file(verboseLogPath, truncate = true)
+        val schemaPath = Paths.get(benchDir, "schema.dl").toString
+        val rulesPath = Paths.get(benchDir, "rules.dl").toString
+        val propertiesPath = Paths.get(benchDir, "properties.dl").toString
+        verboseSink.log(s"[Audit] BenchmarkStart: name=$displayName, benchDir=$benchDir")
+        verboseSink.log(s"[Audit] InputSpecFiles: schema=$schemaPath, rules=$rulesPath, properties=$propertiesPath")
+        verboseSink.log(s"[Audit] ForbidConfig: global=${opts.get("forbid-config").getOrElse("<none>")}, perBenchmark=${if (isFileExists(perBenchForbidPath)) perBenchForbidPath else "<none>"}")
+        verboseSink.log(s"[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.")
+        verboseSink.log(s"[Audit] OutputTargets: datalogOut=$datalogOutfile, stats=$statsFile")
+
+        // Resolve udf.sol path before running CEGIS so the BMC Verifier gets semantic constraints.
+        val sketchUdfPath: String = if (sketch.udfs.nonEmpty) {
+          val p = Paths.get(benchDir, "udf.sol").toString
+          if (isFileExists(p)) p else ""
+        } else ""
+
+        val cegis = Cegis(
+          sketch,
+          udfSolPath = sketchUdfPath,
+          forbiddenSpec = effectiveForbidSpec,
+          verboseSink = verboseSink,
+          benchmarkName = displayName
+        )
         val (program, stat) = cegis.run()
 
         println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
@@ -491,17 +556,13 @@ object Main extends App {
         Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
 
         // --- UDF integration (split benchmarks): check udf.sol and prepare import ---
-        val udfInfoOpt: Option[(String, String)] = {
+        val udfInfoOpt: Option[(String, SolcAst.UdfAstInfo)] = {
           if (program.udfs.nonEmpty) {
-            // Determine benchmark directory that produced this program
-            val benchDir =
-              if (isSplitBenchmarkDir(synthesisBenchmarkDir)) synthesisBenchmarkDir
-              else Paths.get(synthesisBenchmarkDir, filenameNoExt).toString
             val udfPath = Paths.get(benchDir, "udf.sol").toString
             if (!isFileExists(udfPath)) {
               throw new Exception(s"Program declares .udf but missing udf.sol at: $udfPath")
             }
-            val (baseContractName, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
+            val (udfAstInfo, errors) = SolcAst.checkUdfsAgainstUdfSol(program, udfPath)
             if (errors.nonEmpty) {
               val msg = errors.mkString("\n  - ", "\n  - ", "\n")
               throw new Exception(s"udf.sol AST check failed:$msg")
@@ -510,7 +571,7 @@ object Main extends App {
             val outUdfFileName = s"${filenameNoExt}_udf.sol"
             val outUdfPath = Paths.get(datalogOutDir, outUdfFileName).toString
             Files.copy(Paths.get(udfPath), Paths.get(outUdfPath), StandardCopyOption.REPLACE_EXISTING)
-            Some((s"./$outUdfFileName", baseContractName))
+            Some((s"./$outUdfFileName", udfAstInfo))
           } else None
         }
 
@@ -539,6 +600,8 @@ object Main extends App {
 
   // New: run synthesis-all over split-program directories
   else if (args(0) == "synthesis-all-split") {
+    val splitOpts = parseOptionalFlagArgs(args.tail.toList, Set("--forbid-config"))
+    val forbiddenSpec = loadForbiddenSpec(splitOpts.get("--forbid-config"))
     val synthesisBenchmarkDir = "synthesis-benchmark"
     val allParsed: Seq[(String, Program)] = parseAllProgramsFromSplitParent(synthesisBenchmarkDir)
     val programsToRun: Seq[(String, Program)] = if (synthesisSplitDirs.nonEmpty) {
@@ -552,7 +615,7 @@ object Main extends App {
 
     for ((name, sketch) <- programsToRun) {
       println(s"Running synthesis on (split): ${name}")
-      val cegis = Cegis(sketch)
+      val cegis = Cegis(sketch, forbiddenSpec = forbiddenSpec)
       cegis.run()
     }
   }
@@ -585,7 +648,7 @@ object Main extends App {
       monitorViolations = false, arithmeticOptimization = true)
     val imperative = impTranslator.translate()
     // println(imperative)
-    val verifier = new Verifier(dl, imperative)
+    val verifier = new Verifier(dl, imperative, udfSolPath = "")
     verifier.traverseExpression()
   }
 

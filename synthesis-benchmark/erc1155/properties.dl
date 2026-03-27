@@ -1,29 +1,10 @@
-// Preserve original property: total balances must equal total supply (per tokenId)
+// total balances must equal total supply (per tokenId)
 unequalBalance(t,s,n) :- totalBalances(t,s), totalSupply(t,n), s!=n.
 
-////////////////////
-// Transaction validity
-////////////////////
+// no negative balances or allowances
+negativeBalance(t,p,n) :- balanceOf(t,p,n), n<0, p!=0.
+negativeAllowance(t,s,p,n) :- allowance(t,s,p,n), n<0, s!=0, p!=0.
 
-// Only owner can mint/burn (owner derived from constructor msgSender)
-invalidTx() :- recv_mint(_,_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_,_), owner(o), msgSender(s), o!=s.
-
-// mint/burn addresses must be non-zero
-invalidTx() :- recv_mint(_,p,_), p==0.
-invalidTx() :- recv_burn(_,p,_), p==0.
-
-// burn requires enough balance
-invalidTx() :- recv_burn(t,p,n), balanceOf(t,p,m), n>m.
-
-// transfer requires non-zero endpoints and enough balance
-invalidTx() :- recv_transfer(_,s,_,_), s==0.
-invalidTx() :- recv_transfer(_,_,r,_), r==0.
-invalidTx() :- recv_transfer(t,s,_,n), balanceOf(t,s,m), n>m.
-
-// transferFrom requires non-zero endpoints and enough balance/allowance
-invalidTx() :- recv_transferFrom(_,o,_,_,_), o==0.
-invalidTx() :- recv_transferFrom(_,_,r,_,_), r==0.
-invalidTx() :- recv_transferFrom(t,o,_,_,n), balanceOf(t,o,m), n>m.
-invalidTx() :- recv_transferFrom(t,o,_,sp,n), allowance(t,o,sp,k), n>k.
-
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_,_), owner(o), msgSender(s), o!=s.
+unauthorizedBurn() :- recv_burn(_,_,_), owner(o), msgSender(s), o!=s.

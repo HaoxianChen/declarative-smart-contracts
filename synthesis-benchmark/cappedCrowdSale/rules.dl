@@ -2,6 +2,7 @@
 owner(s) :- constructor(_,_), msgSender(s).
 totalSupply(0) :- constructor(_,_).
 onceFinalize(false) :- constructor(_,_).
+onceBuyAfterFinalize(false) :- constructor(_,_).
 cap(c) :- constructor(c,_), c>0.
 rate(r) :- constructor(_,r), r>0.
 
@@ -21,9 +22,10 @@ allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 
-mint(p,n) :- buyToken(p,m), rate(r), n:=m*r.
+mint(p,tokens) :- buyToken(p,v), getTokenAmount(v,tokens).
 raised(s) :- s = sum n: buyToken(_,n).
 
 finalized(true) :- finalize().
 onceFinalize(true) :- finalize().
 
+onceBuyAfterFinalize(true) :- buyToken(_,_), onceFinalize(b), b==true.

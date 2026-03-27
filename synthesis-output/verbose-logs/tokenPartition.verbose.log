@@ -1,0 +1,1552 @@
+[Audit] BenchmarkStart: name=tokenPartition.dl, benchDir=synthesis-benchmark/tokenPartition
+[Audit] InputSpecFiles: schema=synthesis-benchmark/tokenPartition/schema.dl, rules=synthesis-benchmark/tokenPartition/rules.dl, properties=synthesis-benchmark/tokenPartition/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/tokenPartition/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/tokenPartition.dl, stats=synthesis-output/synthesis_stats.csv
+[tokenPartition.dl] BenchmarkStart: program=TokenPartition, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[tokenPartition.dl] SeededPredicatesFromTxProperties: Map(redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n). -> Set(Predicate(context: tx: recv_redeemByPartition(_,_,_), bindings: [owner(o), msgSender(s)], functor: s==o)), issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n). -> Set(Predicate(context: tx: recv_issueByPartition(_,_,_), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[tokenPartition.dl] InitialTransactionRules:
+redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n),owner(o),msgSender(s),s==o.
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n),owner(o),msgSender(s),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+[tokenPartition.dl] Iteration#0 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- recv_redeemByPartition(p,q,n),owner(o),msgSender(s),s==o.
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n),owner(o),msgSender(s),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+[tokenPartition.dl] Iteration#0 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[tokenPartition.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_redeemByPartition(address(5),3,1) [msgSender: 5, value: 0]
+[tokenPartition.dl] Iteration#0 RestrictedSolveStatus: relation=recv_redeemByPartition, status=UNSAT
+[tokenPartition.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=redeemByPartition
+[tokenPartition.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n),owner(o),msgSender(s),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[tokenPartition.dl] Iteration#1 ProgramBeforeBMC:
+issueByPartition(p,q,n) :- recv_issueByPartition(p,q,n),owner(o),msgSender(s),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#1 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[tokenPartition.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_issueByPartition(address(6),2,-1) [msgSender: 3, value: 0]
+[tokenPartition.dl] Iteration#1 RestrictedSolveStatus: relation=recv_issueByPartition, status=SAT
+[tokenPartition.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+issueByPartition(p,q,n) :- msgSender(s),recv_issueByPartition(p,q,n),owner(o),0==q,s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#1 SynthesisResult: updated
+[tokenPartition.dl] Iteration#2 ProgramBeforeBMC:
+issueByPartition(p,q,n) :- msgSender(s),recv_issueByPartition(p,q,n),owner(o),0==q,s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#2 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[tokenPartition.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_issueByPartition(address(5),0,-1) [msgSender: 2, value: 0]
+[tokenPartition.dl] Iteration#2 RestrictedSolveStatus: relation=recv_issueByPartition, status=SAT
+[tokenPartition.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#2 SynthesisResult: updated
+[tokenPartition.dl] Iteration#3 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#3 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 11, value: 0]
+[1] recv_issueByPartition(address(11),1,1) [msgSender: 11, value: 0]
+[2] recv_redeemByPartition(address(12),6,1) [msgSender: 11, value: 0]
+[tokenPartition.dl] Iteration#3 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,msgSender(msgSender),n<balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#3 SynthesisResult: updated
+[tokenPartition.dl] Iteration#4 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o,msgSender(msgSender),n<balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#4 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(8),1,241) [msgSender: 8, value: 0]
+[2] recv_redeemByPartition(address(9),1,1) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#4 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#4 SynthesisResult: updated
+[tokenPartition.dl] Iteration#5 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),owner(o),s==o.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#5 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(8),22280,74247) [msgSender: 8, value: 0]
+[2] recv_redeemByPartition(address(9),74247,22280) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#5 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),owner(o),balanceOfByPartition(msgSender,q,balanceOfByPartition_x2),n==balanceOfByPartition_x2,s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#5 SynthesisResult: updated
+[tokenPartition.dl] Iteration#6 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),msgSender(msgSender),owner(o),balanceOfByPartition(msgSender,q,balanceOfByPartition_x2),n==balanceOfByPartition_x2,s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#6 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_issueByPartition(address(10),6,1) [msgSender: 10, value: 0]
+[2] recv_redeemByPartition(address(11),6,1) [msgSender: 10, value: 0]
+[tokenPartition.dl] Iteration#6 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,msgSender(msgSender),owner(o),balanceOfByPartition(msgSender,q,balanceOfByPartition_x2),s==o.
+[tokenPartition.dl] Iteration#6 SynthesisResult: updated
+[tokenPartition.dl] Iteration#7 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,msgSender(msgSender),owner(o),balanceOfByPartition(msgSender,q,balanceOfByPartition_x2),s==o.
+[tokenPartition.dl] Iteration#7 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_issueByPartition(address(7),16335,16335) [msgSender: 7, value: 0]
+[2] recv_redeemByPartition(address(8),16335,93196) [msgSender: 7, value: 0]
+[tokenPartition.dl] Iteration#7 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),0!=balanceOfByPartition_x2,balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#7 SynthesisResult: updated
+[tokenPartition.dl] Iteration#8 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),0!=balanceOfByPartition_x2,balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#8 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor() [msgSender: 9, value: 0]
+[1] recv_issueByPartition(address(10),129516,1) [msgSender: 9, value: 0]
+[2] recv_redeemByPartition(address(10),129516,129516) [msgSender: 9, value: 0]
+[tokenPartition.dl] Iteration#8 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#8 SynthesisResult: updated
+[tokenPartition.dl] Iteration#9 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#9 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_issueByPartition(address(5),59389,69614) [msgSender: 10, value: 0]
+[2] recv_redeemByPartition(address(5),8,59389) [msgSender: 10, value: 0]
+[tokenPartition.dl] Iteration#9 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),n==balanceOfByPartition_x2,s==o.
+[tokenPartition.dl] Iteration#9 SynthesisResult: updated
+[tokenPartition.dl] Iteration#10 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),n==balanceOfByPartition_x2,s==o.
+[tokenPartition.dl] Iteration#10 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_issueByPartition(address(6),1,1) [msgSender: 6, value: 0]
+[2] recv_redeemByPartition(address(6),7,1) [msgSender: 6, value: 0]
+[tokenPartition.dl] Iteration#10 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o.
+[tokenPartition.dl] Iteration#10 SynthesisResult: updated
+[tokenPartition.dl] Iteration#11 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),q==balanceOfByPartition_x2,owner(o),balanceOfByPartition(p,n,balanceOfByPartition_x2),s==o.
+[tokenPartition.dl] Iteration#11 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[tokenPartition.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(8),1,2) [msgSender: 8, value: 0]
+[2] recv_redeemByPartition(address(8),2,1) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#11 RestrictedSolveStatus: relation=recv_redeemByPartition, status=SAT
+[tokenPartition.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#11 SynthesisResult: updated
+[tokenPartition.dl] Iteration#12 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#12 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_transferByPartition(address(2),address(2),12,0) [msgSender: 7, value: 0]
+[2] recv_issueByPartition(address(11),12,145608) [msgSender: 7, value: 0]
+[3] recv_transferByPartition(address(2),address(11),12,39088) [msgSender: 3, value: 0]
+[tokenPartition.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),0!=n.
+[tokenPartition.dl] Iteration#12 SynthesisResult: updated
+[tokenPartition.dl] Iteration#13 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),0!=n.
+[tokenPartition.dl] Iteration#13 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_issueByPartition(address(15),4,84519) [msgSender: 7, value: 0]
+[2] recv_issueByPartition(address(14),4,1) [msgSender: 7, value: 0]
+[3] recv_transferByPartition(address(15),address(14),4,169135) [msgSender: 16, value: 0]
+[tokenPartition.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transferByPartition, status=UNSAT
+[tokenPartition.dl] Iteration#13 FallbackToFull: reason=UNSAT, relations=transferByPartition
+[tokenPartition.dl] Iteration#13 ProgramAfterFallbackSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(r,q,balanceOfByPartition_x2),0==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#13 SynthesisResult: updated-by-fallback
+[tokenPartition.dl] Iteration#14 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(r,q,balanceOfByPartition_x2),0==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#14 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor() [msgSender: 11, value: 0]
+[1] recv_issueByPartition(address(2),3,55961) [msgSender: 11, value: 0]
+[2] recv_redeemByPartition(address(2),3,55961) [msgSender: 11, value: 0]
+[3] recv_issueByPartition(address(14),3,55962) [msgSender: 11, value: 0]
+[4] recv_transferByPartition(address(14),address(2),3,65338) [msgSender: 15, value: 0]
+[tokenPartition.dl] Iteration#14 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),q>=totalSupplyByPartition_x1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#14 SynthesisResult: updated
+[tokenPartition.dl] Iteration#15 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),q>=totalSupplyByPartition_x1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#15 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_issueByPartition(address(13),51079,25539) [msgSender: 4, value: 0]
+[2] recv_issueByPartition(address(12),51079,25540) [msgSender: 4, value: 0]
+[3] recv_transferByPartition(address(13),address(12),51079,-63185) [msgSender: 14, value: 0]
+[tokenPartition.dl] Iteration#15 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),q>totalSupplyByPartition_x1.
+[tokenPartition.dl] Iteration#15 SynthesisResult: updated
+[tokenPartition.dl] Iteration#16 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),q>totalSupplyByPartition_x1.
+[tokenPartition.dl] Iteration#16 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_issueByPartition(address(14),2,1) [msgSender: 6, value: 0]
+[2] recv_transferByPartition(address(5),address(5),2,0) [msgSender: 6, value: 0]
+[3] recv_transferByPartition(address(14),address(5),2,41243) [msgSender: 15, value: 0]
+[tokenPartition.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1_1),n>0,q>=totalSupplyByPartition_x1_1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#16 SynthesisResult: updated
+[tokenPartition.dl] Iteration#17 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1_1),n>0,q>=totalSupplyByPartition_x1_1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#17 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_issueByPartition(address(14),339990,172856) [msgSender: 5, value: 0]
+[2] recv_issueByPartition(address(13),339990,167134) [msgSender: 5, value: 0]
+[3] recv_transferByPartition(address(14),address(13),339990,172857) [msgSender: 15, value: 0]
+[tokenPartition.dl] Iteration#17 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1_1),n>0,q>totalSupplyByPartition_x1_1.
+[tokenPartition.dl] Iteration#17 SynthesisResult: updated
+[tokenPartition.dl] Iteration#18 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1_1),n>0,q>totalSupplyByPartition_x1_1.
+[tokenPartition.dl] Iteration#18 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_issueByPartition(address(14),108568,106670) [msgSender: 3, value: 0]
+[2] recv_transferByPartition(address(9),address(9),108568,1) [msgSender: 10, value: 0]
+[3] recv_transferByPartition(address(14),address(9),108568,106672) [msgSender: 15, value: 0]
+[tokenPartition.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,0==balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#18 SynthesisResult: updated
+[tokenPartition.dl] Iteration#19 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,0==balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#19 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_issueByPartition(address(7),8,21816) [msgSender: 10, value: 0]
+[2] recv_issueByPartition(address(17),8,144859) [msgSender: 10, value: 0]
+[3] recv_redeemByPartition(address(7),8,21816) [msgSender: 10, value: 0]
+[4] recv_transferByPartition(address(7),address(17),8,6223) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),n>balanceOfByPartition_x2_1,0==balanceOfByPartition_x2_0,balanceOfByPartition(s,q,balanceOfByPartition_x2_0),recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#19 SynthesisResult: updated
+[tokenPartition.dl] Iteration#20 ProgramBeforeBMC:
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),n>balanceOfByPartition_x2_1,0==balanceOfByPartition_x2_0,balanceOfByPartition(s,q,balanceOfByPartition_x2_0),recv_transferByPartition(s,r,q,n).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#20 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_issueByPartition(address(5),6,67686) [msgSender: 5, value: 0]
+[2] recv_redeemByPartition(address(5),6,67686) [msgSender: 5, value: 0]
+[3] recv_issueByPartition(address(15),6,42589) [msgSender: 5, value: 0]
+[4] recv_transferByPartition(address(5),address(15),6,56694) [msgSender: 6, value: 0]
+[tokenPartition.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),n>totalSupplyByPartition_x1,q>=totalSupplyByPartition_x1.
+[tokenPartition.dl] Iteration#20 SynthesisResult: updated
+[tokenPartition.dl] Iteration#21 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),n>totalSupplyByPartition_x1,q>=totalSupplyByPartition_x1.
+[tokenPartition.dl] Iteration#21 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_issueByPartition(address(13),2,1) [msgSender: 3, value: 0]
+[2] recv_transferByPartition(address(9),address(9),2,26356) [msgSender: 10, value: 0]
+[3] recv_transferByPartition(address(13),address(9),2,26357) [msgSender: 14, value: 0]
+[tokenPartition.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),0==balanceOfByPartition_x2_0,recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_0),q>=balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#21 SynthesisResult: updated
+[tokenPartition.dl] Iteration#22 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),0==balanceOfByPartition_x2_0,recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_0),q>=balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#22 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_issueByPartition(address(5),12114,86940) [msgSender: 5, value: 0]
+[2] recv_redeemByPartition(address(5),12114,86940) [msgSender: 5, value: 0]
+[3] recv_issueByPartition(address(17),12114,1) [msgSender: 5, value: 0]
+[4] recv_transferByPartition(address(5),address(17),12114,50722) [msgSender: 6, value: 0]
+[tokenPartition.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),0==balanceOfByPartition_x2_0,balanceOfByPartition(s,q,balanceOfByPartition_x2_0),0==balanceOfByPartition_x2_1,recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#22 SynthesisResult: updated
+[tokenPartition.dl] Iteration#23 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- balanceOfByPartition(r,q,balanceOfByPartition_x2_1),0==balanceOfByPartition_x2_0,balanceOfByPartition(s,q,balanceOfByPartition_x2_0),0==balanceOfByPartition_x2_1,recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#23 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[tokenPartition.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor() [msgSender: 13, value: 0]
+[1] recv_issueByPartition(address(2),15,29237) [msgSender: 13, value: 0]
+[2] recv_redeemByPartition(address(2),15,29237) [msgSender: 13, value: 0]
+[3] recv_issueByPartition(address(14),15,29236) [msgSender: 13, value: 0]
+[4] recv_redeemByPartition(address(14),15,29236) [msgSender: 13, value: 0]
+[5] recv_transferByPartition(address(14),address(2),15,25646) [msgSender: 15, value: 0]
+[tokenPartition.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),msgSender(msgSender),0!=balanceOfByPartition_x2.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#23 SynthesisResult: updated
+[tokenPartition.dl] Iteration#24 ProgramBeforeBMC:
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),msgSender(msgSender),0!=balanceOfByPartition_x2.
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#24 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_issueByPartition(address(5),-6911,1) [msgSender: 2, value: 0]
+[2] recv_transferByPartition(address(7),address(7),-6911,-6911) [msgSender: 5, value: 0]
+[3] recv_transferByPartition(address(5),address(7),-6911,-6911) [msgSender: 5, value: 0]
+[tokenPartition.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- n<balanceOfByPartition_x2_1,n>0,msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2_1),recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#24 SynthesisResult: updated
+[tokenPartition.dl] Iteration#25 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- n<balanceOfByPartition_x2_1,n>0,msgSender(msgSender),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2_1),recv_transferByPartition(s,r,q,n).
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#25 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_issueByPartition(address(6),26981,17979) [msgSender: 7, value: 0]
+[2] recv_issueByPartition(address(10),26981,26982) [msgSender: 7, value: 0]
+[3] recv_transferByPartition(address(6),address(10),26981,26981) [msgSender: 10, value: 0]
+[tokenPartition.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),msgSender(msgSender),q==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#25 SynthesisResult: updated
+[tokenPartition.dl] Iteration#26 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(msgSender,n,balanceOfByPartition_x2),msgSender(msgSender),q==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#26 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(8),5580,5580) [msgSender: 8, value: 0]
+[2] recv_issueByPartition(address(9),5580,5579) [msgSender: 8, value: 0]
+[3] recv_transferByPartition(address(9),address(8),5580,5580) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2),q==balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#26 SynthesisResult: updated
+[tokenPartition.dl] Iteration#27 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2),q==balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#27 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(16),1,2) [msgSender: 8, value: 0]
+[2] recv_issueByPartition(address(9),-80356,1) [msgSender: 8, value: 0]
+[3] recv_transferByPartition(address(9),address(9),1,-80356) [msgSender: 10, value: 0]
+[4] recv_transferByPartition(address(9),address(16),1,-80356) [msgSender: 10, value: 0]
+[tokenPartition.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2),q==balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#27 SynthesisResult: updated
+[tokenPartition.dl] Iteration#28 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2),q==balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#28 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#28 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_issueByPartition(address(5),20261,20261) [msgSender: 5, value: 0]
+[2] recv_issueByPartition(address(9),20261,20260) [msgSender: 5, value: 0]
+[3] recv_transferByPartition(address(5),address(9),20261,-20261) [msgSender: 6, value: 0]
+[tokenPartition.dl] Iteration#28 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#28 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#28 SynthesisResult: updated
+[tokenPartition.dl] Iteration#29 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#29 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#29 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_issueByPartition(address(18),184363,184364) [msgSender: 8, value: 0]
+[2] recv_issueByPartition(address(17),9,92182) [msgSender: 8, value: 0]
+[3] recv_issueByPartition(address(18),9,92183) [msgSender: 8, value: 0]
+[4] recv_transferByPartition(address(18),address(17),9,184363) [msgSender: 19, value: 0]
+[tokenPartition.dl] Iteration#29 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#29 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2),n==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#29 SynthesisResult: updated
+[tokenPartition.dl] Iteration#30 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2),n==balanceOfByPartition_x2.
+[tokenPartition.dl] Iteration#30 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#30 Counterexample:
+Trace:
+[0] constructor() [msgSender: 9, value: 0]
+[1] recv_issueByPartition(address(7),111855,111855) [msgSender: 9, value: 0]
+[2] recv_transferByPartition(address(7),address(7),12,111855) [msgSender: 8, value: 0]
+[3] recv_issueByPartition(address(14),12,88346) [msgSender: 9, value: 0]
+[4] recv_transferByPartition(address(7),address(14),12,111855) [msgSender: 8, value: 0]
+[tokenPartition.dl] Iteration#30 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#30 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),n==totalSupplyByPartition_x1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#30 SynthesisResult: updated
+[tokenPartition.dl] Iteration#31 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),totalSupplyByPartition(q,totalSupplyByPartition_x1),n==totalSupplyByPartition_x1.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+[tokenPartition.dl] Iteration#31 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[tokenPartition.dl] Iteration#31 Counterexample:
+Trace:
+[0] constructor() [msgSender: 15, value: 0]
+[1] recv_issueByPartition(address(15),9,30795) [msgSender: 15, value: 0]
+[2] recv_issueByPartition(address(14),9,53828) [msgSender: 15, value: 0]
+[3] recv_transferByPartition(address(15),address(14),9,84623) [msgSender: 16, value: 0]
+[tokenPartition.dl] Iteration#31 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#31 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2_1),n>0,q==balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#31 SynthesisResult: updated
+[tokenPartition.dl] Iteration#32 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,n,balanceOfByPartition_x2_1),n>0,q==balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#32 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[tokenPartition.dl] Iteration#32 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_issueByPartition(address(6),4,1) [msgSender: 6, value: 0]
+[2] recv_issueByPartition(address(6),13961,4) [msgSender: 6, value: 0]
+[3] recv_issueByPartition(address(15),4,2) [msgSender: 6, value: 0]
+[4] recv_transferByPartition(address(6),address(15),4,13961) [msgSender: 7, value: 0]
+[tokenPartition.dl] Iteration#32 RestrictedSolveStatus: relation=recv_transferByPartition, status=SAT
+[tokenPartition.dl] Iteration#32 ProgramAfterRestrictedSynthesis:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#32 SynthesisResult: updated
+[tokenPartition.dl] Iteration#33 ProgramBeforeBMC:
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.
+[tokenPartition.dl] Iteration#33 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedIssueByPartition,unauthorizedRedeemByPartition
+[BMC] TransitionSystemReady: program=TokenPartition
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOfByPartition (balanceOfByPartition_keyTuple kv_p kv_q))
+        kv_n)
+     (select balanceOfByPartition__exists
+             (balanceOfByPartition_keyTuple kv_p kv_q))
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedRedeemByPartition, formula=(and (or (= recv_redeemByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedIssueByPartition, formula=(and (or (= recv_issueByPartition0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedIssueByPartition, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedRedeemByPartition, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[tokenPartition.dl] Iteration#33 BMCResult: no-counterexample
+[tokenPartition.dl] BenchmarkEnd: reason=sat, totalTimeMs=18500, bmcTimeMs=2328, cegisIterations=33, finalRules=
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.

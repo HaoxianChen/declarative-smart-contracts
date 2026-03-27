@@ -3,16 +3,16 @@
 .decl constructor()
 
 .decl *owner(p: address)
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl *totalSupply(n: int >= 0)
+.decl balanceOf(p: address, n: int >= 0)[0]
 
 // Transactions
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address <> 0, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 .public recv_mint
 .public recv_burn
@@ -25,10 +25,17 @@
 .decl totalIn(p: address, n: int)[0]
 .decl *allMint(n: int)
 .decl *allBurn(n: int)
+.decl *totalBalances(n: int)
 
 // Properties
+.decl unequalBalance(s:int,n:int)[0,1]
+.violation unequalBalance
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
+.decl unauthorizedMint()
+.violation unauthorizedMint
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
 .decl invalidTx()
 .violation invalidTx
 

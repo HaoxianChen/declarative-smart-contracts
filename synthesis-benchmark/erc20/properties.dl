@@ -1,12 +1,10 @@
-// ERC20 Token Standard Properties
-
 // Total balances must equal total supply
 unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
-// Negative balances and allowances are not allowed
+// No negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// Only owner can mint or burn
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+// Authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), s!=o.

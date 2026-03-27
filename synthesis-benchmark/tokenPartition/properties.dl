@@ -1,6 +1,6 @@
 // no negative balances for non-zero addresses
 negativeBalance(p,q,n) :- balanceOfByPartition(p,q,n), n<0, p!=0.
 
-// only owner can issue or redeem tokens
-invalidTx() :- recv_issueByPartition(_,_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_redeemByPartition(_,_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedIssueByPartition() :- recv_issueByPartition(_,_,_), owner(o), msgSender(s), s!=o.
+unauthorizedRedeemByPartition() :- recv_redeemByPartition(_,_,_), owner(o), msgSender(s), s!=o.

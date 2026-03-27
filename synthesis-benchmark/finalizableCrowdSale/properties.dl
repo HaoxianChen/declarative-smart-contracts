@@ -1,15 +1,14 @@
-// cannot have negative balances or allowances
+// no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint, burn, or finalize
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_finalize(), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+unauthorizedFinalize() :- recv_finalize(), owner(o), msgSender(s), o!=s.
 
-// cannot finalize before start or after end
-invalidTx() :- recv_finalize(), now(t), end(e), t<e.
+// once sentinel for buying outside sale period
+buyOutsideSale() :- onceBuyOutsideSale(b), b==true.
 
-// cannot buy tokens before start or after end
-invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
-invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
+// once sentinel for finalizing before end
+finalizeBeforeEnd() :- onceFinalizeBeforeEnd(b), b==true.

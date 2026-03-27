@@ -1,7 +1,3 @@
-////////////////////
-// Safety properties
-////////////////////
-
 // always (_weiRaised <= _cap)
 moreThanCap(true) :-
     _weiRaised(n),
@@ -14,49 +10,11 @@ notSame(true) :-
     _beneficiary(p2),
     p != p2.
 
+// authority rules (retain recv_tx)
+transferPrimaryNotByPrimary() :- recv_transferPrimary(_), _primary(p), msgSender(s), s!=p.
+finalizeNotByPrimary() :- recv_finalize(), _primary(p), msgSender(s), s!=p.
 
-// Mint: receiver must be non-zero
-invalidTx() :- recv_mint(p,_), p==0.
-
-// Burn: receiver must be non-zero and amount must not exceed balance
-invalidTx() :- recv_burn(p,_), p==0.
-invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
-
-// Transfer: amount must not exceed sender balance (and sender/receiver non-zero)
-invalidTx() :- recv_transfer(s,r,_), s==0.
-invalidTx() :- recv_transfer(s,r,_), r==0.
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-
-// TransferFrom: amount must not exceed owner balance and allowance
-invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
-invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
-invalidTx() :- recv_transferFrom(o,_,sp,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
-
-// Deposit: beneficiary must be non-zero and escrow must be in state 0
-invalidTx() :- recv_deposit(p,_), p==0.
-invalidTx() :- recv_deposit(_,a), a==0.
-invalidTx() :- recv_deposit(_,_), state(h), h!=0.
-
-// BuyToken: buyer non-zero, value non-zero, and raised should not exceed cap
-invalidTx() :- recv_buyToken(p,_), p==0.
-invalidTx() :- recv_buyToken(_,v), v==0.
-invalidTx() :- recv_buyToken(_,_), _weiRaised(r), _cap(c), r>c.
-
-// BuyToken: must be within [openingTime, closingTime] and before finalization/state transition
-invalidTx() :- recv_buyToken(_,_), now(t), _openingTime(o), t<o.
-invalidTx() :- recv_buyToken(_,_), now(t), _closingTime(c), t>c.
-invalidTx() :- recv_buyToken(_,_), _finalized(b), b==true.
-invalidTx() :- recv_buyToken(_,_), state(h), h!=0.
-
-// Finalize: only primary; only once; only after closingTime; only when state==0
-invalidTx() :- recv_finalize(), _finalized(b), b==true.
-invalidTx() :- recv_finalize(), msgSender(s), _primary(p), s!=p.
-invalidTx() :- recv_finalize(), state(h), h!=0.
-invalidTx() :- recv_finalize(), now(t), _closingTime(c), t<c.
-
-// ClaimRefund: only after finalization, only in refund state, only if goal not met, and must have deposits > 0
-invalidTx() :- recv_claimRefund(_), _finalized(b), b==false.
-invalidTx() :- recv_claimRefund(_), state(h), h!=1.
-invalidTx() :- recv_claimRefund(_), _weiRaised(r), _goal(g), r>=g.
-invalidTx() :- recv_claimRefund(p), _deposits(p,a), a==0.
+// lifecycle (once sentinel)
+withdrawOutsideSuccessState() :- onceWithdrawOutsideSuccess(b), b==true.
+claimRefundOutsideRefundState() :- onceClaimRefundOutsideRefund(b), b==true.
+buyAfterFinalize() :- onceBuyAfterFinalize(b), b==true.

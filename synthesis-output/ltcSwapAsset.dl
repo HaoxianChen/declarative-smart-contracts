@@ -1,6 +1,6 @@
-mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
-burn(p,n) :- msgSender(s),n<balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
-swapOwnerTx(p,q,d) :- recv_swapOwnerTx(p,q,d),owner(o),msgSender(s),o==s.
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),0==n.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+swapOwnerTx(p,q,d) :- recv_swapOwnerTx(p,q,d),owner(current),p==current.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
 transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).

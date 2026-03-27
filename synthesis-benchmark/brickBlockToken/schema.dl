@@ -1,3 +1,5 @@
+// adopted from https://etherscan.io/address/0x00199C511DC889B8155fa425fc0363Ed481e8f48#code
+
 // parameters
 .decl *owner(p: address)
 .decl *paused(p: bool)
@@ -9,21 +11,22 @@
 .public allowed(2)
 
 .decl recv_pause()
+.public recv_pause
 .decl pause()
 
 // basicToken
-.decl *totalSupply(a:int)
-.decl balances(p: address, a: int)[0]
+.decl *totalSupply(a:int >= 0)
+.decl balances(p: address, a: int >= 0)[0]
 .public balances(1)
 
 
-.decl recv_transfer(from: address, to: address, a: int)
+.decl recv_transfer(from: address, to: address, a: int > 0)
 .decl transfer(from: address, to: address, a:int)
 
 // standardToken
-.decl recv_transferFrom(operator: address, from: address, to: address, a: int)
-.decl recv_increaseAllowance(o: address, s: address, d: int)
-.decl recv_decreaseAllowance(o: address, s: address, d: int)
+.decl recv_transferFrom(operator: address, from: address, to: address, a: int > 0)
+.decl recv_increaseAllowance(o: address, s: address, d: int >= 0)
+.decl recv_decreaseAllowance(o: address, s: address, d: int > 0)
 .public recv_transfer
 .public recv_transferFrom
 .public recv_increaseAllowance
@@ -33,7 +36,7 @@
 
 .decl burn(p:address, n:int)
 .decl mint(p:address, n:int)
-.decl recv_mint(p:address, n:int)
+.decl recv_mint(p:address <> 0, n:int > 0)
 .public recv_mint
 .decl totalIn(p:address,n:int)[0]
 .decl totalOut(p:address,n:int)[0]
@@ -70,19 +73,30 @@
 .public recv_evacuate
 .decl evacuate(p:address)
 
-.decl *transferBeforeUnpause()
-.violation transferBeforeUnpause
-.decl *onceUnpaused(b:bool)
-
-.decl *evacuateAfterUpgrade()
-.violation evacuateAfterUpgrade
-.decl *onceUpgrade(b:bool)
+// (removed: sentinel-based transferBeforeUnpause and evacuateAfterUpgrade)
 
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+
+.decl unauthorizedPause()
+.violation unauthorizedPause
+
+.decl unauthorizedUnpause()
+.violation unauthorizedUnpause
+
+.decl unauthorizedUpgrade()
+.violation unauthorizedUpgrade
+
+.decl unauthorizedMint()
+.violation unauthorizedMint
+
+// (removed: sentinel state variables)
+
+.decl evacuateNotByOwner()
+.violation evacuateNotByOwner
 
 // Transaction placeholder rules
 pause() :- recv_pause().

@@ -1,0 +1,1132 @@
+[Audit] BenchmarkStart: name=brickBlockToken.dl, benchDir=synthesis-benchmark/brickBlockToken
+[Audit] InputSpecFiles: schema=synthesis-benchmark/brickBlockToken/schema.dl, rules=synthesis-benchmark/brickBlockToken/rules.dl, properties=synthesis-benchmark/brickBlockToken/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/brickBlockToken.dl, stats=synthesis-output/synthesis_stats.csv
+[brickBlockToken.dl] BenchmarkStart: program=BrickBlockToken, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[brickBlockToken.dl] SeededPredicatesFromTxProperties: HashMap(evacuate(p) :- recv_evacuate(p). -> Set(Predicate(context: tx: recv_evacuate(_), bindings: [owner(o), msgSender(s)], functor: s==o)), pause() :- recv_pause(). -> Set(Predicate(context: tx: recv_pause(), bindings: [owner(o), msgSender(s)], functor: s==o)), mint(p,n) :- recv_mint(p,n). -> Set(Predicate(context: tx: recv_mint(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)), upgrade(p) :- recv_upgrade(p). -> Set(Predicate(context: tx: recv_upgrade(_), bindings: [owner(o), msgSender(s)], functor: s==o)), unpause() :- recv_unpause(). -> Set(Predicate(context: tx: recv_unpause(), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[brickBlockToken.dl] InitialTransactionRules:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#0 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#0 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[brickBlockToken.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(8),address(6),-1) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#0 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[brickBlockToken.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#0 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#1 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#1 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[brickBlockToken.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_decreaseAllowance(address(9),address(5),1) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#1 RestrictedSolveStatus: relation=recv_decreaseAllowance, status=UNSAT
+[brickBlockToken.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=decreaseAllowance
+[brickBlockToken.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[brickBlockToken.dl] Iteration#2 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+[brickBlockToken.dl] Iteration#2 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[brickBlockToken.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_transferFrom(address(3),address(6),address(6),1) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#2 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[brickBlockToken.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=transferFrom
+[brickBlockToken.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,r,allowed_x2),0!=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[brickBlockToken.dl] Iteration#3 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,r,allowed_x2),0!=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#3 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[brickBlockToken.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(11),address(11),24338) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(8),address(11),address(11),18812) [msgSender: 6, value: 0]
+[brickBlockToken.dl] Iteration#3 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),0!=allowed_x2.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#3 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#4 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),0!=allowed_x2.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#4 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[brickBlockToken.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(8),address(7),6879) [msgSender: 5, value: 0]
+[2] recv_transferFrom(address(7),address(8),address(8),20635) [msgSender: 10, value: 0]
+[brickBlockToken.dl] Iteration#4 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#4 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#5 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#5 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[brickBlockToken.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_increaseAllowance(address(12),address(9),1) [msgSender: 6, value: 0]
+[2] recv_transferFrom(address(9),address(12),address(12),1) [msgSender: 7, value: 0]
+[brickBlockToken.dl] Iteration#5 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),n<allowed_x2.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#5 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#6 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(f,s,allowed_x2),n<allowed_x2.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#6 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[brickBlockToken.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),12214) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(7),address(6),address(6),9166) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#6 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),0!=allowed_x2.
+[brickBlockToken.dl] Iteration#6 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#7 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),0!=allowed_x2.
+[brickBlockToken.dl] Iteration#7 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[brickBlockToken.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(11),address(13),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(11),address(13),address(13),21395) [msgSender: 7, value: 0]
+[brickBlockToken.dl] Iteration#7 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#7 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#8 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#8 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[brickBlockToken.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_transfer(address(6),address(6),1) [msgSender: 7, value: 0]
+[2] recv_mint(address(0),-29968) [msgSender: 7, value: 0]
+[3] recv_mint(address(6),-1217) [msgSender: 7, value: 0]
+[brickBlockToken.dl] Iteration#8 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[brickBlockToken.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#8 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#9 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#9 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[brickBlockToken.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_transfer(address(5),address(5),1) [msgSender: 5, value: 0]
+[2] recv_mint(address(0),28883) [msgSender: 5, value: 0]
+[3] recv_transfer(address(0),address(5),-313356) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[brickBlockToken.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#9 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#10 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#10 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[brickBlockToken.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_transfer(address(7),address(7),1) [msgSender: 2, value: 0]
+[2] recv_transfer(address(9),address(9),79201) [msgSender: 0, value: 0]
+[3] recv_transfer(address(9),address(7),32090) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#10 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[brickBlockToken.dl] Iteration#10 FallbackToFull: reason=UNSAT, relations=transfer
+[brickBlockToken.dl] Iteration#10 ProgramAfterFallbackSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#10 SynthesisResult: updated-by-fallback
+[brickBlockToken.dl] Iteration#11 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,f,allowed_x2),n<=allowed_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#11 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=evacuateNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[brickBlockToken.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(0),1) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(0),address(15),66209) [msgSender: 0, value: 0]
+[3] recv_transferFrom(address(0),address(15),address(15),52567) [msgSender: 0, value: 0]
+[4] recv_transferFrom(address(0),address(15),address(0),11468) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,r,allowed_x2),n<=allowed_x2.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#11 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#12 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),allowed(s,r,allowed_x2),n<=allowed_x2.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#12 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=evacuateNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[brickBlockToken.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor() [msgSender: 9, value: 0]
+[1] recv_increaseAllowance(address(4),address(7),69979) [msgSender: 9, value: 0]
+[2] recv_transferFrom(address(4),address(7),address(7),67408) [msgSender: 0, value: 0]
+[3] recv_mint(address(0),67406) [msgSender: 9, value: 0]
+[4] recv_transferFrom(address(4),address(0),address(7),-67407) [msgSender: 0, value: 0]
+[brickBlockToken.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[brickBlockToken.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#12 SynthesisResult: updated
+[brickBlockToken.dl] Iteration#13 ProgramBeforeBMC:
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[brickBlockToken.dl] Iteration#13 BMCInput: bound=5, violationRules=evacuateNotByOwner,negativeAllowance,negativeBalance,unauthorizedMint,unauthorizedPause,unauthorizedUnpause,unauthorizedUpgrade
+[BMC] TransitionSystemReady: program=BrickBlockToken
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balances kv_p) kv_n)
+     (select balances__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowed (allowed_keyTuple kv_s kv_p)) kv_n)
+     (select allowed__exists (allowed_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedPause, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUpgrade, formula=(and (or (= recv_upgrade0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedUnpause, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=evacuateNotByOwner, formula=(and (or (= recv_evacuate0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=evacuateNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=evacuateNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=evacuateNotByOwner, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=evacuateNotByOwner, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=evacuateNotByOwner, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUnpause, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedUpgrade, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedPause, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[brickBlockToken.dl] Iteration#13 BMCResult: no-counterexample
+[brickBlockToken.dl] BenchmarkEnd: reason=sat, totalTimeMs=7545, bmcTimeMs=2281, cegisIterations=13, finalRules=
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.

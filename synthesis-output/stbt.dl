@@ -1,6 +1,6 @@
-increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>=0.
-burn(p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
-transfer(s,r,n) :- sendOk_2!=false,recv_transfer(s,r,n),s!=address(0),recvOk_1!=false,r!=address(0),balanceOf(s,m_3),permissionSendAllowed(s,sendOk_2),n<=m_3,permissionReceiveAllowed(r,recvOk_1).
-distributeInterests(n,t) :- recv_distributeInterests(n,t),minInterval(i),lastDistributeTime(t1),t1-t>i.
-transferFrom(o,r,sp,n) :- n<=m_2,allowance(o,sp,k_4),recvOk_0!=false,balanceOf(o,m_2),permissionReceiveAllowed(r,recvOk_0),permissionSendAllowed(o,sendOk_1),r!=address(0),sp!=address(0),recv_transferFrom(o,r,sp,n),sendOk_1!=false,o!=address(0),n<=k_4.
-mint(p,n) :- o_1==s_1,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+distributeInterests(n,t) :- recv_distributeInterests(n,t),permissionExpiryTime(msgSender,permissionExpiryTime_x1),msgSender(msgSender),permissionExpiryTime_x1>0.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.

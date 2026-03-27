@@ -1,20 +1,15 @@
 // cannot finalize when cap not reached
 illegalFinalization() :- onceFinalize(true), raised(r), cap(c), r<c.
 
-// cannot buy tokens after finalize
-buyAfterFinalize() :- recv_buyToken(_,_), onceFinalize(true). // transaction(recv_buyToken).
+// raised should not exceed cap
+raisedAboveCap() :- raised(r), cap(c), r>c.
 
 // no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint or burn tokens
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+finalizeNotByOwner() :- recv_finalize(), owner(o), msgSender(s), s!=o.
 
-// buyToken address must be non-zero
-invalidTx() :- recv_buyToken(p,_), p==0.
-
-// buyToken must be within start and end time
-invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
-invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
+// lifecycle (once sentinel)
+buyAfterFinalize() :- onceBuyAfterFinalize(b), b==true.

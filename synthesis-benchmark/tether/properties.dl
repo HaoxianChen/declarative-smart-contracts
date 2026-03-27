@@ -5,6 +5,11 @@ unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can perform restricted actions
-invalidTx() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_issue(_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedIssue() :- recv_issue(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedRedeem() :- recv_redeem(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedDestroyBlackFund() :- recv_destroyBlackFund(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedAddBlackList() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
+
+// once sentinel for blacklisted transfers
+blacklistedTransfer() :- onceBlacklistedTransfer(b), b==true.

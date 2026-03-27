@@ -5,7 +5,7 @@ unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint, burn, or swap ownership
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_swapOwnerTx(_,_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedSwapOwnerTx() :- recv_swapOwnerTx(old,_,_), owner(current), old!=current.

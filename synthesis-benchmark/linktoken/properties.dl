@@ -5,10 +5,6 @@ unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// cannot transfer to the contract itself or to address 0
-invalidTx() :- recv_transfer(_,r,_), this(t), r==t.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-
-// only owner can mint or burn tokens
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), s!=o.

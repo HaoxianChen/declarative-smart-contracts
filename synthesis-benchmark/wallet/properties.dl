@@ -1,6 +1,9 @@
-// Property specifications for wallet contract.
+// total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// no negative balances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 
-// Only owner can mint or burn
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), s!=o.

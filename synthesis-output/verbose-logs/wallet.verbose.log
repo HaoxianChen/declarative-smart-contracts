@@ -1,0 +1,161 @@
+[Audit] BenchmarkStart: name=wallet.dl, benchDir=synthesis-benchmark/wallet
+[Audit] InputSpecFiles: schema=synthesis-benchmark/wallet/schema.dl, rules=synthesis-benchmark/wallet/rules.dl, properties=synthesis-benchmark/wallet/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/wallet/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/wallet.dl, stats=synthesis-output/synthesis_stats.csv
+[wallet.dl] BenchmarkStart: program=Wallet, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[wallet.dl] SeededPredicatesFromTxProperties: Map(mint(p,n) :- recv_mint(p,n). -> Set(Predicate(context: tx: recv_mint(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)), burn(p,n) :- recv_burn(p,n). -> Set(Predicate(context: tx: recv_burn(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[wallet.dl] InitialTransactionRules:
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#0 ProgramBeforeBMC:
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#0 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedBurn,unauthorizedMint,unequalBalance
+[BMC] TransitionSystemReady: program=Wallet
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=unequalBalance, k=1
+[BMC] CounterexampleReturned: rule=unequalBalance, k=1
+[wallet.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_burn(address(0),1) [msgSender: 3, value: 0]
+[wallet.dl] Iteration#0 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[wallet.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=burn
+[wallet.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[wallet.dl] Iteration#1 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#1 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedBurn,unauthorizedMint,unequalBalance
+[BMC] TransitionSystemReady: program=Wallet
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=unequalBalance, k=1
+[BMC] CounterexampleReturned: rule=unequalBalance, k=1
+[wallet.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(0),-1) [msgSender: 4, value: 0]
+[wallet.dl] Iteration#1 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[wallet.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[wallet.dl] Iteration#1 SynthesisResult: updated
+[wallet.dl] Iteration#2 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+[wallet.dl] Iteration#2 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedBurn,unauthorizedMint,unequalBalance
+[BMC] TransitionSystemReady: program=Wallet
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=unequalBalance, k=1
+[BMC] CounterexampleReturned: rule=unequalBalance, k=1
+[wallet.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(0),1) [msgSender: 4, value: 0]
+[wallet.dl] Iteration#2 RestrictedSolveStatus: relation=recv_mint, status=UNSAT
+[wallet.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=mint
+[wallet.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[wallet.dl] Iteration#3 ProgramBeforeBMC:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#3 BMCInput: bound=5, violationRules=negativeBalance,unauthorizedBurn,unauthorizedMint,unequalBalance
+[BMC] TransitionSystemReady: program=Wallet
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=unequalBalance, k=1
+[BMC] CounterexampleReturned: rule=unequalBalance, k=1
+[wallet.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(0),-1) [msgSender: 4, value: 0]
+[wallet.dl] Iteration#3 RestrictedSolveStatus: relation=recv_mint, status=UNSAT
+[wallet.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+[wallet.dl] Iteration#3 SynthesisResult: nochange
+[wallet.dl] BenchmarkEnd: reason=nochange, totalTimeMs=380, bmcTimeMs=101, cegisIterations=3, finalRules=
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.

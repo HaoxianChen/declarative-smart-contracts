@@ -1,1 +1,0 @@
-register(user,neighbor,10,time) :- msgSender(user),villageTimestamp(user,t),now(time),recv_register(neighbor),t==0.

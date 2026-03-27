@@ -4,26 +4,26 @@
 .decl *owner(p: address)
 
 // views
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
-.decl freezeOf(p: address, n: int)[0]
+.decl *totalSupply(n: int >= 0)
+.decl balanceOf(p: address, n: int >= 0)[0]
+.decl freezeOf(p: address, n: int >= 0)[0]
 .decl constructor(n: int)
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 
 // Transactions
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 // New transactions
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int > 0)
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
-.decl recv_increaseAllowance(o: address, s: address, n:int)
+.decl recv_increaseAllowance(o: address, s: address, n:int >= 0)
 .decl increaseAllowance(o: address, s: address, n:int)
 
 // Interfaces
@@ -38,13 +38,17 @@
 .public recv_transferFrom
 .public allowance(2)
 
-.decl recv_freeze(p: address,n: int)
-.decl recv_unfreeze(p: address,n: int)
+.decl recv_freeze(p: address, n: int > 0)
+.decl recv_unfreeze(p: address, n: int > 0)
 .decl freeze(p: address, n: int)
 .decl unfreeze(p: address, n: int)
 
-.decl recv_withdrawEther(p: address, amount: int)
+.decl recv_withdrawEther(p: address, amount: int > 0)
 .decl withdrawEther(p:address, amount: int)
+
+// UDF: native ETH transfer executed during withdrawEther (mirrors payable(owner).transfer(amount))
+.decl sendEther(recipient: address, amount: int, success: bool)
+.udf sendEther
 
 .public recv_freeze
 .public recv_unfreeze
@@ -78,6 +82,14 @@
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
 
+.decl unauthorizedMint()
+.violation unauthorizedMint
+
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
+
+.decl unauthorizedWithdrawEther()
+.violation unauthorizedWithdrawEther
 
 .decl invalidTx()
 .violation invalidTx

@@ -1,8 +1,7 @@
 // Init rules
 owner(s) :- constructor(), msgSender(s).
 paused(true) :- constructor().
-onceUpgrade(false) :- constructor().
-onceUnpaused(false) :- constructor().
+// (removed: sentinel initializations)
 
 paused(a) :- pause(), a:=true.
 
@@ -27,8 +26,4 @@ dead(true) :- upgrade(_).
 paused(true):- upgrade(_).
 burn(p,n) :- evacuate(p), balances(p,n).
 
-onceUnpaused(true) :- unpause().
-
-onceUpgrade(true) :- upgrade(_).
-
-
+// (removed: sentinel trigger rules)

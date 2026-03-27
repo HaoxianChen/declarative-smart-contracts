@@ -267,4 +267,44 @@ object Functor {
     case Equal(a, b)   => Unequal(a, b)
     case Assign(_, _)  => throw new Exception(s"Cannot negate assignment: $functor")
   }
+
+  /** Returns true when f1 and f2 cannot both be satisfied simultaneously.
+   *  Covers exact negation pairs (via `negate`) plus strict mutual-exclusion cases
+   *  that `negate` misses: a>b ∧ a<b, a>b ∧ a==b, a<b ∧ a==b.
+   *  Equal is treated as commutative (0==n is the same as n==0).
+   */
+  /** Type-insensitive operand comparison for contradiction detection.
+   *  Variables are compared by name, constants by value string. This handles
+   *  cases where the same logical value appears with AnyType() in seeded predicates
+   *  (from violation rules) and with a concrete type in CEGIS candidates.
+   */
+  private def exprMatches(e1: Expr, e2: Expr): Boolean = e1 == e2 || {
+    (e1, e2) match {
+      case (Param(Variable(_, n1)), Param(Variable(_, n2))) => n1 == n2
+      case (Param(Constant(_, n1)), Param(Constant(_, n2))) => n1 == n2
+      case _ => false
+    }
+  }
+
+  private def eqMatch(a1: Expr, b1: Expr, a2: Expr, b2: Expr): Boolean =
+    (exprMatches(a1, a2) && exprMatches(b1, b2)) ||
+    (exprMatches(a1, b2) && exprMatches(b1, a2))
+
+  def contradicts(f1: Functor, f2: Functor): Boolean = (f1, f2) match {
+    // a>b ∧ a<b  (strict inequalities in opposite directions)
+    case (Greater(a1, b1), Lesser(a2, b2)) if exprMatches(a1,a2) && exprMatches(b1,b2) => true
+    case (Lesser(a1, b1),  Greater(a2, b2)) if exprMatches(a1,a2) && exprMatches(b1,b2) => true
+    // a>b ∧ a==b  (Equal is commutative: also catches 0==a when a>0)
+    case (Greater(a1, b1), Equal(a2, b2))  if eqMatch(a1, b1, a2, b2) => true
+    case (Equal(a1, b1),   Greater(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    // a<b ∧ a==b
+    case (Lesser(a1, b1),  Equal(a2, b2))  if eqMatch(a1, b1, a2, b2) => true
+    case (Equal(a1, b1),   Lesser(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    // a!=b ∧ a==b  (treat both Equal and Unequal as commutative)
+    case (Unequal(a1, b1), Equal(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    case (Equal(a1, b1), Unequal(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    case _ =>
+      try { f1 == Functor.negate(f2) }
+      catch { case _: Throwable => false }
+  }
 }

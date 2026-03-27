@@ -7,11 +7,11 @@
 
 // views
 .decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl balanceOf(p: address, n: int >= 0)[0]
 .decl constructor()
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 
 // .function owner
 .decl *effectiveTime(t: uint)
@@ -23,14 +23,14 @@
 
 // Transactions
 .decl mint(p: address, n: int)
-.decl recv_mint(p: address, n: int)
+.decl recv_mint(p: address <> 0, n: int > 0)
 .decl burn(p: address, n: int)
-.decl recv_burn(p: address, n: int)
+.decl recv_burn(p: address <> 0, n: int > 0)
 .decl transfer(s: address, r: address, n: int)
-.decl recv_transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address <> 0, r: address <> 0, n: int > 0)
 
 // New transactions
-.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl recv_transferFrom(o: address <> 0, r: address <> 0, s: address <> 0, n: int > 0)
 .decl transferFrom(o: address, r: address, s: address, n: int)
 .decl increaseAllowance(p: address, s: address, n:int)
 .decl recv_increaseAllowance(p: address, s: address, n:int)
@@ -83,6 +83,15 @@
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+
+.decl unauthorizedMint()
+.violation unauthorizedMint
+
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
+
+.decl unauthorizedSwapOwnerTx()
+.violation unauthorizedSwapOwnerTx
 
 .decl invalidTx()
 .violation invalidTx

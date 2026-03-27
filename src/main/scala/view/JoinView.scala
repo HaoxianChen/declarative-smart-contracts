@@ -1,8 +1,8 @@
 package view
 
 import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, TupleSort}
-import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Sub, SymbolType, Type, Unequal, UnitType, Variable, Zero}
-import imp.{BooleanFunction, Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, Match, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Require, Return, Search, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
+import datalog.{Add, AnyType, ArithOperator, Arithmetic, Assign, BinaryOperator, BooleanType, CompoundType, Constant, Equal, Functor, Geq, Greater, Leq, Lesser, Literal, MsgSender, MsgValue, Mul, Negative, Now, NumberType, One, Param, Parameter, Relation, ReservedRelation, Rule, Send, Receive, SimpleRelation, SingletonRelation, Sub, SymbolType, Transaction, Type, Unequal, UnitType, Variable, Zero}
+import imp.{BooleanFunction, Condition, Delete, DeleteTuple, Empty, GroundVar, If, Increment, IncrementAndInsert, IncrementValue, Insert, InsertTuple, Match, MatchRelationField, OnDelete, OnIncrement, OnInsert, OnStatement, ReadTuple, ReplacedByKey, Require, Return, Search, Seq, Statement, Trigger, True, UpdateDependentRelations, UpdateStatement}
 import imp.SolidityTranslator.transactionRelationPrefix
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
@@ -13,6 +13,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
                     udfs: Set[Relation],
                     arithmeticOptimization: Boolean,
                     enableProjection: Boolean) extends View {
+  private case class GroundAccess(relation: Relation, keys: List[Parameter], valueIndex: Int)
   require(rule.aggregators.isEmpty)
   val isTransaction: Boolean = rule.body.exists(_.relation.name.startsWith(transactionRelationPrefix))
   val functionLiterals = rule.body.filter(lit=>functions.contains(lit.relation))
@@ -93,6 +94,28 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
   }
 
   private def getNewRowDerivationStatements(insert: Literal, updateStatement: Statement): Statement = {
+    def functorParamsLocal(f: Functor): Set[Parameter] = f match {
+      case datalog.Greater(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case datalog.Lesser(a, b)  => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case datalog.Geq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case datalog.Leq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case datalog.Unequal(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case datalog.Equal(a, b)   => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
+      case _ => Set.empty
+    }
+
+    def conditionFromFunctors(functors: Iterable[Functor]): Condition = {
+      val conds = functors.map {
+        case g: datalog.Greater => imp.Greater(g.a, g.b)
+        case l: datalog.Lesser => imp.Lesser(l.a, l.b)
+        case l: datalog.Geq => imp.Geq(l.a, l.b)
+        case l: datalog.Leq => imp.Leq(l.a, l.b)
+        case l: datalog.Unequal => imp.Unequal(l.a, l.b)
+        case l: datalog.Equal => imp.Match(l.a, l.b)
+        case _: datalog.Assign => imp.True()
+      }.toList
+      Condition.makeConjunction(conds: _*)
+    }
 
     /** Generate assign statements for functors.
       *
@@ -102,38 +125,38 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       * are not part of the condition (they map to True()), we must emit such assignments BEFORE
       * the `if (condition)` so the condition can reference the variable.
       */
-    val conditionParams: Set[Parameter] = {
-      def functorParamsLocal(f: Functor): Set[Parameter] = f match {
-        case datalog.Greater(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case datalog.Lesser(a, b)  => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case datalog.Geq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case datalog.Leq(a, b)     => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case datalog.Unequal(a, b) => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case datalog.Equal(a, b)   => Arithmetic.extractParameters(a).toSet ++ Arithmetic.extractParameters(b).toSet
-        case _ => Set.empty
-      }
-      val condFunctors = rule.functors.collect {
-        case f @ (_: datalog.Greater | _: datalog.Lesser | _: datalog.Geq | _: datalog.Leq | _: datalog.Unequal | _: datalog.Equal) => f
-      }
-      condFunctors.flatMap(functorParamsLocal)
+    val condFunctors = rule.functors.collect {
+      case f @ (_: datalog.Greater | _: datalog.Lesser | _: datalog.Geq | _: datalog.Leq | _: datalog.Unequal | _: datalog.Equal) => f
+    }.toList
+    val udfOutputParams: Set[Parameter] = udfLiterals.flatMap(_.fields.lastOption).toSet
+    val (preCondFunctors, postCondFunctors) = condFunctors.partition { f =>
+      functorParamsLocal(f).intersect(udfOutputParams).isEmpty
     }
+    val preConditionParams: Set[Parameter] = preCondFunctors.flatMap(functorParamsLocal).toSet ++
+      functionLiterals.flatMap(_.fields).toSet
+    val preCondition = Condition.conjunction(
+      conditionFromFunctors(preCondFunctors),
+      getConditionFromBooleanFunctions(functionLiterals)
+    )
+    val postCondition = conditionFromFunctors(postCondFunctors)
 
-    val (preIfAssigns, inIfAssigns): (List[Statement], List[Statement]) = {
+    val (preIfAssigns, postPreconditionAssigns): (List[Statement], List[Statement]) = {
       val assigns = rule.functors.collect { case a: datalog.Assign => a }.toList
-      val (pre, in) = assigns.partition(a => conditionParams.contains(a.a.p))
+      val (pre, in) = assigns.partition(a => preConditionParams.contains(a.a.p))
       (
         pre.map(a => imp.Assign(Param(a.a.p), a.b)),
         in.map(a => imp.Assign(Param(a.a.p), a.b))
       )
     }
 
-    val condition = _getConditions()
-    val IfStatement: If = If(condition, Statement.makeSeq(Statement.makeSeq(inIfAssigns: _*), updateStatement))
-    // Ensure UDF calls (which define return vars) happen before the if-condition that may use them.
+    val stagedInner = Statement.makeSeq(
+      Statement.makeSeq(postPreconditionAssigns: _*),
+      Statement.makeSeq(udfCalls(): _*),
+      If(postCondition, updateStatement)
+    )
     val withPreAssigns: Statement = Statement.makeSeq(
       Statement.makeSeq(preIfAssigns: _*),
-      Statement.makeSeq(udfCalls(): _*),
-      IfStatement
+      If(preCondition, stagedInner)
     )
 
     // Join
@@ -144,7 +167,7 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
     }
     val updates = _getJoinStatements(groundedParams, sortedLiteral, withPreAssigns)
     // OnInsert(insert, rule.head.relation, updates)
-    updates
+    dedupeGroundReads(updates)
   }
 
   def getQueryStatement(): Statement = {
@@ -157,7 +180,47 @@ case class JoinView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, allIn
       val rest = rule.body.diff(functionLiterals).diff(udfLiterals.toSet)
       sortJoinLiterals(rest)
     }
-    _getJoinStatements(groundedParams, sortedLiteral, innerStatement)
+    dedupeGroundReads(_getJoinStatements(groundedParams, sortedLiteral, innerStatement))
+  }
+
+  private def dedupeGroundReads(statement: Statement): Statement = {
+    def isDedupable(relation: Relation): Boolean = relation match {
+      case _: Send | _: Receive | _: Transaction => false
+      case _ => true
+    }
+
+    def process(stmt: Statement,
+                env: Map[GroundAccess, Parameter],
+                rename: Map[Parameter, Parameter]): (Statement, Map[GroundAccess, Parameter], Map[Parameter, Parameter]) = stmt match {
+      case Empty() => (Empty(), env, rename)
+      case Seq(a, b) =>
+        val (a1, env1, rename1) = process(a, env, rename)
+        val (b1, env2, rename2) = process(b, env1, rename1)
+        (Statement.makeSeq(a1, b1), env2, rename2)
+      case GroundVar(p, relation, keys, valueIndex, enableProjection) if isDedupable(relation) =>
+        val renamedKeys = keys.map(k => rename.getOrElse(k, k))
+        val renamedP = rename.getOrElse(p, p)
+        val access = GroundAccess(relation, renamedKeys, valueIndex)
+        env.get(access) match {
+          case Some(existing) =>
+            (Empty(), env, rename + (p -> existing) + (renamedP -> existing))
+          case None =>
+            val kept = GroundVar(renamedP, relation, renamedKeys, valueIndex, enableProjection)
+            (kept, env + (access -> renamedP), rename)
+        }
+      case If(condition, inner) =>
+        val renamedCondition = Condition.rename(condition, rename)
+        val (inner1, _, _) = process(inner, env, rename)
+        (If(renamedCondition, inner1), env, rename)
+      case Search(relation, conditions, inner) =>
+        val renamedConditions = conditions.map(c => Condition.rename(c, rename).asInstanceOf[MatchRelationField])
+        val (inner1, _, _) = process(inner, env, rename)
+        (Search(relation, renamedConditions, inner1), env, rename)
+      case other =>
+        (Statement.renameParameters(other, rename), env, rename)
+    }
+
+    process(statement, Map.empty, Map.empty)._1
   }
 
   private def _getConditions(): Condition = {

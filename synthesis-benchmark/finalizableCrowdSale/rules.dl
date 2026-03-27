@@ -20,5 +20,12 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 mint(p,n) :- buyToken(p,m), rate(r), n:=m*r.
 
-finalized(false) :- finalize().
+finalized(true) :- finalize().
 
+// Sentinel initialization and triggers
+onceBuyOutsideSale(false) :- constructor().
+onceBuyOutsideSale(true) :- buyToken(_,_), now(t), start(s), t<s.
+onceBuyOutsideSale(true) :- buyToken(_,_), now(t), end(e), t>e.
+
+onceFinalizeBeforeEnd(false) :- constructor().
+onceFinalizeBeforeEnd(true) :- finalize(), now(t), end(e), t<e.

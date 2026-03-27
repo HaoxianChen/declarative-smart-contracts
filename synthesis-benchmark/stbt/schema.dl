@@ -3,8 +3,8 @@
 
 // views
 .decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl balanceOf(p: address, n: int >= 0)[0]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 .decl constructor()
 
 // ERC1400 permissioning
@@ -20,21 +20,21 @@
 
 // Transactions (B-style explicit params)
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address <> 0, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address <> 0, to: address <> 0, spender: address <> 0, amount: int > 0)
 
 .decl increaseAllowance(p: address, s: address, d: int)
-.decl recv_increaseAllowance(p: address, s: address, d: int)
+.decl recv_increaseAllowance(p: address, s: address, d: int >= 0)
 
 // Interest distribution
-.decl recv_distributeInterests(n: int, t: uint)
-.decl distributeInterests(n: int, t: uint)
+.decl recv_distributeInterests(n: int > 0, t: uint > 0)
+.decl distributeInterests(n: int > 0, t: uint > 0)
 .decl *distributeTotal(n: int)
 .decl *lastDistributeTime(time: uint)
 .decl *minInterval(time:uint)
@@ -60,13 +60,24 @@
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
 
-// Properties (preserve original)
+// Properties
 .decl *totalBalances(m: int)
 .decl *unequalBalance(s: int, n: int)
 .violation unequalBalance
 
-.decl invalidTx()
-.violation invalidTx
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl unauthorizedMint()
+.violation unauthorizedMint
+
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
+
+// (removed: sentinel-based unpermittedTransfer and earlyDistribution)
 
 // Transaction placeholder rules
 mint(p,n) :- recv_mint(p,n).
@@ -75,4 +86,3 @@ transfer(s,r,n) :- recv_transfer(s,r,n).
 transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
 distributeInterests(n,t) :- recv_distributeInterests(n,t).
-

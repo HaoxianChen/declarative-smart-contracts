@@ -1,29 +1,30 @@
 // The controllable token contract following ERC 1644 standard.
-
+// Adopated from: https://github.com/ethereum/EIPs/issues/1644
 // parameters
 .decl *owner(p: address)
 .decl *controller(p: address)
 
 // views
 .decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl balanceOf(p: address, n: int >= 0)[0]
 .decl constructor(p: address)
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 
 // Transactions
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address <> 0, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 // ERC 1644 interfaces
-.decl recv_controllerTransfer(from: address, to: address, amount: int)
+.decl recv_controllerTransfer(from: address <> 0, to: address <> 0, amount: int > 0)
+.public recv_controllerTransfer
 .decl controllerTransfer(from: address, to: address, amount: int)
-.decl recv_controllerRedeem(p: address, amount: int)
+.decl recv_controllerRedeem(p: address <> 0, amount: int > 0)
 .decl controllerRedeem(p: address, amount: int)
 
 // New transactions
@@ -53,7 +54,7 @@
 .decl *allBurn(n: int)
 
 // New rules
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address <> 0, to: address <> 0, spender: address <> 0, amount: int > 0)
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
 .public recv_transferFrom
 
@@ -77,6 +78,9 @@
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+
+.decl illegalControllerTransfer()
+.violation illegalControllerTransfer
 
 .decl invalidTx()
 .violation invalidTx

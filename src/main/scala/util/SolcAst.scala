@@ -25,6 +25,13 @@ object SolcAst {
     visibility: String
   )
 
+  case class UdfAstInfo(
+    baseContractName: String,
+    functionSigs: List[SolFunctionSig],
+    externalFunctions: Set[String],
+    ownedRelationNames: Set[String]
+  )
+
   private def normalizeSolType(typeString: String): String = {
     if (typeString == null) return ""
     val t = typeString.trim
@@ -105,25 +112,236 @@ object SolcAst {
     )
   }
 
-  def extractSingleContractAndFunctions(udfSolPath: String): (String, List[SolFunctionSig]) = {
+  private def relationNameFromTuple(tupleName: String): Option[String] = {
+    if (!tupleName.endsWith("Tuple") || tupleName.length <= "Tuple".length) None
+    else {
+      val base = tupleName.stripSuffix("Tuple")
+      Some(base.head.toLower + base.tail)
+    }
+  }
+
+  private def contractOwnedRelations(contractNode: Map[String, Any]): Set[String] = {
+    val nodes = asList(contractNode.getOrElse("nodes", Nil)).map(asMap)
+    val structOwned = nodes.flatMap { node =>
+      if (node.get("nodeType").contains("StructDefinition")) {
+        relationNameFromTuple(node.getOrElse("name", "").toString)
+      } else None
+    }
+    val stateOwned = nodes.flatMap { node =>
+      val isStateVar = node.get("nodeType").contains("VariableDeclaration") &&
+        (node.getOrElse("stateVariable", false) match {
+          case b: Boolean => b
+          case s: String => s == "true"
+          case _ => false
+        })
+      if (isStateVar) Some(node.getOrElse("name", "").toString) else None
+    }
+    (structOwned ++ stateOwned).filter(_.nonEmpty).toSet
+  }
+
+  private def contractFunctions(contractNode: Map[String, Any]): List[SolFunctionSig] = {
+    val nodes = asList(contractNode.getOrElse("nodes", Nil)).map(asMap)
+    nodes
+      .filter(n => n.get("nodeType").contains("FunctionDefinition"))
+      .filter(n => n.getOrElse("name", "").toString.nonEmpty)
+      .map(extractFunctionSig)
+  }
+
+  def extractUdfAstInfo(program: Program, udfSolPath: String): UdfAstInfo = {
     val json = runSolcAstJson(udfSolPath)
     val root = parseJson(json)
 
     val contractNodes = findAllNodes(root, n => n.get("nodeType").contains("ContractDefinition"))
     if (contractNodes.isEmpty) throw new Exception(s"No ContractDefinition found in $udfSolPath")
-    val contractName = contractNodes.head.getOrElse("name", "").toString
-
-    val functionNodes = findAllNodes(root, n => n.get("nodeType").contains("FunctionDefinition"))
-      // filter out constructors/fallback/receive (name may be empty)
-      .filter(n => n.getOrElse("name", "").toString.nonEmpty)
-
-    val funcs = functionNodes.map(extractFunctionSig)
-    (contractName, funcs)
+    val udfNames = program.udfs.map(_.name)
+    val rankedContracts = contractNodes.map { node =>
+      val name = node.getOrElse("name", "").toString
+      val kind = node.getOrElse("contractKind", "contract").toString
+      val funcs = contractFunctions(node)
+      val funcNames = funcs.map(_.name).toSet
+      val matchCount = udfNames.intersect(funcNames).size
+      val kindScore = kind match {
+        case "contract" => 2
+        case "abstract" => 1
+        case _ => 0
+      }
+      (node, name, funcs, matchCount, kindScore)
+    }
+    val selected = rankedContracts.maxBy { case (_, _, _, matchCount, kindScore) => (matchCount, kindScore) }
+    val (contractNode, contractName, funcs, _, _) = selected
+    val externalFunctions = funcs.collect {
+      case f if f.visibility == "external" => f.name
+    }.toSet
+    val ownedRelationNames = contractOwnedRelations(contractNode)
+    UdfAstInfo(contractName, funcs, externalFunctions, ownedRelationNames)
   }
 
-  def checkUdfsAgainstUdfSol(program: Program, udfSolPath: String): (String, List[String]) = {
-    val (contractName, funcs) = extractSingleContractAndFunctions(udfSolPath)
-    val funcIndex: Map[String, List[SolFunctionSig]] = funcs.groupBy(_.name)
+  // ---- Constraint extraction from udf.sol body ----
+
+  /** Extract state variable declared initial values from the solc AST root. */
+  private def extractStateVarInits(root: Any): Map[String, BigInt] = {
+    val svNodes = findAllNodes(root, n =>
+      n.get("nodeType").contains("VariableDeclaration") &&
+      (n.getOrElse("stateVariable", false) match {
+        case b: Boolean => b
+        case s: String  => s == "true"
+        case _          => false
+      })
+    )
+    svNodes.flatMap { sv =>
+      val name = sv.getOrElse("name", "").toString
+      val valueNode = asMap(sv.getOrElse("value", Map.empty))
+      val initValOpt: Option[BigInt] = valueNode.get("nodeType").map(_.toString) match {
+        case Some("Literal") =>
+          try Some(BigInt(valueNode.getOrElse("value", "").toString))
+          catch { case _: Exception => None }
+        case _ => None
+      }
+      initValOpt.map(v => name -> v)
+    }.toMap
+  }
+
+  /**
+   * Try to parse a Solidity AST expression node into a UdfExpr.
+   * Returns None for patterns we cannot represent (e.g., function calls, local vars).
+   */
+  private def parseUdfExpr(
+    node: Any,
+    paramNames: List[String],
+    stateVarInits: Map[String, BigInt]
+  ): Option[UdfExpr] = {
+    val m = asMap(node)
+    m.get("nodeType").map(_.toString) match {
+      case Some("Identifier") =>
+        val name = m.getOrElse("name", "").toString
+        val idx = paramNames.indexOf(name)
+        if (idx >= 0) Some(UdfParam(idx))
+        else stateVarInits.get(name).map(iv => UdfStateVar(name, iv))
+
+      case Some("Literal") =>
+        val kind  = m.getOrElse("kind", "number").toString
+        val value = m.getOrElse("value", "").toString
+        if (kind == "bool") Some(UdfBool(value == "true"))
+        else try Some(UdfLiteral(BigInt(value))) catch { case _: Exception => None }
+
+      case Some("BinaryOperation") =>
+        val op    = m.getOrElse("operator", "").toString
+        val left  = parseUdfExpr(m.getOrElse("leftExpression",  Map.empty), paramNames, stateVarInits)
+        val right = parseUdfExpr(m.getOrElse("rightExpression", Map.empty), paramNames, stateVarInits)
+        (left, right) match {
+          case (Some(l), Some(r)) => Some(UdfBinOp(op, l, r))
+          case _                  => None
+        }
+
+      case Some("TupleExpression") =>
+        // Parenthesised expression: unwrap single-element tuple.
+        val components = asList(m.getOrElse("components", Nil))
+        if (components.size == 1) parseUdfExpr(components.head, paramNames, stateVarInits)
+        else None
+
+      case _ => None
+    }
+  }
+
+  /** Try to extract the return expression from a Return statement node. */
+  private def extractReturnExpr(
+    retNode: Any,
+    paramNames: List[String],
+    stateVarInits: Map[String, BigInt]
+  ): Option[UdfExpr] = {
+    val m = asMap(retNode)
+    if (m.get("nodeType").contains("Return"))
+      parseUdfExpr(m.getOrElse("expression", Map.empty), paramNames, stateVarInits)
+    else None
+  }
+
+  /**
+   * Scan the top-level statements of a function body and produce UdfConstraints.
+   * Only patterns expressible in the constraint model are captured; others are silently skipped.
+   */
+  private def extractConstraintsFromStatements(
+    statements: List[Any],
+    paramNames: List[String],
+    stateVarInits: Map[String, BigInt]
+  ): List[UdfConstraint] = {
+    statements.flatMap { stmt =>
+      val m = asMap(stmt)
+      m.get("nodeType").map(_.toString) match {
+
+        case Some("Return") =>
+          extractReturnExpr(stmt, paramNames, stateVarInits).map(ReturnEquals(_))
+
+        case Some("IfStatement") =>
+          val condOpt     = parseUdfExpr(m.getOrElse("condition", Map.empty), paramNames, stateVarInits)
+          val trueBodyNode = m.getOrElse("trueBody", Map.empty)
+          val trueBodyMap  = asMap(trueBodyNode)
+          // trueBody may be a Return directly or a Block containing statements.
+          val returnNodeOpt: Option[Any] = trueBodyMap.get("nodeType").map(_.toString) match {
+            case Some("Return") => Some(trueBodyNode)
+            case Some("Block")  =>
+              asList(trueBodyMap.getOrElse("statements", Nil))
+                .find(s => asMap(s).get("nodeType").contains("Return"))
+            case _ => None
+          }
+          (condOpt, returnNodeOpt) match {
+            case (Some(cond), Some(retNode)) =>
+              extractReturnExpr(retNode, paramNames, stateVarInits).map(r => ConditionalReturn(cond, r))
+            case _ => None
+          }
+
+        case Some("ExpressionStatement") =>
+          // Detect require(cond, ...) calls.
+          val exprNode = asMap(m.getOrElse("expression", Map.empty))
+          if (exprNode.get("nodeType").contains("FunctionCall")) {
+            val callee = asMap(exprNode.getOrElse("expression", Map.empty))
+            if (callee.getOrElse("name", "").toString == "require") {
+              val args = asList(exprNode.getOrElse("arguments", Nil))
+              if (args.nonEmpty)
+                parseUdfExpr(args.head, paramNames, stateVarInits).map(RequireConstraint(_))
+              else None
+            } else None
+          } else None
+
+        case _ => None
+      }
+    }
+  }
+
+  /**
+   * Parse the given udf.sol file via solc AST and extract per-function constraint specs.
+   * Returns an empty map if solc is unavailable or if any AST parsing step fails;
+   * the Verifier then falls back to Uninterpreted Function semantics for all UDFs.
+   */
+  def extractFunctionConstraints(udfSolPath: String): Map[String, UdfConstraintSpec] = {
+    try {
+      val json  = runSolcAstJson(udfSolPath)
+      val root  = parseJson(json)
+      val stateVarInits = extractStateVarInits(root)
+
+      val functionNodes = findAllNodes(root, n => n.get("nodeType").contains("FunctionDefinition"))
+        .filter(n => n.getOrElse("name", "").toString.nonEmpty)
+
+      functionNodes.map { fnNode =>
+        val fnName     = fnNode.getOrElse("name", "").toString
+        val paramsNode = asMap(fnNode.getOrElse("parameters", Map.empty))
+        val paramNames: List[String] =
+          asList(paramsNode.getOrElse("parameters", Nil))
+            .map(p => asMap(p).getOrElse("name", "").toString)
+
+        val bodyNode   = asMap(fnNode.getOrElse("body", Map.empty))
+        val statements = asList(bodyNode.getOrElse("statements", Nil))
+        val constraints = extractConstraintsFromStatements(statements, paramNames, stateVarInits)
+
+        fnName -> UdfConstraintSpec(fnName, constraints)
+      }.toMap
+    } catch {
+      case _: Exception => Map.empty
+    }
+  }
+
+  def checkUdfsAgainstUdfSol(program: Program, udfSolPath: String): (UdfAstInfo, List[String]) = {
+    val info = extractUdfAstInfo(program, udfSolPath)
+    val funcIndex: Map[String, List[SolFunctionSig]] = info.functionSigs.groupBy(_.name)
 
     def relationToExpectedSig(rel: Relation): (String, List[String], String) = {
       val name = rel.name
@@ -172,7 +390,7 @@ object SolcAst {
       }
     }
 
-    (contractName, errors)
+    (info, errors)
   }
 }
 

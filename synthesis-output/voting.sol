@@ -11,15 +11,15 @@ contract Voting {
     bool b;
     bool _valid;
   }
+  struct HasWinnerTuple {
+    bool b;
+    bool _valid;
+  }
   struct VotesTuple {
     int c;
     bool _valid;
   }
   struct WinsTuple {
-    bool b;
-    bool _valid;
-  }
-  struct HasWinnerTuple {
     bool b;
     bool _valid;
   }
@@ -35,17 +35,22 @@ contract Voting {
   QuorumSizeTuple quorumSize;
   mapping(uint=>WinsTuple) wins;
   event Vote(address v,uint proposal);
-  event InvalidTx();
   event Finalize(uint proposal);
   constructor() public {
-    updateWinningProposalOnInsertConstructor_r17();
-    updateQuorumSizeOnInsertConstructor_r1();
-    updateIsVoterOnInsertConstructor_r16();
-    updateHasWinnerOnInsertConstructor_r14();
+    updateQuorumSizeOnInsertConstructor_r7();
+    updateHasWinnerOnInsertConstructor_r10();
+    updateWinningProposalOnInsertConstructor_r12();
+    updateIsVoterOnInsertConstructor_r11();
   }
   function getVotes(uint proposal) public view  returns (int) {
       int c = votes[proposal].c;
       return c;
+  }
+  function finalize(uint proposal) public    {
+      bool r8 = updateFinalizeOnInsertRecv_finalize_r8(proposal);
+      if(r8==false) {
+        revert("Rule condition failed");
+      }
   }
   function getWinningProposal() public view  returns (uint) {
       uint proposal = winningProposal.proposal;
@@ -55,22 +60,6 @@ contract Voting {
       bool b = hasWinner.b;
       return b;
   }
-  function finalize(uint proposal) public    {
-      bool r10 = updateFinalizeOnInsertRecv_finalize_r10(proposal);
-      if(r10==false) {
-        revert("Rule condition failed");
-      }
-  }
-  function getIsVoter(address v) public view  returns (bool) {
-      bool b = isVoter[v].b;
-      return b;
-  }
-  function vote(address v,uint proposal) public    {
-      bool r2 = updateVoteOnInsertRecv_vote_r2(v,proposal);
-      if(r2==false) {
-        revert("Rule condition failed");
-      }
-  }
   function getVoted(address p) public view  returns (bool) {
       bool b = voted[p].b;
       return b;
@@ -79,8 +68,29 @@ contract Voting {
       bool b = wins[proposal].b;
       return b;
   }
-  function updateVotedOnInsertVote_r4(address v) private    {
-      voted[v] = VotedTuple(true,true);
+  function vote(address v,uint proposal) public    {
+      bool r6 = updateVoteOnInsertRecv_vote_r6(v,proposal);
+      if(r6==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function getIsVoter(address v) public view  returns (bool) {
+      bool b = isVoter[v].b;
+      return b;
+  }
+  function updateHasWinnerOnInsertFinalize_r4(uint p) private    {
+      int q = quorumSize.q;
+      int c = votes[p].c;
+      if(c>=q) {
+        hasWinner = HasWinnerTuple(true,true);
+      }
+  }
+  function updateVoteOnInsertRecv_vote_r6(address v,uint proposal) private   returns (bool) {
+      updateVoteUnitOnInsertVote_r9(v,proposal);
+      updateVotedOnInsertVote_r3(v);
+      emit Vote(v,proposal);
+      return true;
+      return false;
   }
   function updateWinsOnInsertFinalize_r0(uint p) private    {
       int q = quorumSize.q;
@@ -89,12 +99,8 @@ contract Voting {
         wins[p] = WinsTuple(true,true);
       }
   }
-  function updateIsVoterOnInsertConstructor_r16() private    {
-      address v = msg.sender;
-      isVoter[v] = IsVoterTuple(true,true);
-  }
-  function updateVoteUnitOnInsertVote_r6(uint p) private    {
-      updateVotesOnInsertVoteUnit_r5(p,int(1));
+  function updateVotesOnInsertVoteUnit_r1(uint p,int one) private    {
+      votes[p].c += one;
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
       int convertedX = int(x);
@@ -102,55 +108,41 @@ contract Voting {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function updateHasWinnerOnInsertFinalize_r8(uint p) private    {
-      int q = quorumSize.q;
-      int c = votes[p].c;
-      if(c>=q) {
-        hasWinner = HasWinnerTuple(true,true);
-      }
+  function updateVotedOnInsertVote_r3(address v) private    {
+      voted[v] = VotedTuple(true,true);
   }
-  function updateWinningProposalOnInsertConstructor_r17() private    {
-      winningProposal = WinningProposalTuple(0,true);
-  }
-  function updateVotesOnInsertVoteUnit_r5(uint p,int one) private    {
-      votes[p].c += one;
-  }
-  function updateFinalizeOnInsertRecv_finalize_r10(uint proposal) private   returns (bool) {
-      int q_1 = quorumSize.q;
-      bool b_0 = hasWinner.b;
-      int c_1 = votes[p].c;
-      if(b_0!=true && c_1>=q_1) {
-        updateWinsOnInsertFinalize_r0(p);
-        updateHasWinnerOnInsertFinalize_r8(p);
-        updateWinningProposalOnInsertFinalize_r12(p);
-        emit Finalize(p);
+  function updateFinalizeOnInsertRecv_finalize_r8(uint proposal) private   returns (bool) {
+      bool hasWinner_b = hasWinner.b;
+      if(hasWinner_b==false) {
+        updateHasWinnerOnInsertFinalize_r4(proposal);
+        updateWinningProposalOnInsertFinalize_r5(proposal);
+        updateWinsOnInsertFinalize_r0(proposal);
+        emit Finalize(proposal);
         return true;
       }
       return false;
   }
-  function updateHasWinnerOnInsertConstructor_r14() private    {
+  function updateHasWinnerOnInsertConstructor_r10() private    {
       hasWinner = HasWinnerTuple(false,true);
   }
-  function updateVoteOnInsertRecv_vote_r2(address v,uint proposal) private   returns (bool) {
-      bool b_0 = hasWinner.b;
-      bool b_2 = voted[v].b;
-      bool b_1 = isVoter[v].b;
-      if(b_0!=true && b_1!=false && b_2!=true) {
-        updateVotedOnInsertVote_r4(v);
-        updateVoteUnitOnInsertVote_r6(p);
-        emit Vote(v,p);
-        return true;
-      }
-      return false;
+  function updateWinningProposalOnInsertConstructor_r12() private    {
+      winningProposal = WinningProposalTuple(0,true);
   }
-  function updateQuorumSizeOnInsertConstructor_r1() private    {
-      quorumSize = QuorumSizeTuple(1,true);
+  function updateIsVoterOnInsertConstructor_r11() private    {
+      address v = msg.sender;
+      isVoter[v] = IsVoterTuple(true,true);
   }
-  function updateWinningProposalOnInsertFinalize_r12(uint p) private    {
+  function updateWinningProposalOnInsertFinalize_r5(uint p) private    {
       int q = quorumSize.q;
       int c = votes[p].c;
       if(c>=q) {
         winningProposal = WinningProposalTuple(p,true);
       }
+  }
+  function updateQuorumSizeOnInsertConstructor_r7() private    {
+      quorumSize = QuorumSizeTuple(1,true);
+  }
+  function updateVoteUnitOnInsertVote_r9(address v,uint p) private    {
+      updateVotesOnInsertVoteUnit_r1(p,int(1));
   }
 }

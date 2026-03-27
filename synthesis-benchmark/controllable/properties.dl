@@ -1,17 +1,10 @@
-// Properties for Controllable Token
-
-// Check that total balances equal total supply
+// total balances equal total supply
 unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 
-// Check that no account has negative balance
+// no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
-
-// Check that only controller can redeem
-illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), p!=c.
-
-// Check that no account has negative allowance
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// Check that only owner can mint or burn
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+illegalRedeem(p,n) :- recv_controllerRedeem(p,n), controller(c), msgSender(s), s!=c.
+illegalControllerTransfer() :- recv_controllerTransfer(_,_,_), controller(c), msgSender(s), s!=c.

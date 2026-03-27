@@ -1,0 +1,2950 @@
+[Audit] BenchmarkStart: name=theta.dl, benchDir=synthesis-benchmark/theta
+[Audit] InputSpecFiles: schema=synthesis-benchmark/theta/schema.dl, rules=synthesis-benchmark/theta/rules.dl, properties=synthesis-benchmark/theta/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/theta.dl, stats=synthesis-output/synthesis_stats.csv
+[theta.dl] BenchmarkStart: program=Theta, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[theta.dl] SeededPredicatesFromTxProperties: Map(disallowPrecirculation(p) :- recv_disallowPrecirculation(p). -> Set(Predicate(context: tx: recv_disallowPrecirculation(_), bindings: [owner(o), msgSender(s)], functor: s==o)), allowPrecirculation(p) :- recv_allowPrecirculation(p). -> Set(Predicate(context: tx: recv_allowPrecirculation(_), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[theta.dl] InitialTransactionRules:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#0 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#0 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[theta.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 0, value: 0]
+[1] recv_mint(address(9),-14681) [msgSender: 0, value: 0]
+[theta.dl] Iteration#0 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[theta.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#0 SynthesisResult: updated
+[theta.dl] Iteration#1 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#1 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[theta.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 0, value: 0]
+[1] recv_burn(address(9),1) [msgSender: 0, value: 0]
+[theta.dl] Iteration#1 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[theta.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=burn
+[theta.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[theta.dl] Iteration#2 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#2 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[theta.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(6),address(8),-30613) [msgSender: 0, value: 0]
+[theta.dl] Iteration#2 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[theta.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#2 SynthesisResult: updated
+[theta.dl] Iteration#3 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[theta.dl] Iteration#3 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[theta.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 0, value: 0]
+[1] recv_transferFrom(address(2),address(2),address(7),1) [msgSender: 0, value: 0]
+[theta.dl] Iteration#3 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[theta.dl] Iteration#3 FallbackToFull: reason=UNSAT, relations=transferFrom
+[theta.dl] Iteration#3 ProgramAfterFallbackSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#3 SynthesisResult: updated-by-fallback
+[theta.dl] Iteration#4 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#4 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[theta.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 5, value: 0]
+[1] recv_mint(address(11),1) [msgSender: 5, value: 0]
+[2] recv_burn(address(11),30699) [msgSender: 13, value: 0]
+[theta.dl] Iteration#4 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[theta.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#4 SynthesisResult: updated
+[theta.dl] Iteration#5 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#5 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(11),address(11),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(11),address(11),address(12),25348) [msgSender: 13, value: 0]
+[theta.dl] Iteration#5 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#5 SynthesisResult: updated
+[theta.dl] Iteration#6 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#6 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(5),address(5),3566) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(5),address(5),address(13),230) [msgSender: 14, value: 0]
+[theta.dl] Iteration#6 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#6 SynthesisResult: updated
+[theta.dl] Iteration#7 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#7 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(12),address(13),21394) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(12),address(12),address(13),21395) [msgSender: 12, value: 0]
+[theta.dl] Iteration#7 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#7 SynthesisResult: updated
+[theta.dl] Iteration#8 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#8 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[theta.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_transfer(address(6),address(6),30100) [msgSender: 4, value: 0]
+[2] recv_mint(address(23),30099) [msgSender: 9, value: 0]
+[3] recv_transfer(address(6),address(23),-60201) [msgSender: 7, value: 0]
+[theta.dl] Iteration#8 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[theta.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#8 SynthesisResult: updated
+[theta.dl] Iteration#9 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#9 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[theta.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_transfer(address(7),address(7),1) [msgSender: 4, value: 0]
+[2] recv_mint(address(17),65073) [msgSender: 10, value: 0]
+[3] recv_transfer(address(7),address(17),209804) [msgSender: 8, value: 0]
+[theta.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[theta.dl] Iteration#9 FallbackToFull: reason=UNSAT, relations=transfer
+[theta.dl] Iteration#9 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#9 SynthesisResult: updated-by-fallback
+[theta.dl] Iteration#10 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[theta.dl] Iteration#10 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[theta.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_mint(address(19),56355) [msgSender: 4, value: 0]
+[2] recv_mint(address(18),103372) [msgSender: 11, value: 0]
+[3] recv_transfer(address(18),address(19),-159729) [msgSender: 19, value: 0]
+[theta.dl] Iteration#10 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[theta.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,0!=balanceOf_x1_1.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#10 SynthesisResult: updated
+[theta.dl] Iteration#11 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,0!=balanceOf_x1_1.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#11 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[theta.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_mint(address(8),2) [msgSender: 4, value: 0]
+[2] recv_mint(address(18),1) [msgSender: 9, value: 0]
+[3] recv_transfer(address(8),address(18),50792) [msgSender: 9, value: 0]
+[theta.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[theta.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#11 SynthesisResult: updated
+[theta.dl] Iteration#12 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#12 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[theta.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(23),56904) [msgSender: 2, value: 0]
+[2] recv_mint(address(14),128081) [msgSender: 13, value: 0]
+[3] recv_transfer(address(23),address(14),56905) [msgSender: 24, value: 0]
+[theta.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[theta.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#12 SynthesisResult: updated
+[theta.dl] Iteration#13 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#13 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_mint(address(28),1) [msgSender: 4, value: 0]
+[2] recv_mint(address(25),2) [msgSender: 13, value: 0]
+[3] recv_increaseAllowance(address(25),address(26),87267) [msgSender: 27, value: 0]
+[4] recv_transferFrom(address(25),address(28),address(26),70662) [msgSender: 34, value: 0]
+[theta.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#13 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#13 SynthesisResult: updated
+[theta.dl] Iteration#14 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#14 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(21),address(29),16230) [msgSender: 3, value: 0]
+[2] recv_mint(address(29),9336) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(21),address(21),address(29),-7863) [msgSender: 23, value: 0]
+[4] recv_transferFrom(address(29),address(21),address(29),17200) [msgSender: 30, value: 0]
+[theta.dl] Iteration#14 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#14 SynthesisResult: updated
+[theta.dl] Iteration#15 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#15 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(9),address(10),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(10),address(10),address(9),30339) [msgSender: 13, value: 0]
+[theta.dl] Iteration#15 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#15 SynthesisResult: updated
+[theta.dl] Iteration#16 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),n<=allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#16 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(13),address(10),24324) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(10),address(10),address(13),24324) [msgSender: 14, value: 0]
+[theta.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),n<allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#16 SynthesisResult: updated
+[theta.dl] Iteration#17 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,o,allowance_x2),n<allowance_x2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#17 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(13),address(14),2) [msgSender: 4, value: 0]
+[2] recv_transferFrom(address(14),address(14),address(13),1) [msgSender: 17, value: 0]
+[theta.dl] Iteration#17 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#17 SynthesisResult: updated
+[theta.dl] Iteration#18 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#18 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_mint(address(8),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(8),address(8),address(12),1) [msgSender: 12, value: 0]
+[theta.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#18 SynthesisResult: updated
+[theta.dl] Iteration#19 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#19 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(7),28873) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(13),28872) [msgSender: 13, value: 0]
+[theta.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#19 SynthesisResult: updated
+[theta.dl] Iteration#20 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#20 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_mint(address(6),36707) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(6),2) [msgSender: 14, value: 0]
+[theta.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<=allowance_x2_1.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#20 SynthesisResult: updated
+[theta.dl] Iteration#21 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<=allowance_x2_1.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#21 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(24),405154) [msgSender: 2, value: 0]
+[2] recv_mint(address(18),79220) [msgSender: 5, value: 0]
+[3] recv_increaseAllowance(address(18),address(29),435404) [msgSender: 30, value: 0]
+[4] recv_transferFrom(address(24),address(18),address(29),435404) [msgSender: 26, value: 0]
+[theta.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#21 SynthesisResult: updated
+[theta.dl] Iteration#22 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#22 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 9, value: 0]
+[1] recv_increaseAllowance(address(8),address(3),361557) [msgSender: 9, value: 0]
+[2] recv_transferFrom(address(8),address(8),address(3),1) [msgSender: 4, value: 0]
+[3] recv_mint(address(22),180777) [msgSender: 20, value: 0]
+[4] recv_transferFrom(address(22),address(8),address(3),361555) [msgSender: 9, value: 0]
+[theta.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#22 SynthesisResult: updated
+[theta.dl] Iteration#23 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#23 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(20),address(16),1) [msgSender: 3, value: 0]
+[2] recv_mint(address(16),5744) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(16),address(16),address(20),1) [msgSender: 18, value: 0]
+[theta.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n<=allowance_x2_0,allowance(r,sp,allowance_x2_1),allowance(sp,o,allowance_x2_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#23 SynthesisResult: updated
+[theta.dl] Iteration#24 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n<=allowance_x2_0,allowance(r,sp,allowance_x2_1),allowance(sp,o,allowance_x2_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#24 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[theta.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(12),address(12),10879) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(12),address(12),address(12),1) [msgSender: 16, value: 0]
+[3] recv_increaseAllowance(address(35),address(12),10877) [msgSender: 13, value: 0]
+[4] recv_mint(address(35),12640) [msgSender: 28, value: 0]
+[5] recv_transferFrom(address(12),address(35),address(12),-25279) [msgSender: 36, value: 0]
+[theta.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance(sp,o,allowance_x2_1),n<allowance_x2_2,recv_transferFrom(o,r,sp,n),n<=allowance_x2_1,allowance(r,sp,allowance_x2_2).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#24 SynthesisResult: updated
+[theta.dl] Iteration#25 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance(sp,o,allowance_x2_1),n<allowance_x2_2,recv_transferFrom(o,r,sp,n),n<=allowance_x2_1,allowance(r,sp,allowance_x2_2).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#25 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[theta.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(32),address(15),34787) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(15),address(15),69571) [msgSender: 16, value: 0]
+[3] recv_transferFrom(address(15),address(15),address(15),34785) [msgSender: 17, value: 0]
+[4] recv_mint(address(32),1) [msgSender: 29, value: 0]
+[5] recv_transferFrom(address(15),address(32),address(15),34786) [msgSender: 16, value: 0]
+[theta.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n<=allowance_x2_0,allowance(sp,o,allowance_x2_0),allowance(o,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),allowance_x2_1>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#25 SynthesisResult: updated
+[theta.dl] Iteration#26 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n<=allowance_x2_0,allowance(sp,o,allowance_x2_0),allowance(o,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),allowance_x2_1>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#26 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(17),address(17),1) [msgSender: 3, value: 0]
+[2] recv_increaseAllowance(address(18),address(17),58716) [msgSender: 18, value: 0]
+[3] recv_transferFrom(address(17),address(17),address(18),45458) [msgSender: 23, value: 0]
+[theta.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#26 SynthesisResult: updated
+[theta.dl] Iteration#27 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#27 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_mint(address(18),78830) [msgSender: 3, value: 0]
+[2] recv_increaseAllowance(address(9),address(18),59911) [msgSender: 19, value: 0]
+[3] recv_transferFrom(address(18),address(18),address(9),46843) [msgSender: 22, value: 0]
+[theta.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),n<allowance_x2_0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(r,sp,allowance_x2_0).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#27 SynthesisResult: updated
+[theta.dl] Iteration#28 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),n<allowance_x2_0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(r,sp,allowance_x2_0).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#28 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#28 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(29),address(29),38418) [msgSender: 2, value: 0]
+[2] recv_mint(address(22),29484) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(29),address(29),address(29),14977) [msgSender: 22, value: 0]
+[4] recv_transferFrom(address(22),address(29),address(29),-46706) [msgSender: 11, value: 0]
+[theta.dl] Iteration#28 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#28 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),balanceOf(r,balanceOf_x1_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf_x1_0>0.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#28 SynthesisResult: updated
+[theta.dl] Iteration#29 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),balanceOf(r,balanceOf_x1_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf_x1_0>0.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#29 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#29 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 10, value: 0]
+[1] recv_increaseAllowance(address(23),address(24),9262) [msgSender: 10, value: 0]
+[2] recv_mint(address(28),2) [msgSender: 25, value: 0]
+[3] recv_mint(address(23),2) [msgSender: 25, value: 0]
+[4] recv_transferFrom(address(28),address(23),address(24),1518) [msgSender: 24, value: 0]
+[theta.dl] Iteration#29 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#29 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance(r,sp,allowance_x2_1),n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#29 SynthesisResult: updated
+[theta.dl] Iteration#30 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance(r,sp,allowance_x2_1),n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),n<allowance_x2_1.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#30 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#30 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 7, value: 0]
+[1] recv_mint(address(27),2) [msgSender: 7, value: 0]
+[2] recv_increaseAllowance(address(21),address(21),8) [msgSender: 22, value: 0]
+[3] recv_transferFrom(address(21),address(21),address(21),3) [msgSender: 23, value: 0]
+[4] recv_transferFrom(address(27),address(21),address(21),4) [msgSender: 29, value: 0]
+[theta.dl] Iteration#30 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#30 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,allowance(r,o,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#30 SynthesisResult: updated
+[theta.dl] Iteration#31 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- balanceOf(r,balanceOf_x1_0),0!=balanceOf_x1_0,allowance(r,o,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_1.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#31 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#31 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(13),address(13),26720) [msgSender: 3, value: 0]
+[2] recv_mint(address(13),26721) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(21),26720) [msgSender: 14, value: 0]
+[theta.dl] Iteration#31 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#31 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,o,allowance_x2_2),n>0,allowance(sp,r,allowance_x2_1),n<=allowance_x2_2,n<allowance_x2_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#31 SynthesisResult: updated
+[theta.dl] Iteration#32 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,o,allowance_x2_2),n>0,allowance(sp,r,allowance_x2_1),n<=allowance_x2_2,n<allowance_x2_1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#32 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#32 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(11),address(18),23498) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(18),address(18),23499) [msgSender: 19, value: 0]
+[3] recv_transferFrom(address(18),address(18),address(11),2) [msgSender: 20, value: 0]
+[theta.dl] Iteration#32 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#32 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance_x2_2>0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1,allowance(sp,o,allowance_x2_2),allowance(o,sp,allowance_x2_1).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#32 SynthesisResult: updated
+[theta.dl] Iteration#33 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- n>0,allowance_x2_2>0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1,allowance(sp,o,allowance_x2_2),allowance(o,sp,allowance_x2_1).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#33 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#33 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(25),357) [msgSender: 2, value: 0]
+[2] recv_mint(address(27),4129) [msgSender: 10, value: 0]
+[3] recv_increaseAllowance(address(27),address(27),9675) [msgSender: 28, value: 0]
+[4] recv_transferFrom(address(27),address(25),address(27),8259) [msgSender: 30, value: 0]
+[theta.dl] Iteration#33 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#33 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,sp,n) :- allowance(o,r,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(o,sp,allowance_x2_0).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#33 SynthesisResult: updated
+[theta.dl] Iteration#34 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,sp,n) :- allowance(o,r,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(o,sp,allowance_x2_0).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#34 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[theta.dl] Iteration#34 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(12),address(12),47098) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(12),address(12),address(12),47099) [msgSender: 12, value: 0]
+[theta.dl] Iteration#34 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#34 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),n<=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_0),n<=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+[theta.dl] Iteration#34 SynthesisResult: updated
+[theta.dl] Iteration#35 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),n<=balanceOf_x1_0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_0),n<=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+[theta.dl] Iteration#35 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[theta.dl] Iteration#35 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(25),address(26),1) [msgSender: 3, value: 0]
+[2] recv_mint(address(25),278998) [msgSender: 27, value: 0]
+[3] recv_mint(address(29),278999) [msgSender: 21, value: 0]
+[4] recv_transferFrom(address(29),address(25),address(26),-557998) [msgSender: 33, value: 0]
+[theta.dl] Iteration#35 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#35 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),allowance(o,r,allowance_x2_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,0!=allowance_x2_0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#35 SynthesisResult: updated
+[theta.dl] Iteration#36 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- allowance(r,sp,allowance_x2_1),allowance(o,r,allowance_x2_0),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,0!=allowance_x2_0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#36 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[theta.dl] Iteration#36 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(32),address(33),985724) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(31),address(32),1) [msgSender: 33, value: 0]
+[3] recv_mint(address(31),476789) [msgSender: 18, value: 0]
+[4] recv_mint(address(32),476790) [msgSender: 30, value: 0]
+[5] recv_transferFrom(address(31),address(32),address(33),985723) [msgSender: 17, value: 0]
+[theta.dl] Iteration#36 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#36 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,allowance_x2_2>0,recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1),allowance(o,r,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#36 SynthesisResult: updated
+[theta.dl] Iteration#37 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,allowance_x2_2>0,recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1),allowance(o,r,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#37 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#37 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(17),address(17),1) [msgSender: 2, value: 0]
+[2] recv_mint(address(18),24835) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(17),address(17),address(18),10026) [msgSender: 20, value: 0]
+[theta.dl] Iteration#37 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#37 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- n<balanceOf_x1_0,balanceOf(r,balanceOf_x1_0),recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(o,sp,allowance_x2_1).
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#37 SynthesisResult: updated
+[theta.dl] Iteration#38 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- n<balanceOf_x1_0,balanceOf(r,balanceOf_x1_0),recv_transferFrom(o,r,sp,n),allowance_x2_1>0,allowance(o,sp,allowance_x2_1).
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#38 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#38 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(19),address(20),211203) [msgSender: 2, value: 0]
+[2] recv_mint(address(19),353175) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(19),address(19),address(20),211204) [msgSender: 16, value: 0]
+[theta.dl] Iteration#38 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#38 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,allowance(r,o,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#38 SynthesisResult: updated
+[theta.dl] Iteration#39 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,allowance(r,o,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#39 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#39 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(8),address(8),2) [msgSender: 4, value: 0]
+[2] recv_mint(address(8),6914) [msgSender: 21, value: 0]
+[3] recv_transferFrom(address(8),address(8),address(20),1) [msgSender: 21, value: 0]
+[theta.dl] Iteration#39 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#39 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf(sp,balanceOf_x1_0),balanceOf_x1_0>0.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#39 SynthesisResult: updated
+[theta.dl] Iteration#40 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf(sp,balanceOf_x1_0),balanceOf_x1_0>0.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#40 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#40 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(14),1) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(14),address(18),218603) [msgSender: 19, value: 0]
+[3] recv_transferFrom(address(18),address(18),address(14),218602) [msgSender: 24, value: 0]
+[theta.dl] Iteration#40 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#40 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- n>0,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<=balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+[theta.dl] Iteration#40 SynthesisResult: updated
+[theta.dl] Iteration#41 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- n>0,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<=balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+[theta.dl] Iteration#41 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=4
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=4
+[theta.dl] Iteration#41 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 5, value: 0]
+[1] recv_mint(address(13),12282) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(13),address(27),2) [msgSender: 28, value: 0]
+[3] recv_mint(address(17),345) [msgSender: 28, value: 0]
+[4] recv_transferFrom(address(17),address(13),address(27),2) [msgSender: 19, value: 0]
+[theta.dl] Iteration#41 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#41 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- n<balanceOf_x1_0,0!=allowance_x2_1,recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_0),allowance(o,sp,allowance_x2_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+[theta.dl] Iteration#41 SynthesisResult: updated
+[theta.dl] Iteration#42 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,sp,n) :- n<balanceOf_x1_0,0!=allowance_x2_1,recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_0),allowance(o,sp,allowance_x2_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+[theta.dl] Iteration#42 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#42 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(12),address(3),1) [msgSender: 2, value: 0]
+[2] recv_mint(address(3),28891) [msgSender: 5, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(3),24366) [msgSender: 20, value: 0]
+[theta.dl] Iteration#42 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#42 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#42 SynthesisResult: updated
+[theta.dl] Iteration#43 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#43 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=4
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=4
+[theta.dl] Iteration#43 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 2, value: 0]
+[1] recv_mint(address(10),355535) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(10),address(23),146239) [msgSender: 24, value: 0]
+[3] recv_mint(address(18),355534) [msgSender: 17, value: 0]
+[4] recv_transferFrom(address(18),address(10),address(23),128705) [msgSender: 20, value: 0]
+[theta.dl] Iteration#43 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#43 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- allowance(o,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf(sp,balanceOf_x1_0),balanceOf_x1_0>0.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#43 SynthesisResult: updated
+[theta.dl] Iteration#44 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- allowance(o,r,allowance_x2_1),recv_transferFrom(o,r,sp,n),n<allowance_x2_1,balanceOf(sp,balanceOf_x1_0),balanceOf_x1_0>0.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#44 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#44 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(16),address(16),35615) [msgSender: 3, value: 0]
+[2] recv_mint(address(23),1) [msgSender: 17, value: 0]
+[3] recv_transferFrom(address(16),address(16),address(23),35614) [msgSender: 19, value: 0]
+[theta.dl] Iteration#44 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#44 ProgramAfterRestrictedSynthesis:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,allowance(sp,o,allowance_x2_2),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#44 SynthesisResult: updated
+[theta.dl] Iteration#45 ProgramBeforeBMC:
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,allowance(sp,o,allowance_x2_2),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#45 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[theta.dl] Iteration#45 Counterexample:
+Trace:
+[0] constructor(0) [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(23),address(17),1) [msgSender: 3, value: 0]
+[2] recv_mint(address(23),1316) [msgSender: 7, value: 0]
+[3] recv_transferFrom(address(17),address(17),address(23),1) [msgSender: 19, value: 0]
+[theta.dl] Iteration#45 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[theta.dl] Iteration#45 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#45 SynthesisResult: updated
+[theta.dl] Iteration#46 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[theta.dl] Iteration#46 BMCInput: bound=5, violationRules=negativeAllowance,negativeBalance,unauthorizedAllowPrecirculation,unauthorizedDisallowPrecirculation,unequalBalance
+[BMC] TransitionSystemReady: program=Theta
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=unauthorizedDisallowPrecirculation, formula=(and (or (= recv_disallowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=unauthorizedAllowPrecirculation, formula=(and (or (= recv_allowPrecirculation0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedAllowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedDisallowPrecirculation, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[theta.dl] Iteration#46 BMCResult: no-counterexample
+[theta.dl] BenchmarkEnd: reason=sat, totalTimeMs=27688, bmcTimeMs=9182, cegisIterations=46, finalRules=
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+disallowPrecirculation(p) :- recv_disallowPrecirculation(p),owner(o),msgSender(s),s==o.
+allowPrecirculation(p) :- recv_allowPrecirculation(p),owner(o),msgSender(s),s==o.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.

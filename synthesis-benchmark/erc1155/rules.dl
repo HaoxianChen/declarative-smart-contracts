@@ -20,4 +20,3 @@ allowance(t,o,s,n) :- allowanceTotal(t,o,s,m), spentTotal(t,o,s,l), n := m-l.
 
 // Properties helper
 totalBalances(t,s) :- s = sum n: balanceOf(t,_,n).
-

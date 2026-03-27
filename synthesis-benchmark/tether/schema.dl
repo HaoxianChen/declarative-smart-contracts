@@ -4,36 +4,40 @@
 .decl *owner(p: address)
 
 // views
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl *totalSupply(n: int >= 0)
+.decl balanceOf(p: address, n: int >= 0)[0]
 .decl constructor(n: int)
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 .decl isBlackListed(p: address, b:bool)[0]
 .public isBlackListed(1)
 
+.decl computeFee(value: int, fee: int)
+.udf computeFee
+
 // Transactions
 .decl issue(p: address, amount: int)
-.decl recv_issue(p: address, amount: int)
+.decl recv_issue(p: address <> 0, amount: int > 0)
 .decl redeem(p: address, amount: int)
-.decl recv_redeem(p: address, amount: int)
+.decl recv_redeem(p: address <> 0, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address,to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 // New transactions
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address <> 0, to: address <> 0, spender: address <> 0, amount: int > 0)
 .decl increaseAllowance(p: address, s: address, n:int)
-.decl recv_increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int >= 0)
 .public recv_increaseAllowance
 
 .decl destroyBlackFund(p:address,n:int)
-.decl recv_destroyBlackFund(p:address, n:int)
+.decl recv_destroyBlackFund(p:address, n:int > 0)
 
 // Interfaces
 .public recv_issue
 .public recv_redeem
 .public recv_transfer
+.public recv_destroyBlackFund
 .public balanceOf(1)
 .public totalSupply(0)
 
@@ -65,7 +69,6 @@
 // Properties
 .decl *totalBalances(m: int)
 .decl *unequalBalance(s: int, n: int)
-
 .violation unequalBalance
 
 .decl negativeBalance(p:address,n:int)[0]
@@ -74,8 +77,21 @@
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
 
-.decl invalidTx()
-.violation invalidTx
+.decl unauthorizedIssue()
+.violation unauthorizedIssue
+
+.decl unauthorizedRedeem()
+.violation unauthorizedRedeem
+
+.decl unauthorizedDestroyBlackFund()
+.violation unauthorizedDestroyBlackFund
+
+.decl unauthorizedAddBlackList()
+.violation unauthorizedAddBlackList
+
+.decl *onceBlacklistedTransfer(b: bool)
+.decl blacklistedTransfer()
+.violation blacklistedTransfer
 
 // Transaction placeholder rules
 destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).
