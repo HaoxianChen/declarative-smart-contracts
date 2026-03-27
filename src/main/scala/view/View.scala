@@ -99,8 +99,10 @@ abstract class View {
   }
 
   protected def deleteByKeysStatement(literal: Literal, keyIndices: List[Int]): Statement = {
-      val keys = keyIndices.map(i=>literal.fields(i))
-      DeleteByKeys(literal.relation, keys, updateTarget = this.relation)
+      // Filter out wildcard _ parameters — they cannot be used as lookup keys in generated Solidity
+      val keys = keyIndices.map(i=>literal.fields(i)).filterNot(_.name == "_")
+      if (keys.isEmpty) Empty()
+      else DeleteByKeys(literal.relation, keys, updateTarget = this.relation)
   }
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,

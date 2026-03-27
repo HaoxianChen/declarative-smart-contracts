@@ -215,6 +215,11 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def getCallDependentFunctionsStatement(update: UpdateStatement): Statement = {
+    // DeleteByKeys on a non-materialized relation cannot generate a ReadTuple
+    // (no struct or storage exists for it), so skip cascading for those cases.
+    if (update.isInstanceOf[DeleteByKeys] && !materializedRelations.contains(update.relation)) {
+      return Empty()
+    }
     val dsHelper = dataStructureHelper(update.relation)
     dependentFunctions.get(update.relation) match {
       case Some(dependents) => dsHelper.callDependentFunctions(update, dependents)

@@ -319,7 +319,11 @@ case class Revert(msg: String) extends SolidityStatement {
 }
 case class SendEther(p: Parameter, amount: Parameter) extends SolidityStatement {
   require(p._type == Type.addressType)
-  override def toString: String = s"payable($p).send($amount);"
+  override def toString: String = {
+    // Solidity send() requires uint256; cast int amounts
+    val amountStr = if (amount._type == Type.integerType) s"uint($amount)" else amount.toString
+    s"payable($p).send($amountStr);"
+  }
 }
 case class Emit(event: String, parameters: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
