@@ -8,6 +8,5 @@ totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
 balanceOf(p,s) :- totalOut(p,o), totalIn(p,i), s:=i-o.
 allMint(s) :- s = sum n: mint(_,n).
 allBurn(s) :- s = sum n: burn(_,n).
+totalBalances(s) :- s = sum n: balanceOf(_,n).
 totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
-
-

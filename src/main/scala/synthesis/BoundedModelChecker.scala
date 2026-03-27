@@ -7,9 +7,23 @@ import com.microsoft.z3._
 import Verifier.indicatorConstForTransactionTriggerRelation
 import imp.SolidityTranslator.transactionRelationPrefix
 
-case class BoundedModelChecker(udfSolPath: String = "") {
+case class BoundedModelChecker(udfSolPath: String = "", verboseSink: VerboseLogSink = VerboseLogSink.NoOp) {
   // cache for per-step substitution arrays and name->Expr map
   private val stepSubstCache = scala.collection.mutable.Map.empty[Int, (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]])]
+  private def vlog(msg: String): Unit = verboseSink.log(s"[BMC] $msg")
+
+  private def dbgEnabled(program: Program): Boolean =
+    program.name == "Erc1155"
+
+  private def dbgJsonString(s: String): String =
+    "\"" + Option(s).getOrElse("").flatMap {
+      case '\\' => "\\\\"
+      case '"' => "\\\""
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case c => c.toString
+    } + "\""
 
   // get or compute the per-step subst (fromArr, toArr, map) and cache it
   private def getStepSubst(step: Int, stateVars: Seq[(Expr[_], Expr[_])], otherConsts: Set[Expr[_]], ctx: Context): (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]]) = {
@@ -67,6 +81,7 @@ case class BoundedModelChecker(udfSolPath: String = "") {
      // 3) Unroll and check bounds (start at k=1 to require at least one transition)
      for (k <- 1 to bound) {
        println(s"[BMC] Checking bound = $k")
+       vlog(s"CheckBound: k=$k")
        val pathConstraint = buildPathConstraint(ts, k, stateVars, otherConsts, ctx)
        // println(s"Path constraint:\n $pathConstraint")
        // check each property at this bound
@@ -75,7 +90,9 @@ case class BoundedModelChecker(udfSolPath: String = "") {
          val violation = prop
          val violationAtK = renameForStep(violation, k-1, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
          checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx, ts, encMap0) match {
-           case Some(trace) => return (false, Some(trace))
+          case Some(trace) =>
+            vlog(s"CounterexampleReturned: rule=${rule.head.relation.name}, k=$k")
+            return (false, Some(trace))
            case None => // continue
          }
        }
@@ -84,12 +101,15 @@ case class BoundedModelChecker(udfSolPath: String = "") {
          val violation = prop
          val violationAtK = renameForStep(violation, k, stateVars, otherConsts, ctx).asInstanceOf[BoolExpr]
          checkPropertyAtBound(rule, violationAtK, pathConstraint, k, program, stateVars, otherConsts, ctx, ts, encMap0) match {
-           case Some(trace) => return (false, Some(trace))
+          case Some(trace) =>
+            vlog(s"CounterexampleReturned: rule=${rule.head.relation.name}, k=$k")
+            return (false, Some(trace))
            case None => // continue
          }
        }
      }
 
+     vlog("CheckFinished: no-counterexample-within-bound")
      (true, None)
    }
 
@@ -109,6 +129,7 @@ case class BoundedModelChecker(udfSolPath: String = "") {
     val ts = verifier.getTransitionSystem()
 
     println(s"[BMC] Transition system ready for program '${program.name}'")
+    vlog(s"TransitionSystemReady: program=${program.name}")
     val ctx = ts.ctx
 
     val txViolationRules = program.violationRules.filter(_.body.exists(_.relation.name.startsWith(transactionRelationPrefix)))
@@ -123,7 +144,10 @@ case class BoundedModelChecker(udfSolPath: String = "") {
     // val txProperties: Seq[(Rule, BoolExpr)] = ???
 
     val properties = stateProperties // ++ txProperties
-    properties.foreach { case (vr, prop) => println(s"[BMC] Property for violation rule '${vr.head.relation.name}': $prop") }
+    properties.foreach { case (vr, prop) =>
+      println(s"[BMC] Property for violation rule '${vr.head.relation.name}': $prop")
+      vlog(s"TemporalSpec(state): rule=${vr.head.relation.name}, formula=${prop.toString}")
+    }
     (verifier, ts, ctx, properties)
   }
 
@@ -183,6 +207,19 @@ case class BoundedModelChecker(udfSolPath: String = "") {
         ctx.mkAnd(anyIndicatorEq1, subsExpr)
       }
 
+      if (dbgEnabled(program) && Set("insufficientTransferBalance", "insufficientTransferFromBalance", "insufficientTransferFromAllowance").contains(r.head.relation.name)) {
+        val triggeredRulesForInterface = program.transactionRules().count(_.body.exists(_.relation == recvLit.relation))
+        // #region agent log
+        DebugLogger.log(
+          "BoundedModelChecker.scala:185",
+          "tx property wiring",
+          s"""{"violationRule":${dbgJsonString(r.head.relation.name)},"recvRelation":${dbgJsonString(recvName)},"triggeredRuleCount":$triggeredRulesForInterface,"propertyShape":${dbgJsonString(violationExpr.toString)}}""",
+          "erc1155-debug-pre",
+          "H4"
+        )
+        // #endregion
+      }
+
       // Find candidate transition expressions that mention the transaction relation or indicator
       val candidates = ts.getTrs().filter { tr =>
         try {
@@ -194,6 +231,7 @@ case class BoundedModelChecker(udfSolPath: String = "") {
         throw new Exception(s"[BMC] Warning: no transition expression found for transaction '$recvName' (rule ${r.head.relation.name})")
 
       properties +:= (r, violationExpr)
+      vlog(s"TemporalSpec(tx): rule=${r.head.relation.name}, formula=${violationExpr.toString}")
     } // end for txRules
     properties
   }
@@ -346,8 +384,21 @@ case class BoundedModelChecker(udfSolPath: String = "") {
       attempt += 1
     }
     println(s"[BMC] Solver result for rule ${rule.head.relation.name} at bound $k: $res")
+    vlog(s"SolverResult: rule=${rule.head.relation.name}, k=$k, result=${res.toString}")
+    if (dbgEnabled(program) && Set("insufficientTransferBalance", "insufficientTransferFromBalance", "insufficientTransferFromAllowance").contains(rule.head.relation.name)) {
+      // #region agent log
+      DebugLogger.log(
+        "BoundedModelChecker.scala:348",
+        "bmc property result",
+        s"""{"violationRule":${dbgJsonString(rule.head.relation.name)},"bound":$k,"result":${dbgJsonString(res.toString)}}""",
+        "erc1155-debug-pre",
+        "H4"
+      )
+      // #endregion
+    }
     if (res == Status.SATISFIABLE) {
       println(s"[BMC] Counterexample found at bound $k for rule ${rule.head.relation.name}")
+      vlog(s"CounterexampleFound: rule=${rule.head.relation.name}, k=$k")
       // println(s"Model:$model")
       val constructorTx = extractConstructorFromModel(model, ts.getInit(), program, encMap0, ctx)
       val trace = extractTraceFromModel(model, k, ctx, program, stateVars, otherConsts)

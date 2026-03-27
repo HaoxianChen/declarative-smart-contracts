@@ -2,19 +2,19 @@
 .decl *owner(p: address)
 
 // views
-.decl *totalSupply(n: int)
-.decl totalSupplyByPartition(q:int, n:int)[0]
-.decl balanceOfByPartition(p: address, q:int, n: int)[0,1]
+.decl *totalSupply(n: int >= 0)
+.decl totalSupplyByPartition(q:int, n:int >= 0)[0]
+.decl balanceOfByPartition(p: address, q:int, n: int >= 0)[0,1]
 .decl constructor()
 
 
 // Transactions
 .decl issueByPartition(p: address, q:int, n: int)
-.decl recv_issueByPartition(p: address, q:int, n: int)
+.decl recv_issueByPartition(p: address <> 0, q:int, n: int > 0)
 .decl redeemByPartition(p: address, q:int, n: int)
-.decl recv_redeemByPartition(p: address, q:int, n: int)
+.decl recv_redeemByPartition(p: address <> 0, q:int, n: int > 0)
 .decl transferByPartition(s: address, r: address, q:int, n: int)
-.decl recv_transferByPartition(s: address, r: address, q:int, n: int)
+.decl recv_transferByPartition(s: address <> 0, r: address <> 0, q:int, n: int > 0)
 
 // Interfaces
 .public recv_issueByPartition
@@ -39,6 +39,12 @@
 // Properties
 .decl negativeBalance(p:address,q:int,n:int)[0]
 .violation negativeBalance
+
+.decl unauthorizedIssueByPartition()
+.violation unauthorizedIssueByPartition
+
+.decl unauthorizedRedeemByPartition()
+.violation unauthorizedRedeemByPartition
 
 .decl invalidTx()
 .violation invalidTx

@@ -5,25 +5,25 @@
 .public owner(0)
 
 // views
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl *totalSupply(n: int >= 0)
+.decl balanceOf(p: address, n: int >= 0)[0]
 .decl constructor(n: int)
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 .decl *paused(b:bool)
 
 
 // Transactions
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int > 0)
 .decl transfer(s: address, r: address, n: int)
-.decl recv_transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address <> 0, r: address <> 0, n: int > 0)
 
 // New transactions
-.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl recv_transferFrom(o: address <> 0, r: address <> 0, s: address, n: int > 0)
 .decl increaseAllowance(p: address, s: address, n:int)
 // .decl recv_approve(s: address, n:int)
 
@@ -72,8 +72,8 @@
 // New rules
 .decl transferFrom(o: address, r: address, s: address, n: int)
 
-.decl recv_increaseAllowance(p: address, s:address, n:int)
-.decl recv_decreaseAllowance(p: address, s:address, n:int)
+.decl recv_increaseAllowance(p: address, s:address, n:int >= 0)
+.decl recv_decreaseAllowance(p: address, s:address, n:int > 0)
 .decl decreaseAllowance(p: address, s: address, n:int)
 .public recv_increaseAllowance
 .public recv_decreaseAllowance
@@ -96,6 +96,21 @@
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+
+.decl pauseNotByPauser()
+.violation pauseNotByPauser
+
+.decl unpauseNotByPauser()
+.violation unpauseNotByPauser
+
+// (removed: sentinel-based transferWhilePaused)
+
+.decl unauthorizedMint()
+.violation unauthorizedMint
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
+
+// (removed: sentinel state variable)
 
 .decl invalidTx()
 .violation invalidTx

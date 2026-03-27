@@ -1,6 +1,7 @@
 // Init rules
 owner(s) :- constructor(), msgSender(s).
 totalSupply(0) :- constructor().
+// (removed: sentinel initialization)
 
 
 // Inference rules
@@ -27,4 +28,4 @@ decreaseAllowanceTotal(o,s,m) :- decreaseApproval(o, s, _), m = sum n: decreaseA
 spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
-
+// (removed: sentinel trigger rule)

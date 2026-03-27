@@ -1,0 +1,736 @@
+[Audit] BenchmarkStart: name=crowdsale.dl, benchDir=synthesis-benchmark/crowdsale
+[Audit] InputSpecFiles: schema=synthesis-benchmark/crowdsale/schema.dl, rules=synthesis-benchmark/crowdsale/rules.dl, properties=synthesis-benchmark/crowdsale/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/crowdsale/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/crowdsale.dl, stats=synthesis-output/synthesis_stats.csv
+[crowdsale.dl] BenchmarkStart: program=Crowdsale, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[crowdsale.dl] SeededPredicatesFromTxProperties: Map(transferPrimary(p) :- recv_transferPrimary(p). -> Set(Predicate(context: tx: recv_transferPrimary(_), bindings: [_primary(p), msgSender(s)], functor: s==p)), finalize() :- recv_finalize(). -> Set(Predicate(context: tx: recv_finalize(), bindings: [_primary(p), msgSender(s)], functor: s==p)))
+[crowdsale.dl] InitialTransactionRules:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p).
+withdraw(p) :- recv_withdraw(p).
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#0 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p).
+withdraw(p) :- recv_withdraw(p).
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#0 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=withdrawOutsideSuccessState, k=1
+[BMC] CounterexampleReturned: rule=withdrawOutsideSuccessState, k=1
+[crowdsale.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),0,0) [msgSender: 0, value: 0]
+[1] recv_withdraw(address(0)) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#0 RestrictedSolveStatus: relation=recv_withdraw, status=UNSAT
+[crowdsale.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=withdraw
+[crowdsale.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p).
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#1 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p).
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#1 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=claimRefundOutsideRefundState, k=1
+[BMC] CounterexampleReturned: rule=claimRefundOutsideRefundState, k=1
+[crowdsale.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),0,0) [msgSender: 0, value: 0]
+[1] recv_claimRefund(address(0)) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#1 RestrictedSolveStatus: relation=recv_claimRefund, status=UNSAT
+[crowdsale.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=claimRefund
+[crowdsale.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#2 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#2 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 7, value: 0]
+[1] recv_transfer(address(9),address(9),1) [msgSender: 7, value: 0]
+[crowdsale.dl] Iteration#2 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[crowdsale.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=transfer
+[crowdsale.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#3 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n).
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#3 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 6, value: 0]
+[1] recv_mint(address(5),-1) [msgSender: 6, value: 0]
+[crowdsale.dl] Iteration#3 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[crowdsale.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#3 SynthesisResult: updated
+[crowdsale.dl] Iteration#4 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#4 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 6, value: 0]
+[1] recv_mint(address(5),1) [msgSender: 6, value: 0]
+[crowdsale.dl] Iteration#4 RestrictedSolveStatus: relation=recv_mint, status=UNSAT
+[crowdsale.dl] Iteration#4 FallbackToFull: reason=UNSAT, relations=mint
+[crowdsale.dl] Iteration#4 ProgramAfterFallbackSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#4 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#5 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+[crowdsale.dl] Iteration#5 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 7, value: 0]
+[1] recv_transferFrom(address(5),address(5),address(6),-1) [msgSender: 7, value: 0]
+[crowdsale.dl] Iteration#5 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[crowdsale.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),n>0.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#5 SynthesisResult: updated
+[crowdsale.dl] Iteration#6 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),n>0.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#6 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 7, value: 0]
+[1] recv_transferFrom(address(5),address(5),address(6),1) [msgSender: 7, value: 0]
+[crowdsale.dl] Iteration#6 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[crowdsale.dl] Iteration#6 FallbackToFull: reason=UNSAT, relations=transferFrom
+[crowdsale.dl] Iteration#6 ProgramAfterFallbackSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#6 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#7 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#7 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),11797) [msgSender: 5, value: 0]
+[crowdsale.dl] Iteration#7 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[crowdsale.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#7 SynthesisResult: updated
+[crowdsale.dl] Iteration#8 ProgramBeforeBMC:
+transferPrimary(p) :- recv_transferPrimary(p),_primary(p),msgSender(s),s==p.
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+burn(p,n) :- recv_burn(p,n).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+[crowdsale.dl] Iteration#8 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 5, value: 0]
+[1] recv_transferPrimary(address(5)) [msgSender: 5, value: 0]
+[crowdsale.dl] Iteration#8 RestrictedSolveStatus: relation=recv_transferPrimary, status=UNSAT
+[crowdsale.dl] Iteration#8 FallbackToFull: reason=UNSAT, relations=transferPrimary
+[crowdsale.dl] Iteration#8 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#8 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#9 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+deposit(p,a) :- recv_deposit(p,a).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#9 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 0, value: 0]
+[1] recv_deposit(address(5),8) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#9 RestrictedSolveStatus: relation=recv_deposit, status=UNSAT
+[crowdsale.dl] Iteration#9 FallbackToFull: reason=UNSAT, relations=deposit
+[crowdsale.dl] Iteration#9 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#9 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#10 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0==n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#10 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),0) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#10 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[crowdsale.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#10 SynthesisResult: updated
+[crowdsale.dl] Iteration#11 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+burn(p,n) :- recv_burn(p,n).
+[crowdsale.dl] Iteration#11 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 0, value: 0]
+[1] recv_burn(address(5),1) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#11 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[crowdsale.dl] Iteration#11 FallbackToFull: reason=UNSAT, relations=burn
+[crowdsale.dl] Iteration#11 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[crowdsale.dl] Iteration#11 SynthesisResult: updated-by-fallback
+[crowdsale.dl] Iteration#12 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[crowdsale.dl] Iteration#12 BMCInput: bound=5, violationRules=buyAfterFinalize,claimRefundOutsideRefundState,finalizeNotByPrimary,moreThanCap,notSame,transferPrimaryNotByPrimary,withdrawOutsideSuccessState
+[BMC] TransitionSystemReady: program=Crowdsale
+[BMC] TemporalSpec(state): rule=withdrawOutsideSuccessState, formula=(and (= onceWithdrawOutsideSuccess kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=claimRefundOutsideRefundState, formula=(and (= onceClaimRefundOutsideRefund kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=buyAfterFinalize, formula=(and (= onceBuyAfterFinalize kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=moreThanCap, formula=(and (= _weiRaised kv_n) (= _cap kv_m) (not (<= kv_n kv_m)))
+[BMC] TemporalSpec(state): rule=notSame, formula=(and (= _wallet kv_p) (= _beneficiary kv_p2) (not (= kv_p kv_p2)))
+[BMC] TemporalSpec(tx): rule=transferPrimaryNotByPrimary, formula=(and (or (= recv_transferPrimary0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] TemporalSpec(tx): rule=finalizeNotByPrimary, formula=(and (or (= recv_finalize0 1))
+     (= _primary kv_p)
+     (= msgSender kv_s)
+     (not (= kv_s kv_p)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=finalizeNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferPrimaryNotByPrimary, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=withdrawOutsideSuccessState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimRefundOutsideRefundState, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=buyAfterFinalize, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=moreThanCap, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=moreThanCap, k=1
+[BMC] CounterexampleReturned: rule=moreThanCap, k=1
+[crowdsale.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor(0,0,address(0),-1,-1) [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),5) [msgSender: 0, value: 0]
+[crowdsale.dl] Iteration#12 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[crowdsale.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[crowdsale.dl] Iteration#12 SynthesisResult: nochange
+[crowdsale.dl] BenchmarkEnd: reason=nochange, totalTimeMs=19819, bmcTimeMs=2308, cegisIterations=12, finalRules=
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+mint(p,n) :- recv_mint(p,n),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+increaseAllowance(o,s,n) :- recv_increaseAllowance(o,s,n),0!=n.
+finalize() :- recv_finalize(),_primary(p),msgSender(s),s==p.
+deposit(p,a) :- recv_deposit(p,a),balanceOf(p,balanceOf_x1),a<=balanceOf_x1.
+claimRefund(p) :- recv_claimRefund(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+transferPrimary(p) :- msgSender(s),_deposits_x1>0,_deposits(msgSender,_deposits_x1),msgSender(msgSender),_primary(p),s==p,recv_transferPrimary(p).
+buyToken(p,v) :- recv_buyToken(p,v).
+withdraw(p) :- recv_withdraw(p),_deposits(msgSender,_deposits_x1),msgSender(msgSender),0!=_deposits_x1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.

@@ -1,0 +1,47 @@
+{
+  "relations": [
+    {
+      "txRelation": "recv_redeemByPartition",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==q"},
+        {"bindingLiterals": [], "functor": "q<0"},
+        {"bindingLiterals": [], "functor": "q<=0"},
+        {"bindingLiterals": [], "functor": "q>0"},
+        {"bindingLiterals": [], "functor": "0!=q"}
+      ]
+    },
+    {
+      "txRelation": "recv_transferByPartition",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==q"},
+        {"bindingLiterals": [], "functor": "q<=0"},
+        {"bindingLiterals": [], "functor": "q<0"},
+        {"bindingLiterals": [], "functor": "0!=q"},
+        {"bindingLiterals": [], "functor": "q>0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "0!=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "0==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n>0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n<0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n<=0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q!=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q<totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q>totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q<=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "q>=totalSupply_n"},
+        {"bindingLiterals": ["totalSupplyByPartition(n,totalSupplyByPartition_x1)"], "functor": "totalSupplyByPartition_x1<0"},
+        {"bindingLiterals": ["totalSupplyByPartition(n,totalSupplyByPartition_x1)"], "functor": "totalSupplyByPartition_x1<=0"},
+        {"bindingLiterals": ["totalSupplyByPartition(n,totalSupplyByPartition_x1)"], "functor": "0==totalSupplyByPartition_x1"},
+        {"bindingLiterals": ["totalSupplyByPartition(q,totalSupplyByPartition_x1)"], "functor": "totalSupplyByPartition_x1<0"},
+        {"bindingLiterals": ["totalSupplyByPartition(q,totalSupplyByPartition_x1)"], "functor": "totalSupplyByPartition_x1<=0"},
+        {"bindingLiterals": ["totalSupplyByPartition(q,totalSupplyByPartition_x1)"], "functor": "0==totalSupplyByPartition_x1"},
+        {"bindingLiterals": ["balanceOfByPartition(s,q,balanceOfByPartition_x2)"], "functor": "n==balanceOfByPartition_x2"}
+      ]
+    }
+  ]
+}

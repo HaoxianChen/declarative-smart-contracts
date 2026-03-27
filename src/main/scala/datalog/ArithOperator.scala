@@ -300,6 +300,9 @@ object Functor {
     // a<b ∧ a==b
     case (Lesser(a1, b1),  Equal(a2, b2))  if eqMatch(a1, b1, a2, b2) => true
     case (Equal(a1, b1),   Lesser(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    // a!=b ∧ a==b  (treat both Equal and Unequal as commutative)
+    case (Unequal(a1, b1), Equal(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
+    case (Equal(a1, b1), Unequal(a2, b2)) if eqMatch(a1, b1, a2, b2) => true
     case _ =>
       try { f1 == Functor.negate(f2) }
       catch { case _: Throwable => false }

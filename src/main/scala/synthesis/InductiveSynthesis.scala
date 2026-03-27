@@ -5,6 +5,7 @@ import datalog.{Arithmetic, Constant, Literal, Parameter, Program, Relation, Res
 import synthesis.EvaluatedTrace.shiftTrace
 import imp.SolidityTranslator.transactionRelationPrefix
 import scala.collection.mutable
+import synthesis.InductiveSynthesis.{RelationSolveStatus, SynthesisRunResult}
 
 /** Given an EvaluatedTrace object, a set of predicates, return
  * a mapping, each transaction type to a bit vector encoding,
@@ -12,7 +13,9 @@ import scala.collection.mutable
  * condition guard. */
 case class InductiveSynthesis(
   predicatesPerRule: Map[Rule,Set[Predicate]],
-  interpreterContext: InterpreterContext
+  interpreterContext: InterpreterContext,
+  forbiddenSpec: ForbiddenSpec = ForbiddenSpec.empty,
+  preselectedPredicates: Map[Relation, Set[Predicate]] = Map.empty
 ) {
 
   case class Representation(map: Map[Relation, Set[Predicate]]) {
@@ -24,6 +27,34 @@ case class InductiveSynthesis(
 
   val interpreter: Interpreter = Interpreter(interpreterContext)
 
+  private def dbgEnabledForRelation(rel: Relation): Boolean =
+    rel.name == "recv_transfer" || rel.name == "recv_transferFrom"
+
+  private def dbgJsonString(s: String): String =
+    "\"" + Option(s).getOrElse("").flatMap {
+      case '\\' => "\\\\"
+      case '"' => "\\\""
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case c => c.toString
+    } + "\""
+
+  private def dbgJsonArray(items: Seq[String]): String =
+    items.map(dbgJsonString).mkString("[", ",", "]")
+
+  private def bindingSlotKey(literal: Literal): String = {
+    try {
+      val (keyParams, _) = interpreter.extractKeyValueVar(literal)
+      s"${literal.relation.name}(${keyParams.mkString(",")})"
+    } catch {
+      case _: Throwable => literal.toString
+    }
+  }
+
+  private def effectivePredicates(rel: Relation, repr: Representation): Set[Predicate] =
+    preselectedPredicates.getOrElse(rel, Set.empty) ++ repr.getPredicates(rel)
+
   private val synthesisCache: mutable.Map[List[EvaluatedTrace], List[Representation]] = mutable.Map.empty
 
   /** Reorganize and make the predicate lookup by relation efficient. */
@@ -34,17 +65,37 @@ case class InductiveSynthesis(
     }
   }
 
+  val orderedPredicates: Map[Relation, List[Predicate]] = predicates.map { case (rel, preds) =>
+    rel -> preds.toList.sortBy(_.canonicalString)
+  }
+
   // Initialize Z3 context as a member
   val z3ctx: Context = new Context()
 
   // Initialize encoding as a member using makeEncoding
   val encodings: Map[Relation, List[BoolExpr]] = makeEncoding(z3ctx)
 
+  private val predicateVars: Map[(Relation, Predicate), BoolExpr] = orderedPredicates.flatMap { case (rel, preds) =>
+    preds.zip(encodings(rel)).map { case (pred, boolVar) =>
+      (rel, pred) -> boolVar
+    }
+  }.toMap
+
+  private val predicateVarsByKey: Map[Relation, Map[PredicateKey, BoolExpr]] = orderedPredicates.map { case (rel, preds) =>
+    rel -> preds.zip(encodings(rel)).map { case (pred, boolVar) =>
+      pred.stableKey -> boolVar
+    }.toMap
+  }
+
+  private val preselectedKeysByRelation: Map[String, Set[PredicateKey]] = preselectedPredicates.map {
+    case (rel, preds) => rel.name -> preds.map(_.stableKey)
+  }
+
   /** For each Rule, create a list of Z3 Bool variables, one for each predicate.
    * The length of the list matches the number of predicates for that Rule. */
   def makeEncoding(z3ctx: Context): Map[Relation, List[BoolExpr]] = {
-    predicates.map { case (rel, preds) =>
-      val boolVars = preds.toList.zipWithIndex.map { case (_, i) =>
+    orderedPredicates.map { case (rel, preds) =>
+      val boolVars = preds.zipWithIndex.map { case (_, i) =>
         z3ctx.mkBoolConst(s"pred_${rel.name}_$i")
       }
       rel -> boolVars
@@ -59,8 +110,8 @@ case class InductiveSynthesis(
   def evaluatePredicates(evaluatedTrace: EvaluatedTrace): Seq[(Transaction, List[Boolean])] = {
     val pairs = shiftTrace(evaluatedTrace)
     pairs.map { case (state, tx) =>
-      val preds = predicates(tx.relation)
-      val results = preds.toList.map(p => interpreter.evaluate(state, tx, p))
+      val preds = orderedPredicates(tx.relation)
+      val results = preds.map(p => interpreter.evaluate(state, tx, p))
       (tx, results)
     }
   }
@@ -94,7 +145,7 @@ case class InductiveSynthesis(
    */
   private def interpretModel(model: Model): Representation = {
     val mapping = encodings.map { case (rel, boolVars) =>
-      val preds = predicates(rel).toList
+      val preds = orderedPredicates(rel)
       val assignments = boolVars.map { v =>
         val value = model.eval(v, true)
         value.isTrue
@@ -105,9 +156,80 @@ case class InductiveSynthesis(
       // println(s"Relation: ${rel.name}")
       // selectedPreds.foreach(p => println(s"  Selected: ${p}"))
       //rel -> assignments
+      if (dbgEnabledForRelation(rel)) {
+        // #region agent log
+        DebugLogger.log(
+          "InductiveSynthesis.scala:124",
+          "interpretModel selected predicates",
+          s"""{"relation":${dbgJsonString(rel.name)},"selectedPredicates":${dbgJsonArray(selectedPreds.toSeq.map(_.canonicalString).sorted)}}""",
+          "erc1155-debug-pre",
+          "H2"
+        )
+        // #endregion
+      }
       rel -> selectedPreds.toSet
     }
     Representation(mapping)
+  }
+
+  private def relationPredicates(rel: Relation): List[Predicate] =
+    orderedPredicates.getOrElse(rel, Nil)
+
+  private def predicateVar(rel: Relation, predicate: Predicate): Option[BoolExpr] =
+    predicateVars.get((rel, predicate))
+
+  private def forbiddenClauses(targetRelation: Option[Relation]): Seq[(String, BoolExpr)] = {
+    val relations = targetRelation.map(Set(_)).getOrElse(encodings.keySet)
+
+    relations.toSeq.sortBy(_.name).flatMap { rel =>
+      val relationName = rel.name
+      val keyToVar = predicateVarsByKey.getOrElse(rel, Map.empty)
+      val preselectedKeys = preselectedKeysByRelation.getOrElse(relationName, Set.empty)
+
+      val singleClauses = forbiddenSpec.singleKeysFor(relationName).toSeq.sortBy(_.canonicalString).flatMap { key =>
+        keyToVar.get(key).map { boolVar =>
+          s"[forbid] Enforcing single predicate block for $relationName: ${key.canonicalString}" ->
+            z3ctx.mkNot(boolVar)
+        }
+      }
+
+      val pairClauses = forbiddenSpec.pairKeysFor(relationName).toSeq.sortBy(_.canonicalString).flatMap { pair =>
+        val normalizedPair = pair.normalized
+        val leftVar = keyToVar.get(normalizedPair.left)
+        val rightVar = keyToVar.get(normalizedPair.right)
+        val leftPreselected = preselectedKeys.contains(normalizedPair.left)
+        val rightPreselected = preselectedKeys.contains(normalizedPair.right)
+
+        (leftVar, rightVar, leftPreselected, rightPreselected) match {
+          case (Some(v1), Some(v2), _, _) =>
+            Some(
+              s"[forbid] Enforcing predicate pair block for $relationName: ${normalizedPair.canonicalString}" ->
+                z3ctx.mkOr(z3ctx.mkNot(v1), z3ctx.mkNot(v2))
+            )
+          case (Some(v1), None, _, true) =>
+            Some(
+              s"[forbid] Enforcing seeded/candidate pair block for $relationName by blocking: ${normalizedPair.left.canonicalString}" ->
+                z3ctx.mkNot(v1)
+            )
+          case (None, Some(v2), true, _) =>
+            Some(
+              s"[forbid] Enforcing seeded/candidate pair block for $relationName by blocking: ${normalizedPair.right.canonicalString}" ->
+                z3ctx.mkNot(v2)
+            )
+          case _ => None
+        }
+      }
+
+      singleClauses ++ pairClauses
+    }
+  }
+
+  private def addForbiddenClauses(solver: com.microsoft.z3.Optimize, targetRelation: Option[Relation]): Unit = {
+    val clauses = forbiddenClauses(targetRelation)
+    clauses.foreach { case (message, clause) =>
+      println(message)
+      solver.Add(clause)
+    }
   }
 
   /** Rename relation in trace with the recv_ prefix */
@@ -136,6 +258,13 @@ case class InductiveSynthesis(
                  evaluatedTraces: List[EvaluatedTrace],
                  maxSolutions: Int,
                  disambiguationTraces: Set[EvaluatedTrace]): Program = {
+    synthesizeWithStatus(sketch, evaluatedTraces, maxSolutions, disambiguationTraces).program
+  }
+
+  def synthesizeWithStatus(sketch: Program,
+                           evaluatedTraces: List[EvaluatedTrace],
+                           maxSolutions: Int,
+                           disambiguationTraces: Set[EvaluatedTrace]): SynthesisRunResult = {
     // Remove the first constructor transaction from each trace if present
     def stripConstructor(trace: EvaluatedTrace): EvaluatedTrace = {
       val steps = trace.steps
@@ -160,9 +289,9 @@ case class InductiveSynthesis(
 
     // val candidates = synthesizeMultiSolution(renamedSafetyTrace, maxSolutions, renamedDisambiguationTrace)
     // val selection = disambiguate(renamedDisambiguationTrace, candidates)
-    val selection = synthesizePerRelation(renamedSafetyTrace, maxSolutions,
+    val (selection, relationStatuses) = synthesizePerRelation(renamedSafetyTrace, maxSolutions,
       renamedDisambiguationTrace)
-    makeProgram(sketch, selection)
+    SynthesisRunResult(makeProgram(sketch, selection), relationStatuses)
   }
 
   // debug info
@@ -179,7 +308,7 @@ case class InductiveSynthesis(
         case _: Throwable => None
       }
 
-      val infos = preds.toList.flatMap { p =>
+      val infos = preds.toList.sortBy(_.canonicalString).flatMap { p =>
         val (total, trueCount) = txRelationOpt match {
           case Some(txRel) =>
             val evalResults: Seq[Boolean] = evaluatedTraces.toSeq.flatMap { trace =>
@@ -218,19 +347,21 @@ case class InductiveSynthesis(
   private def synthesizePerRelation(evaluatedTraces: List[EvaluatedTrace],
                                        maxSolutions: Int,
                                        disambiguationTraces: Set[EvaluatedTrace]
-                                     ): Representation = {
+                                     ): (Representation, Map[Relation, RelationSolveStatus]) = {
     // Group traces by last transaction relation
     val grouped: Map[Relation, List[EvaluatedTrace]] =
       evaluatedTraces.groupBy(_.steps.last._1.relation)
 
     // For each relation, synthesize and disambiguate
-    val allSolutions: Map[Relation, List[Representation]] = grouped.map { case (rel, traces) =>
+    val allSolutionsWithStatus: Map[Relation, (List[Representation], RelationSolveStatus)] = grouped.map { case (rel, traces) =>
       synthesisCache.get(traces) match {
         case Some(cached) =>
           println(s"[synthesizePerRelation] Using cached synthesis for relation ${rel.name}")
-          rel -> cached
+          // Cache contains only SAT-produced models.
+          rel -> (cached, RelationSolveStatus.SatFound)
         case None => {
           val solver = z3ctx.mkOptimize()
+          addForbiddenClauses(solver, Some(rel))
           val traceConstraints = traces.map { t =>
             val evalResults = evaluatePredicates(t)
             makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
@@ -249,7 +380,10 @@ case class InductiveSynthesis(
 
           var selections = List.empty[Representation]
           var found = 0
-          while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+          var satFound = false
+          var checkStatus = solver.Check()
+          while (found < maxSolutions && checkStatus == com.microsoft.z3.Status.SATISFIABLE) {
+            satFound = true
             val model = solver.getModel
             val selection = interpretModel(model)
 
@@ -264,15 +398,28 @@ case class InductiveSynthesis(
 
             selections :+= selection
             found += 1
+            if (found < maxSolutions) {
+              checkStatus = solver.Check()
+            }
           }
           synthesisCache.update(traces,selections)
-          rel -> selections
+          val solveStatus =
+            if (satFound) RelationSolveStatus.SatFound
+            else checkStatus match {
+              case com.microsoft.z3.Status.UNSATISFIABLE => RelationSolveStatus.Unsat
+              case _ => RelationSolveStatus.Unknown
+            }
+          println(s"[synthesizePerRelation] Solver status for relation ${rel.name}: ${solveStatus.label}")
+          rel -> (selections, solveStatus)
         }
       }
     }
 
     // Disambiguate for each relation after collecting all solutions
-    val bestSelections: Map[Relation, Set[Predicate]] = allSolutions.map { case (rel, candidates) =>
+    val bestSelections: Map[Relation, Set[Predicate]] = allSolutionsWithStatus.map { case (rel, (candidates, _)) =>
+      if (candidates.isEmpty) {
+        println(s"[synthesizePerRelation] No Z3 solution found for relation ${rel.name}. Predicate pool size: ${orderedPredicates.getOrElse(rel, Nil).size}. Skipping.")
+      }
       val best = disambiguate(disambiguationTraces, candidates)
       rel -> best.getPredicates(rel)
     }
@@ -288,7 +435,8 @@ case class InductiveSynthesis(
     // println(debugInfo)
 
 
-    Representation(completeSelections)
+    val relationStatuses = allSolutionsWithStatus.map { case (rel, (_, status)) => rel -> status }
+    (Representation(completeSelections), relationStatuses)
   }
 
   private def permissiveness(disambiguationTraces: Set[EvaluatedTrace], repr: Representation): Int = {
@@ -296,7 +444,7 @@ case class InductiveSynthesis(
     def accept(trace: EvaluatedTrace, repr: Representation): Boolean = {
       trace.iterateTxAndStateBefore.forall {
         case (state, tx) =>
-          val predicates = repr.getPredicates(tx.relation)
+          val predicates = effectivePredicates(tx.relation, repr)
           val accepts = predicates.map(p => p -> interpreter.evaluate(state, tx, p)).toMap
           predicates.forall(accepts)
       }
@@ -308,6 +456,11 @@ case class InductiveSynthesis(
 
   private def disambiguate(disambiguationTraces: Set[EvaluatedTrace],
                            candidates: List[Representation]): Representation = {
+
+    if (candidates.isEmpty) {
+      println("[disambiguate] Warning: no candidate solutions found for this relation. Returning empty representation.")
+      return Representation(Map.empty)
+    }
 
     val permissivenessScores: Map[Representation, Int] = {
       candidates.map(c => c -> permissiveness(disambiguationTraces, c)).toMap
@@ -328,6 +481,21 @@ case class InductiveSynthesis(
     val finalCandidates = bestCandidates.filter(c => numPredicates(c) == minPredCount)
     val best = finalCandidates.head
     println(s"Selected $best with permissive score: $maxScore / ${disambiguationTraces.size}, min predicates: $minPredCount.")
+    val debugRelations = best.map.keySet.filter(dbgEnabledForRelation)
+    if (debugRelations.nonEmpty) {
+      val relPayload = debugRelations.toSeq.sortBy(_.name).map { rel =>
+        s"""{"relation":${dbgJsonString(rel.name)},"predicates":${dbgJsonArray(best.getPredicates(rel).toSeq.map(_.canonicalString).sorted)}}"""
+      }.mkString("[", ",", "]")
+      // #region agent log
+      DebugLogger.log(
+        "InductiveSynthesis.scala:420",
+        "disambiguate best representation",
+        s"""{"maxScore":$maxScore,"traceCount":${disambiguationTraces.size},"minPredCount":$minPredCount,"relations":$relPayload}""",
+        "erc1155-debug-pre",
+        "H3"
+      )
+      // #endregion
+    }
 
     best
   }
@@ -343,6 +511,7 @@ case class InductiveSynthesis(
     })
     val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
     val solver = z3ctx.mkOptimize()
+    addForbiddenClauses(solver, None)
     solver.Add(constraint)
 
     /** Metric: maximize permissiveness */
@@ -379,6 +548,7 @@ case class InductiveSynthesis(
     val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
     // val solver = z3ctx.mkSolver()
     val solver = z3ctx.mkOptimize()
+    addForbiddenClauses(solver, None)
     solver.Add(constraint)
 
     /** Metric: minimize the number of selected predicats */
@@ -477,15 +647,19 @@ case class InductiveSynthesis(
     def boolToInt(b: BoolExpr): IntExpr = z3ctx.mkITE(b, z3ctx.mkInt(1), z3ctx.mkInt(0)).asInstanceOf[IntExpr]
 
     val disambigAcceptExprs: Seq[BoolExpr] = disambiguationTraces.toSeq.map { trace =>
-      val evalResults = evaluatePredicates(trace)
-      val txAccepts = evalResults.map { case (tx, boolList) =>
+      val txAccepts = shiftTrace(trace).map { case (state, tx) =>
+        val preds = orderedPredicates(tx.relation)
+        val boolList = preds.map(p => interpreter.evaluate(state, tx, p))
         val boolVars = encodings(tx.relation)
         val assertions = boolList.zipWithIndex.map { case (b, i) =>
           val premise = boolVars(i)
           val conclusion = z3ctx.mkBool(b)
           z3ctx.mkImplies(premise, conclusion)
         }
-        z3ctx.mkAnd(assertions: _*)
+        val seededAccept =
+          preselectedPredicates.getOrElse(tx.relation, Set.empty).forall(p => interpreter.evaluate(state, tx, p))
+        val clauses = z3ctx.mkBool(seededAccept) +: assertions.toSeq
+        z3ctx.mkAnd(clauses: _*)
       }
       z3ctx.mkAnd(txAccepts: _*)
     }
@@ -500,7 +674,7 @@ case class InductiveSynthesis(
     val allBoolVars = encodings.values.flatten.toSeq
     val penaltyTerms = allBoolVars.map { b =>
       val boolExprToPredicate: Map[BoolExpr, Predicate] = encodings.flatMap { case (rel, boolVars) =>
-        val preds = predicates(rel).toList
+        val preds = relationPredicates(rel)
         boolVars.zip(preds)
       }.toMap
       val predicate = boolExprToPredicate(b)
@@ -635,6 +809,21 @@ case class InductiveSynthesis(
       renamedPredicates
     }
 
+    val debugTxRelationOpt = targetTxLiteralOpt.map(_.relation).filter(dbgEnabledForRelation)
+    if (debugTxRelationOpt.nonEmpty) {
+      val sketchBindingSlots = sketchRule.body.map(bindingSlotKey).toSeq.sorted
+      val selectedBindings = predicates.toSeq.flatMap(_.context.bindingLiterals.map(bindingSlotKey)).sorted
+      // #region agent log
+      DebugLogger.log(
+        "InductiveSynthesis.scala:731",
+        "makeRule before collision resolution",
+        s"""{"relation":${dbgJsonString(debugTxRelationOpt.get.name)},"head":${dbgJsonString(sketchRule.head.relation.name)},"sketchBodySlots":${dbgJsonArray(sketchBindingSlots)},"sketchFunctors":${dbgJsonArray(sketchRule.functors.toSeq.map(_.toString).sorted)},"selectedPredicates":${dbgJsonArray(predicates.toSeq.map(_.canonicalString).sorted)},"selectedBindingSlots":${dbgJsonArray(selectedBindings)}}""",
+        "erc1155-debug-pre",
+        "H1"
+      )
+      // #endregion
+    }
+
     val compatiblePredicates = predicates.flatMap(adaptPredicateToRule)
     val renamedPredicates = _resolveCollision(compatiblePredicates)
     val bindingLits = renamedPredicates.flatMap(p => p.context.bindingLiterals)
@@ -663,6 +852,27 @@ case class InductiveSynthesis(
         if (contradicted) acc else acc + f
     }
 
+    if (debugTxRelationOpt.nonEmpty) {
+      val sameSlotConflicts = renamedPredicates.toSeq.flatMap { pred =>
+        pred.context.bindingLiterals.toSeq.flatMap { lit =>
+          val slot = bindingSlotKey(lit)
+          val sketchSlotMatch = sketchRule.body.exists(bodyLit => bindingSlotKey(bodyLit) == slot)
+          if (sketchSlotMatch) {
+            Some(s"$slot :: ${pred.functor}")
+          } else None
+        }
+      }.sorted
+      // #region agent log
+      DebugLogger.log(
+        "InductiveSynthesis.scala:759",
+        "makeRule after contradiction filtering",
+        s"""{"relation":${dbgJsonString(debugTxRelationOpt.get.name)},"renamedPredicates":${dbgJsonArray(renamedPredicates.toSeq.map(_.canonicalString).sorted)},"allCandidateFunctors":${dbgJsonArray(allCandidateFunctors.toSeq.map(_.toString).sorted)},"filteredBySketch":${dbgJsonArray(filteredBySketch.toSeq.map(_.toString).sorted)},"finalPredicateFunctors":${dbgJsonArray(predicateFunctors.toSeq.map(_.toString).sorted)},"sameSlotConflictsWithSketch":${dbgJsonArray(sameSlotConflicts)}}""",
+        "erc1155-debug-pre",
+        "H2"
+      )
+      // #endregion
+    }
+
     // New body: original body plus binding literals (avoid duplicates)
     val newBody: Set[datalog.Literal] = sketchRule.body ++ bindingLits
 
@@ -679,6 +889,18 @@ case class InductiveSynthesis(
 
     // Keep aggregators unchanged
     val newAggregators = sketchRule.aggregators
+
+    if (debugTxRelationOpt.nonEmpty) {
+      // #region agent log
+      DebugLogger.log(
+        "InductiveSynthesis.scala:776",
+        "makeRule final rule",
+        s"""{"relation":${dbgJsonString(debugTxRelationOpt.get.name)},"finalBody":${dbgJsonArray(finalBody.toSeq.map(_.toString).sorted)},"finalFunctors":${dbgJsonArray((sketchRule.functors ++ predicateFunctors ++ helperAssigns).toSeq.map(_.toString).sorted)}}""",
+        "erc1155-debug-pre",
+        "H1"
+      )
+      // #endregion
+    }
 
     Rule(sketchRule.head, finalBody, newFunctors, newAggregators)
   }
@@ -731,8 +953,7 @@ case class InductiveSynthesis(
     // Create blocking clauses for each minimal subset
     val blockClauses = minimalBlocks.map { subset =>
       val vars = subset.flatMap { case (rel, p) =>
-        val idx = predicates(rel).toList.indexOf(p)
-        if (idx >= 0) Some(encodings(rel)(idx)) else None
+        predicateVar(rel, p)
       }
       // At least one must be false
       // z3ctx.mkOr(vars.map(z3ctx.mkNot).toSeq: _*)
@@ -761,12 +982,11 @@ case class InductiveSynthesis(
 
     // Get the corresponding BoolExpr variables for these predicates
     val falseVars = alwaysFalsePredicates.flatMap { case (rel, p) =>
-      val idx = predicates(rel).toList.indexOf(p)
-      if (idx >= 0) Some(encodings(rel)(idx)) else None
+      predicateVar(rel, p)
     }
 
     val alwaysFalsePairsPerRelation: Map[Relation, Set[(Predicate, Predicate)]] = predicates.map { case (rel, preds) =>
-      val predList = preds.toList
+      val predList = preds.toList.sortBy(_.canonicalString)
       val pairs = (for {
         i <- predList.indices
         j <- (i + 1) until predList.size
@@ -788,9 +1008,9 @@ case class InductiveSynthesis(
 
     // Get corresponding BoolExpr variables for these pairs
     val falsePairVars = alwaysFalsePairs.flatMap { case (rel, p1, p2) =>
-      val idx1 = predicates(rel).toList.indexOf(p1)
-      val idx2 = predicates(rel).toList.indexOf(p2)
-      if (idx1 >= 0 && idx2 >= 0) Some((encodings(rel)(idx1), encodings(rel)(idx2))) else None
+      predicateVar(rel, p1).flatMap { v1 =>
+        predicateVar(rel, p2).map(v2 => (v1, v2))
+      }
     }
 
     // Block clause: all these must be false
@@ -815,4 +1035,17 @@ case class InductiveSynthesis(
   }
 
 
+}
+
+object InductiveSynthesis {
+  sealed trait RelationSolveStatus {
+    def label: String
+  }
+  object RelationSolveStatus {
+    case object SatFound extends RelationSolveStatus { val label: String = "SAT" }
+    case object Unsat extends RelationSolveStatus { val label: String = "UNSAT" }
+    case object Unknown extends RelationSolveStatus { val label: String = "UNKNOWN" }
+  }
+
+  case class SynthesisRunResult(program: Program, relationStatuses: Map[Relation, RelationSolveStatus])
 }

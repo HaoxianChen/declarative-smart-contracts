@@ -45,3 +45,19 @@ operators(p,o,false) :- revokeDefaultOperator(p,o).
 transfer(o,r,n) :- operatorSend(o,r,_,n,_,_).
 burn(p,n) :- operatorBurn(p,_,n,_,_).
 
+////////////////////
+// Sentinel initialization and triggers
+////////////////////
+onceUnauthorizedOperatorSend(false) :- constructor().
+onceUnauthorizedOperatorSend(true) :- operatorSend(o,_,s,_,_,_),
+    operators(o,s,opOk), opOk==false,
+    defaultOperator(s,defOk), defOk==false,
+    revokedDefaultOperator(o,s,rev), rev==true,
+    s!=o.
+
+onceUnauthorizedOperatorBurn(false) :- constructor().
+onceUnauthorizedOperatorBurn(true) :- operatorBurn(p,s,_,_,_),
+    operators(p,s,opOk), opOk==false,
+    defaultOperator(s,defOk), defOk==false,
+    revokedDefaultOperator(p,s,rev), rev==true,
+    s!=p.

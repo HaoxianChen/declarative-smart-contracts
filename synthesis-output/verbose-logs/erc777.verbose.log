@@ -1,0 +1,2620 @@
+[Audit] BenchmarkStart: name=erc777.dl, benchDir=synthesis-benchmark/erc777
+[Audit] InputSpecFiles: schema=synthesis-benchmark/erc777/schema.dl, rules=synthesis-benchmark/erc777/rules.dl, properties=synthesis-benchmark/erc777/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/erc777.dl, stats=synthesis-output/synthesis_stats.csv
+[erc777.dl] BenchmarkStart: program=Erc777, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[erc777.dl] SeededPredicatesFromTxProperties: Map(burn(p,n) :- recv_burn(p,n). -> Set(Predicate(context: tx: recv_burn(_,_), bindings: [owner(o), msgSender(s)], functor: o==s)), mint(p,n) :- recv_mint(p,n). -> Set(Predicate(context: tx: recv_mint(_,_), bindings: [owner(o), msgSender(s)], functor: o==s)))
+[erc777.dl] InitialTransactionRules:
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),o==s.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),o==s.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#0 ProgramBeforeBMC:
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),o==s.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),o==s.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#0 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[erc777.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(6),-1) [msgSender: 3, value: 0]
+[erc777.dl] Iteration#0 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[erc777.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),o==s.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#0 SynthesisResult: updated
+[erc777.dl] Iteration#1 ProgramBeforeBMC:
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+burn(p,n) :- recv_burn(p,n),owner(o),msgSender(s),o==s.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#1 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[erc777.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_burn(address(7),2) [msgSender: 4, value: 0]
+[erc777.dl] Iteration#1 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[erc777.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=burn
+[erc777.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[erc777.dl] Iteration#2 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[erc777.dl] Iteration#2 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[erc777.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_increaseAllowance(address(2),address(8),-1) [msgSender: 0, value: 0]
+[erc777.dl] Iteration#2 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[erc777.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#2 SynthesisResult: updated
+[erc777.dl] Iteration#3 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#3 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[erc777.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_transferFrom(address(2),address(2),address(5),8366) [msgSender: 0, value: 0]
+[erc777.dl] Iteration#3 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[erc777.dl] Iteration#3 FallbackToFull: reason=UNSAT, relations=transferFrom
+[erc777.dl] Iteration#3 ProgramAfterFallbackSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#3 SynthesisResult: updated-by-fallback
+[erc777.dl] Iteration#4 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,msgSender(msgSender),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#4 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[erc777.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(5),1) [msgSender: 5, value: 0]
+[2] recv_burn(address(12),1) [msgSender: 5, value: 0]
+[erc777.dl] Iteration#4 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[erc777.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+burn(p,n) :- msgSender(s),balanceOf(p,balanceOf_x1),o==s,balanceOf_x1>0,owner(o),recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#4 SynthesisResult: updated
+[erc777.dl] Iteration#5 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+burn(p,n) :- msgSender(s),balanceOf(p,balanceOf_x1),o==s,balanceOf_x1>0,owner(o),recv_burn(p,n).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#5 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[erc777.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor() [msgSender: 12, value: 0]
+[1] recv_mint(address(14),2) [msgSender: 12, value: 0]
+[2] recv_burn(address(14),3) [msgSender: 12, value: 0]
+[erc777.dl] Iteration#5 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[erc777.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- msgSender(s),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n),msgSender(msgSender),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#5 SynthesisResult: updated
+[erc777.dl] Iteration#6 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- msgSender(s),o==s,owner(o),balanceOf(msgSender,balanceOf_x1),recv_burn(p,n),msgSender(msgSender),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+[erc777.dl] Iteration#6 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[erc777.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(5),29645) [msgSender: 5, value: 0]
+[2] recv_burn(address(10),29644) [msgSender: 5, value: 0]
+[erc777.dl] Iteration#6 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[erc777.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#6 SynthesisResult: updated
+[erc777.dl] Iteration#7 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#7 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(7),address(7),10198) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(10),139) [msgSender: 8, value: 0]
+[erc777.dl] Iteration#7 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#7 SynthesisResult: updated
+[erc777.dl] Iteration#8 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),0!=allowance_x2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#8 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(9),address(11),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(9),address(9),address(11),2) [msgSender: 7, value: 0]
+[erc777.dl] Iteration#8 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#8 SynthesisResult: updated
+[erc777.dl] Iteration#9 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#9 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[erc777.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_transfer(address(3),address(3),1) [msgSender: 6, value: 0]
+[2] recv_mint(address(17),243605) [msgSender: 6, value: 0]
+[3] recv_transfer(address(17),address(3),314492) [msgSender: 18, value: 0]
+[erc777.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[erc777.dl] Iteration#9 FallbackToFull: reason=UNSAT, relations=transfer
+[erc777.dl] Iteration#9 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#9 SynthesisResult: updated-by-fallback
+[erc777.dl] Iteration#10 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#10 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[erc777.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_mint(address(2),15687) [msgSender: 6, value: 0]
+[2] recv_mint(address(10),15686) [msgSender: 6, value: 0]
+[3] recv_transfer(address(10),address(2),22919) [msgSender: 11, value: 0]
+[erc777.dl] Iteration#10 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[erc777.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<=balanceOf_x1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#10 SynthesisResult: updated
+[erc777.dl] Iteration#11 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<=balanceOf_x1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#11 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[erc777.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_mint(address(2),51683) [msgSender: 7, value: 0]
+[2] recv_mint(address(10),13362) [msgSender: 7, value: 0]
+[3] recv_transfer(address(10),address(2),51683) [msgSender: 11, value: 0]
+[erc777.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[erc777.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+[erc777.dl] Iteration#11 SynthesisResult: updated
+[erc777.dl] Iteration#12 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),n<balanceOf_x1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+[erc777.dl] Iteration#12 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[erc777.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_mint(address(10),21911) [msgSender: 7, value: 0]
+[2] recv_mint(address(9),88352) [msgSender: 7, value: 0]
+[3] recv_transfer(address(10),address(9),-117069) [msgSender: 11, value: 0]
+[erc777.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[erc777.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#12 SynthesisResult: updated
+[erc777.dl] Iteration#13 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#13 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[erc777.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_mint(address(15),53781) [msgSender: 6, value: 0]
+[2] recv_mint(address(16),53783) [msgSender: 6, value: 0]
+[3] recv_transfer(address(15),address(16),53782) [msgSender: 16, value: 0]
+[erc777.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[erc777.dl] Iteration#13 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#13 SynthesisResult: updated
+[erc777.dl] Iteration#14 ProgramBeforeBMC:
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(o,sp,allowance_x2),n<=allowance_x2.
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#14 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[erc777.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor() [msgSender: 13, value: 0]
+[1] recv_mint(address(3),29395) [msgSender: 13, value: 0]
+[2] recv_increaseAllowance(address(3),address(3),139125) [msgSender: 4, value: 0]
+[3] recv_mint(address(18),15743) [msgSender: 13, value: 0]
+[4] recv_transferFrom(address(3),address(18),address(3),134890) [msgSender: 23, value: 0]
+[erc777.dl] Iteration#14 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<=allowance_x2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#14 SynthesisResult: updated
+[erc777.dl] Iteration#15 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<=allowance_x2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#15 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[erc777.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_increaseAllowance(address(5),address(26),43450) [msgSender: 6, value: 0]
+[2] recv_mint(address(5),16904) [msgSender: 6, value: 0]
+[3] recv_mint(address(20),16903) [msgSender: 6, value: 0]
+[4] recv_transferFrom(address(20),address(5),address(26),43450) [msgSender: 25, value: 0]
+[erc777.dl] Iteration#15 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<allowance_x2.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#15 SynthesisResult: updated
+[erc777.dl] Iteration#16 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2),n<allowance_x2.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#16 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[erc777.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor() [msgSender: 15, value: 0]
+[1] recv_mint(address(11),44097) [msgSender: 15, value: 0]
+[2] recv_increaseAllowance(address(11),address(11),3465) [msgSender: 12, value: 0]
+[3] recv_mint(address(15),55550) [msgSender: 15, value: 0]
+[4] recv_transferFrom(address(15),address(11),address(11),-55549) [msgSender: 23, value: 0]
+[erc777.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<allowance_x2_1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#16 SynthesisResult: updated
+[erc777.dl] Iteration#17 ProgramBeforeBMC:
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(r,sp,allowance_x2_1),n>0,n<allowance_x2_1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#17 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[erc777.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_mint(address(20),99881) [msgSender: 7, value: 0]
+[2] recv_mint(address(14),99880) [msgSender: 7, value: 0]
+[3] recv_increaseAllowance(address(14),address(20),168416) [msgSender: 21, value: 0]
+[4] recv_transferFrom(address(20),address(14),address(20),168415) [msgSender: 22, value: 0]
+[erc777.dl] Iteration#17 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,0!=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#17 SynthesisResult: updated
+[erc777.dl] Iteration#18 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,0!=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#18 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(2),address(7),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(2),15943) [msgSender: 9, value: 0]
+[erc777.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,n<=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#18 SynthesisResult: updated
+[erc777.dl] Iteration#19 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,n<=allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#19 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_increaseAllowance(address(3),address(6),1) [msgSender: 4, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(3),1) [msgSender: 14, value: 0]
+[erc777.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,n<allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#19 SynthesisResult: updated
+[erc777.dl] Iteration#20 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),allowance(sp,r,allowance_x2_1),n>0,n<allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#20 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_increaseAllowance(address(5),address(7),2) [msgSender: 6, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(5),1) [msgSender: 6, value: 0]
+[erc777.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#20 SynthesisResult: updated
+[erc777.dl] Iteration#21 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#21 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(4),1) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(4),address(4),address(11),1) [msgSender: 6, value: 0]
+[erc777.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#21 SynthesisResult: updated
+[erc777.dl] Iteration#22 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#22 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(6),22303) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(11),1) [msgSender: 10, value: 0]
+[erc777.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#22 SynthesisResult: updated
+[erc777.dl] Iteration#23 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#23 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(2),46907) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(2),address(2),address(2),46907) [msgSender: 8, value: 0]
+[erc777.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#23 SynthesisResult: updated
+[erc777.dl] Iteration#24 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- recv_transferFrom(o,r,sp,n),balanceOf(sp,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#24 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[erc777.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(3),626) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(3),625) [msgSender: 8, value: 0]
+[erc777.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_0),0!=allowance_x2_1,n<allowance_x2_0,allowance(r,o,allowance_x2_1),recv_transferFrom(o,r,sp,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#24 SynthesisResult: updated
+[erc777.dl] Iteration#25 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_0),0!=allowance_x2_1,n<allowance_x2_0,allowance(r,o,allowance_x2_1),recv_transferFrom(o,r,sp,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#25 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(12),address(12),1) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(4),address(12),42365) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(4),32299) [msgSender: 14, value: 0]
+[erc777.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),n<balanceOf_x1_0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,balanceOf(sp,balanceOf_x1_0).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#25 SynthesisResult: updated
+[erc777.dl] Iteration#26 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- allowance(sp,o,allowance_x2_1),n<balanceOf_x1_0,recv_transferFrom(o,r,sp,n),allowance_x2_1>0,balanceOf(sp,balanceOf_x1_0).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#26 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(12),61142) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(12),address(12),25880) [msgSender: 13, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(12),61141) [msgSender: 18, value: 0]
+[erc777.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1,allowance(o,sp,allowance_x2_0).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#26 SynthesisResult: updated
+[erc777.dl] Iteration#27 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- allowance(sp,r,allowance_x2_1),allowance_x2_0>0,recv_transferFrom(o,r,sp,n),n<allowance_x2_1,allowance(o,sp,allowance_x2_0).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#27 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseAllowance(address(8),address(12),56234) [msgSender: 2, value: 0]
+[2] recv_increaseAllowance(address(12),address(8),32225) [msgSender: 9, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(8),56233) [msgSender: 17, value: 0]
+[erc777.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),0!=balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#27 SynthesisResult: updated
+[erc777.dl] Iteration#28 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),0!=balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#28 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#28 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_increaseAllowance(address(8),address(12),89511) [msgSender: 7, value: 0]
+[2] recv_mint(address(8),1) [msgSender: 7, value: 0]
+[3] recv_transferFrom(address(12),address(12),address(8),89510) [msgSender: 14, value: 0]
+[erc777.dl] Iteration#28 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#28 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),balanceOf(r,balanceOf_x1_1),balanceOf_x1_1>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#28 SynthesisResult: updated
+[erc777.dl] Iteration#29 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),balanceOf(r,balanceOf_x1_1),balanceOf_x1_1>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#29 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#29 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(3),113508) [msgSender: 3, value: 0]
+[2] recv_increaseAllowance(address(2),address(3),39937) [msgSender: 4, value: 0]
+[3] recv_transferFrom(address(3),address(3),address(2),25315) [msgSender: 4, value: 0]
+[erc777.dl] Iteration#29 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#29 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#29 SynthesisResult: updated
+[erc777.dl] Iteration#30 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,allowance(sp,r,allowance_x2_2),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,balanceOf(sp,balanceOf_x1_1).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#30 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#30 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseAllowance(address(13),address(9),29308) [msgSender: 3, value: 0]
+[2] recv_mint(address(13),43604) [msgSender: 3, value: 0]
+[3] recv_transferFrom(address(9),address(9),address(13),29307) [msgSender: 11, value: 0]
+[erc777.dl] Iteration#30 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#30 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#30 SynthesisResult: updated
+[erc777.dl] Iteration#31 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<balanceOf_x1_1,allowance(r,sp,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#31 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=4
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=4
+[erc777.dl] Iteration#31 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(2),96993) [msgSender: 2, value: 0]
+[2] recv_mint(address(9),57671) [msgSender: 2, value: 0]
+[3] recv_increaseAllowance(address(9),address(10),39321) [msgSender: 11, value: 0]
+[4] recv_transferFrom(address(2),address(9),address(10),39321) [msgSender: 11, value: 0]
+[erc777.dl] Iteration#31 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#31 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,allowance(r,o,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#31 SynthesisResult: updated
+[erc777.dl] Iteration#32 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),recv_transferFrom(o,r,sp,n),n<balanceOf_x1_1,allowance(r,o,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#32 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[erc777.dl] Iteration#32 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(13),address(13),2) [msgSender: 8, value: 0]
+[2] recv_mint(address(13),48220) [msgSender: 8, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(19),1) [msgSender: 18, value: 0]
+[erc777.dl] Iteration#32 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#32 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<balanceOf_x1_1,balanceOf(r,balanceOf_x1_1),allowance(o,sp,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#32 SynthesisResult: updated
+[erc777.dl] Iteration#33 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),n<=allowance_x2_2,n<balanceOf_x1_1,balanceOf(r,balanceOf_x1_1),allowance(o,sp,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#33 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[erc777.dl] Iteration#33 Counterexample:
+Trace:
+[0] constructor() [msgSender: 10, value: 0]
+[1] recv_mint(address(20),74578) [msgSender: 10, value: 0]
+[2] recv_increaseAllowance(address(20),address(2),113663) [msgSender: 3, value: 0]
+[3] recv_mint(address(9),98598) [msgSender: 10, value: 0]
+[4] recv_transferFrom(address(20),address(9),address(2),98597) [msgSender: 22, value: 0]
+[erc777.dl] Iteration#33 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[erc777.dl] Iteration#33 ProgramAfterRestrictedSynthesis:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#33 SynthesisResult: updated
+[erc777.dl] Iteration#34 ProgramBeforeBMC:
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).
+[erc777.dl] Iteration#34 BMCInput: bound=5, violationRules=inconsistentOperator,negativeAllowance,negativeBalance,unauthorizedBurn,unauthorizedMint,unauthorizedOperatorBurn,unauthorizedOperatorSend
+[BMC] TransitionSystemReady: program=Erc777
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorBurn, formula=(and (= onceUnauthorizedOperatorBurn kv_b) kv_b)
+[BMC] TemporalSpec(state): rule=inconsistentOperator, formula=(and (= (select defaultOperator kv_o) kv_b1)
+     (select defaultOperator__exists kv_o)
+     (= (select operators (operators_keyTuple kv_p kv_o)) kv_b2)
+     (select operators__exists (operators_keyTuple kv_p kv_o))
+     kv_b1
+     kv_b2)
+[BMC] TemporalSpec(state): rule=unauthorizedOperatorSend, formula=(and (= onceUnauthorizedOperatorSend kv_b) kv_b)
+[BMC] TemporalSpec(tx): rule=unauthorizedBurn, formula=(and (or (= recv_burn0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_o kv_s)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=unauthorizedMint, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=unauthorizedMint, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=unauthorizedMint, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedBurn, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorBurn, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=inconsistentOperator, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedOperatorSend, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[erc777.dl] Iteration#34 BMCResult: no-counterexample
+[erc777.dl] BenchmarkEnd: reason=sat, totalTimeMs=20338, bmcTimeMs=6667, cegisIterations=34, finalRules=
+operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
+transferFrom(o,r,sp,n) :- n>0,recv_transferFrom(o,r,sp,n),balanceOf(o,balanceOf_x1_2),n<=allowance_x2_1,allowance(o,sp,allowance_x2_1),n<balanceOf_x1_2.
+approveOperator(p,o) :- recv_approveOperator(p,o).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
+revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),o==s,owner(o).

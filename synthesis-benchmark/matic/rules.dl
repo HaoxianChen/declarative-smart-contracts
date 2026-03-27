@@ -3,6 +3,7 @@
 owner(s) :- constructor(_), msgSender(s).
 paused(false) :- constructor(_).
 isPauser(s,true) :- constructor(_),msgSender(s).
+// (removed: sentinel initialization)
 
 // Inference rules
 paused(true) :- pause().
@@ -26,4 +27,6 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), decreaseAllowanceTotal(o,s,d), n := m-l-d.
 
 totalBalances(s) :- s = sum n: balanceOf(_,n).
+
+// (removed: sentinel trigger rule)
 

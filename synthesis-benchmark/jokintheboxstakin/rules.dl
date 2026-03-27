@@ -80,3 +80,4 @@ nonce(sender, n_new) :-
 // totalStaked: cumulative sum of all staked amounts (approximation — does not
 // subtract unstaked amounts; sufficient for CEGIS guard learning on withdraw limits).
 totalStaked(s) :- stake(_, _, _, _, _), s = sum a: stake(_, _, a, _, _).
+

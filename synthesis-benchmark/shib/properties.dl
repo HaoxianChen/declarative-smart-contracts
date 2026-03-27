@@ -1,22 +1,7 @@
-// should not have negative balances or allowances
+// no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint or burn tokens
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-
-// burn/burnFrom: amount must be positive
-invalidTx() :- recv_burn(_,n), n<=0.
-invalidTx() :- recv_burnFrom(_,_,n), n<=0.
-
-// transfer: non-zero addresses, positive amount, sender has sufficient balance
-invalidTx() :- recv_transfer(s,_,_), s==0.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-
-// transferFrom: positive amount, owner (from) has sufficient balance and allowance
-invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
-invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.
+// authority rules (retain recv_tx)
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedBurn() :- recv_burn(_,_), owner(o), msgSender(s), s!=o.

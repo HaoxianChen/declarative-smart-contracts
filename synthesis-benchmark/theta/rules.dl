@@ -28,3 +28,4 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 // total balance view for property
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 
+

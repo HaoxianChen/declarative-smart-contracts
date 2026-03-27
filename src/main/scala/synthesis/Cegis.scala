@@ -4,6 +4,7 @@ import datalog.{AnyType, BooleanType, CompoundType, NumberType, Program, Relatio
 import imp.SolidityStatement
 import imp.{ImperativeTranslator, Inliner}
 import imp.SolidityTranslator.transactionRelationPrefix
+import synthesis.InductiveSynthesis.RelationSolveStatus
 
 case class SynthesisStat(
   synthesisTimeMs: Long,
@@ -12,8 +13,11 @@ case class SynthesisStat(
   bmcBound: Int
 )
 
-case class Cegis(sketch: Program, udfSolPath: String = "") {
-
+case class Cegis(sketch: Program,
+                 udfSolPath: String = "",
+                 forbiddenSpec: ForbiddenSpec = ForbiddenSpec.empty,
+                 verboseSink: VerboseLogSink = VerboseLogSink.NoOp,
+                 benchmarkName: String = "") {
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter()
   // val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
@@ -24,6 +28,11 @@ case class Cegis(sketch: Program, udfSolPath: String = "") {
   val disambiguationTraces: Set[EvaluatedTrace] = {
     val disambiguator = Disambiguator(sketch, interpreter, txDefs)
     disambiguator.makeTracesHeuristic(500)
+  }
+
+  private def vlog(msg: String): Unit = {
+    val scoped = if (benchmarkName.nonEmpty) s"[${benchmarkName}] $msg" else msg
+    verboseSink.log(scoped)
   }
 
   /**  This is a composed object that :
@@ -42,13 +51,39 @@ case class Cegis(sketch: Program, udfSolPath: String = "") {
     // Build predicate candidates and the interpreter context for synthesis
     val interpreterContext = InterpreterContext.makeContext(program)
     val enumerator = PredicateEnumerator(interpreterContext)
-    val candidates = enumerator.enumeratePredicates(program)
+    val restrictedCandidates = enumerator.enumeratePredicatesRestricted(program, fallbackToAllIfEmpty = false)
+    val fullCandidates = enumerator.enumeratePredicatesFull(program)
+    val txRuleByRelation: Map[Relation, Rule] = restrictedCandidates.keys.map { rule =>
+      PredicateEnumerator.extractTxLiteral(rule).relation -> rule
+    }.toMap
 
-    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    def promoteCandidateRules(base: Map[Rule, Set[Predicate]],
+                              full: Map[Rule, Set[Predicate]],
+                              promoted: Set[Rule]): Map[Rule, Set[Predicate]] = {
+      base.map { case (rule, preds) =>
+        val effectivePreds =
+          if (promoted.contains(rule)) full.getOrElse(rule, preds)
+          else preds
+        rule -> effectivePreds
+      }
+    }
 
-    val predicatesFromTxRules = enumerator.extractPredicateFromTxProperties(program)
+    var promotedRules: Set[Rule] = Set.empty
+
+    var rawCandidates = promoteCandidateRules(restrictedCandidates, fullCandidates, promotedRules)
+    var candidates = forbiddenSpec.filterCandidateMap(rawCandidates)
+    val rawPredicatesFromTxRules = enumerator.extractPredicateFromTxProperties(program)
+    val predicatesFromTxRules = forbiddenSpec.filterSeededPredicateMap(rawPredicatesFromTxRules)
+    val seededPredicatesByRelation: Map[Relation, Set[Predicate]] = predicatesFromTxRules.map {
+      case (rule, preds) => PredicateEnumerator.extractTxLiteral(rule).relation -> preds
+    }
+    var synthesizer = InductiveSynthesis(candidates, interpreterContext, forbiddenSpec, seededPredicatesByRelation)
+
     val augmented = synthesizer.augmentSketchWithPredicates(program, predicatesFromTxRules)
     println(predicatesFromTxRules)
+    vlog(s"BenchmarkStart: program=${sketch.name}, maxBound=$maxBound, maxIters=$maxIters, maxSolutionsPerStep=$maxSolutionsPerStep")
+    vlog(s"SeededPredicatesFromTxProperties: ${predicatesFromTxRules}")
+    vlog(s"InitialTransactionRules:\n${augmented.transactionRules().mkString("\n")}")
     program = augmented
 
     var iter = 0
@@ -57,37 +92,83 @@ case class Cegis(sketch: Program, udfSolPath: String = "") {
 
     while (iter < maxIters && !finished) {
       val bmcStart = System.currentTimeMillis()
-      val bmc = BoundedModelChecker(udfSolPath = udfSolPath)
+      val bmc = BoundedModelChecker(udfSolPath = udfSolPath, verboseSink = verboseSink)
       println(s"[CEGIS] Iteration: $iter (BMC bound = $maxBound)")
+      vlog(s"Iteration#$iter ProgramBeforeBMC:\n${program.transactionRules().mkString("\n")}")
+      vlog(s"Iteration#$iter BMCInput: bound=$maxBound, violationRules=${program.violationRules.toSeq.map(_.head.relation.name).sorted.mkString(",")}")
 
       val (sat, optTrace) = bmc.check(program, program.violationRules, maxBound)
       bmcTime += (System.currentTimeMillis() - bmcStart)
       if (sat) {
         println("[CEGIS] No counterexample found by BMC. Finished.")
+        vlog(s"Iteration#$iter BMCResult: no-counterexample")
         finished = true
         reason = "sat"
       } else {
         optTrace match {
           case None =>
             println("[CEGIS] BMC reported violation but did not return a trace. Aborting.")
+            vlog(s"Iteration#$iter BMCResult: violation-without-trace")
             finished = true
             reason = "abort"
           case Some(trace) =>
             println(s"[CEGIS] Counterexample trace found: $trace")
-
+            vlog(s"Iteration#$iter Counterexample:\n$trace")
             val evaluatedTrace = interpreter.interpret(txDefs, trace)
+            val blockedRelation = evaluatedTrace.steps.last._1.relation
 
             traces :+= evaluatedTrace
             println("[CEGIS] Running inductive synthesis to block the counterexample...")
-            val newProgram = synthesizer.synthesize(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
+            val restrictedRun = synthesizer.synthesizeWithStatus(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
+            val blockedStatus = restrictedRun.relationStatuses.get(blockedRelation)
+            blockedStatus.foreach(status =>
+              println(s"[CEGIS] Restricted solver status for relation ${blockedRelation.name}: ${status.label}")
+            )
+            blockedStatus.foreach(status => vlog(s"Iteration#$iter RestrictedSolveStatus: relation=${blockedRelation.name}, status=${status.label}"))
 
-            if (newProgram == program) {
-              println("[CEGIS] Synthesizer produced no change. Stopping.")
+            val shouldFallbackForStatus = blockedStatus.exists {
+              case RelationSolveStatus.Unsat | RelationSolveStatus.Unknown => true
+              case RelationSolveStatus.SatFound => false
+            }
+            val fallbackRules = txRuleByRelation.get(blockedRelation).filterNot(promotedRules.contains).filter(_ => shouldFallbackForStatus).toSet
+
+            val effectiveProgram =
+              if (fallbackRules.nonEmpty) {
+                val promotedNames = fallbackRules.toList.map(_.head.relation.name).sorted.mkString(", ")
+                val statusLabel = blockedStatus.map(_.label).getOrElse("UNKNOWN")
+                println(s"[CEGIS] Restricted status=$statusLabel. Falling back to full predicate space for: $promotedNames")
+                vlog(s"Iteration#$iter FallbackToFull: reason=$statusLabel, relations=$promotedNames")
+                promotedRules ++= fallbackRules
+                rawCandidates = promoteCandidateRules(restrictedCandidates, fullCandidates, promotedRules)
+                candidates = forbiddenSpec.filterCandidateMap(rawCandidates)
+                synthesizer = InductiveSynthesis(candidates, interpreterContext, forbiddenSpec, seededPredicatesByRelation)
+                val retryRun = synthesizer.synthesizeWithStatus(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
+                vlog(s"Iteration#$iter ProgramAfterFallbackSynthesis:\n${retryRun.program.transactionRules().mkString("\n")}")
+                retryRun.program
+              } else {
+                vlog(s"Iteration#$iter ProgramAfterRestrictedSynthesis:\n${restrictedRun.program.transactionRules().mkString("\n")}")
+                restrictedRun.program
+              }
+
+            if (effectiveProgram == program) {
+              if (fallbackRules.nonEmpty) {
+                println("[CEGIS] Synthesizer produced no change after status-driven full-space fallback. Stopping.")
+                vlog(s"Iteration#$iter SynthesisResult: nochange-after-fallback")
+              } else {
+                println("[CEGIS] Synthesizer produced no change. Stopping.")
+                vlog(s"Iteration#$iter SynthesisResult: nochange")
+              }
               finished = true
               reason = "nochange"
             } else {
-              println("[CEGIS] Program updated by synthesizer. Continuing next iteration.")
-              program = newProgram
+              if (fallbackRules.nonEmpty) {
+                println("[CEGIS] Program updated by status-driven full-space fallback. Continuing next iteration.")
+                vlog(s"Iteration#$iter SynthesisResult: updated-by-fallback")
+              } else {
+                println("[CEGIS] Program updated by synthesizer. Continuing next iteration.")
+                vlog(s"Iteration#$iter SynthesisResult: updated")
+              }
+              program = effectiveProgram
               iter += 1
             }
         }
@@ -98,6 +179,7 @@ case class Cegis(sketch: Program, udfSolPath: String = "") {
       reason = "maxiters"
     }
     val totalTime = System.currentTimeMillis() - startTime
+    vlog(s"BenchmarkEnd: reason=$reason, totalTimeMs=$totalTime, bmcTimeMs=$bmcTime, cegisIterations=$iter, finalRules=\n${program.transactionRules().mkString("\n")}")
     (program, SynthesisStat(totalTime, iter, bmcTime, maxBound))
   }
 

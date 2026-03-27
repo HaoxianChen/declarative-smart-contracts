@@ -16,38 +16,51 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
-                          relationIndices: Map[SimpleRelation, List[Int]]
+                          relationIndices: Map[SimpleRelation, List[Int]],
+                          relationFieldConstraints: Map[String, List[List[FieldConstraint]]]
                          ) {
   val relsByName: Map[String,Relation] = relations.map(rel => rel.name -> rel).toMap
-  def getProgram(): Program = Program(rules, interfaces, relationIndices, functions, violations, udfs)
-  private def getTypes(schema: List[(String, String)]) :(List[String], List[Type]) = {
-    val memberNames = schema.map(_._1)
-    val types = schema.map ( s => s._2 match {
+  def getProgram(): Program =
+    Program(rules, interfaces, relationIndices, functions, violations, udfs, relationFieldConstraints)
+
+  private def getTypes(schema: List[SchemaField]) :(List[String], List[Type], List[List[FieldConstraint]]) = {
+    val memberNames = schema.map(_.name)
+    val types = schema.map ( s => s.typeName match {
         case "bool" => BooleanType()
         case "uint" => Type.uintType
         case "int" => Type.integerType
-        case _ => Type(s._2)
+        case _ => Type(s.typeName)
       }
     )
-    (memberNames, types)
+    val constraints = schema.map(_.constraints)
+    (memberNames, types, constraints)
   }
-  def addRelation(name: String, schema: List[(String,String)], optIndexStr: Option[List[String]]): ParsingContext = {
+  def addRelation(name: String, schema: List[SchemaField], optIndexStr: Option[List[String]]): ParsingContext = {
     require(!this.relsByName.keySet.contains(name), s"Relation name conflict: $name.")
-    val (memberNames, types) = getTypes(schema)
+    val (memberNames, types, fieldConstraints) = getTypes(schema)
     val relation = SimpleRelation(name, types, memberNames)
+    val nextFieldConstraints = relationFieldConstraints + (name -> fieldConstraints)
     optIndexStr match {
       case Some(ls) => {
         val indices = ls.map(_.toInt)
         require(!relationIndices.contains(relation))
-        this.copy(relations=relations+relation, relationIndices=relationIndices+(relation->indices))
+        this.copy(
+          relations = relations + relation,
+          relationIndices = relationIndices + (relation -> indices),
+          relationFieldConstraints = nextFieldConstraints
+        )
       }
-      case None => this.copy(relations=relations+relation)
+      case None =>
+        this.copy(relations = relations + relation, relationFieldConstraints = nextFieldConstraints)
     }
   }
-  def addSingletonRelation(name: String, schema: List[(String,String)]): ParsingContext = {
-    val (memberNames, types) = getTypes(schema)
+  def addSingletonRelation(name: String, schema: List[SchemaField]): ParsingContext = {
+    val (memberNames, types, fieldConstraints) = getTypes(schema)
     val relation = SingletonRelation(name, types, memberNames)
-    this.copy(relations=relations+relation)
+    this.copy(
+      relations = relations + relation,
+      relationFieldConstraints = relationFieldConstraints + (name -> fieldConstraints)
+    )
   }
   def addInterface(name: String, optRetIndexStr: Option[String]): ParsingContext = {
     val relation = relsByName(name)
@@ -118,7 +131,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
 }
 object ParsingContext {
   def apply(): ParsingContext =
-    ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Set(), Set(), Map())
+    ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Set(), Set(), Map(), Map())
 }
 
 class ArithmeticParser extends JavaTokenParsers {
@@ -181,8 +194,24 @@ class ArithmeticParser extends JavaTokenParsers {
 }
 
 class Parser extends ArithmeticParser {
-  def fieldDecl: Parser[(String, String)] = ident ~  ":" ~ ident ^^ {case name ~ _ ~ t => (name,t)}
-  def fieldDeclList: Parser[List[(String, String)]] = repsep(fieldDecl, ",")
+  private def zeroOnlyConstraint[A](name: String, value: String, out: => A): A = {
+    require(value == "0", s"Only '$name 0' field constraints are supported, found '$name $value'.")
+    out
+  }
+
+  def fieldConstraint: Parser[FieldConstraint] =
+    ("<>" ~> wholeNumber) ^^ { value => zeroOnlyConstraint("<>", value, FieldNonZero) } |
+    (">=" ~> wholeNumber) ^^ { value => zeroOnlyConstraint(">=", value, FieldNonNegative) } |
+    ("==" ~> wholeNumber) ^^ { value => zeroOnlyConstraint("==", value, FieldZero) } |
+    (">" ~> wholeNumber) ^^ { value => zeroOnlyConstraint(">", value, FieldPositive) }
+
+  def fieldDecl: Parser[SchemaField] =
+    ident ~ ":" ~ ident ~ opt(fieldConstraint) ^^ {
+      case name ~ _ ~ t ~ optConstraint =>
+        SchemaField(name, t, optConstraint.toList)
+    }
+
+  def fieldDeclList: Parser[List[SchemaField]] = repsep(fieldDecl, ",")
 
   def singletonRelationDecl: Parser[ParsingContext => ParsingContext] =
     (".decl" ~> "*" ~> ident ) ~ ("(" ~> fieldDeclList <~ ")") ^^ {

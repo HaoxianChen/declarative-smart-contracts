@@ -1,1 +1,0 @@
-release() :- released(released_n),now(t_0),total := b_0+e_0,start(a),0!=released_n,e_1>=0,start(a_0),released(e),t>a+d,t_2>=a_2,funds(b),recv_release(),duration(d),vestedAmount(total,elapsed,vested_0),now(t_2),b>e,start(a_2),now(t),elapsed := t_0-a_0,vested_0>e_0,released(e_0),funds(b_0),released(e_1).

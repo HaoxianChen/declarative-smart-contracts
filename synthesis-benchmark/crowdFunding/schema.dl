@@ -9,11 +9,11 @@
 // Transactions
 .decl recv_close()
 .decl close()
-.decl recv_invest(p: address, n: uint)
+.decl recv_invest(p: address, n: uint > 0)
 .decl invest(p: address, n: uint)
-.decl recv_refund(p: address, n: uint)
+.decl recv_refund(p: address, n: uint > 0)
 .decl refund(p: address, n: uint)
-.decl recv_withdraw(p: address, n: uint)
+.decl recv_withdraw(p: address, n: uint > 0)
 .decl withdraw(p: address, n: uint)
 
 .decl *closed(b: bool)
@@ -48,6 +48,28 @@
 
 .decl *illegalRefund()
 .violation illegalRefund
+
+.decl negativeBalance(p: address)
+.violation negativeBalance
+
+.decl closeNotByOwner()
+.violation closeNotByOwner
+
+.decl *onceInvestAfterClose(b: bool)
+.decl *onceWithdrawBeforeTarget(b: bool)
+.decl *onceRefundBeforeClose(b: bool)
+
+.decl investAfterClose()
+.violation investAfterClose
+
+.decl withdrawNotByBeneficiary()
+.violation withdrawNotByBeneficiary
+
+.decl withdrawBeforeTarget()
+.violation withdrawBeforeTarget
+
+.decl refundBeforeClose()
+.violation refundBeforeClose
 
 .decl invalidTx()
 .violation invalidTx

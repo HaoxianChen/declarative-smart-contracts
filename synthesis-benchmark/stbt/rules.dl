@@ -6,6 +6,12 @@ minInterval(0) :- constructor().
 lastDistributeTime(0) :- constructor().
 distributeTotal(0) :- constructor().
 
+// Permission functions (same semantics as old), using split permission maps
+canSend(s) :- permissionSendAllowed(s, true), permissionExpiryTime(s, expire), now(t), t<expire.
+canSend(s) :- permissionSendAllowed(s, true), permissionExpiryTime(s, 0).
+canRecv(s) :- permissionReceiveAllowed(s, true), permissionExpiryTime(s, expire), now(t), t<expire.
+canRecv(s) :- permissionReceiveAllowed(s, true), permissionExpiryTime(s, 0).
+
 // Interest distribution views
 lastDistributeTime(m) :- m = max t: distributeInterests(_,t).
 distributeTotal(s) :- s = sum n: distributeInterests(n,_).
@@ -30,3 +36,4 @@ allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 // total balance view for property
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 
+// (removed: sentinel initialization and triggers for unpermittedTransfer and earlyDistribution)

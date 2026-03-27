@@ -1,0 +1,17 @@
+{
+  "relations": [
+    {
+      "txRelation": "recv_controllerRedeem",
+      "singlePredicates": [
+        {
+          "bindingLiterals": ["controller(controller_p)"],
+          "functor": "p==controller_p"
+        },
+        {
+          "bindingLiterals": ["controller(controller_x)", "msgSender(msgSender_x)"],
+          "functor": "controller_x==msgSender_x"
+        }
+      ]
+    }
+  ]
+}

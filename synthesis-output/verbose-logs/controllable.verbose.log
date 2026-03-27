@@ -1,0 +1,2693 @@
+[Audit] BenchmarkStart: name=controllable.dl, benchDir=synthesis-benchmark/controllable
+[Audit] InputSpecFiles: schema=synthesis-benchmark/controllable/schema.dl, rules=synthesis-benchmark/controllable/rules.dl, properties=synthesis-benchmark/controllable/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/controllable/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/controllable.dl, stats=synthesis-output/synthesis_stats.csv
+[controllable.dl] BenchmarkStart: program=Controllable, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[controllable.dl] SeededPredicatesFromTxProperties: Map(controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n). -> Set(Predicate(context: tx: recv_controllerTransfer(_,_,_), bindings: [controller(c), msgSender(s)], functor: s==c)), controllerRedeem(p,n) :- recv_controllerRedeem(p,n). -> Set(Predicate(context: tx: recv_controllerRedeem(p,n), bindings: [controller(c), msgSender(s)], functor: s==c)))
+[controllable.dl] InitialTransactionRules:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+burn(p,n) :- recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#0 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n).
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+burn(p,n) :- recv_burn(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#0 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[controllable.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(address(8)) [msgSender: 7, value: 0]
+[1] recv_burn(address(8),1) [msgSender: 7, value: 0]
+[controllable.dl] Iteration#0 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[controllable.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=burn
+[controllable.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+mint(p,n) :- recv_mint(p,n).
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[controllable.dl] Iteration#1 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+mint(p,n) :- recv_mint(p,n).
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#1 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[controllable.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor(address(7)) [msgSender: 6, value: 0]
+[1] recv_mint(address(5),-16908) [msgSender: 6, value: 0]
+[controllable.dl] Iteration#1 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[controllable.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#1 SynthesisResult: updated
+[controllable.dl] Iteration#2 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n),controller(c),msgSender(s),s==c.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#2 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[controllable.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor(address(4)) [msgSender: 4, value: 0]
+[1] recv_controllerRedeem(address(6),1) [msgSender: 4, value: 0]
+[controllable.dl] Iteration#2 RestrictedSolveStatus: relation=recv_controllerRedeem, status=UNSAT
+[controllable.dl] Iteration#2 FallbackToFull: reason=UNSAT, relations=controllerRedeem
+[controllable.dl] Iteration#2 ProgramAfterFallbackSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#2 SynthesisResult: updated-by-fallback
+[controllable.dl] Iteration#3 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+[controllable.dl] Iteration#3 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[controllable.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor(address(8)) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),-30613) [msgSender: 8, value: 0]
+[controllable.dl] Iteration#3 RestrictedSolveStatus: relation=recv_increaseAllowance, status=SAT
+[controllable.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#3 SynthesisResult: updated
+[controllable.dl] Iteration#4 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#4 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[controllable.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor(address(8)) [msgSender: 8, value: 0]
+[1] recv_transferFrom(address(6),address(6),address(7),1) [msgSender: 8, value: 0]
+[controllable.dl] Iteration#4 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[controllable.dl] Iteration#4 FallbackToFull: reason=UNSAT, relations=transferFrom
+[controllable.dl] Iteration#4 ProgramAfterFallbackSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#4 SynthesisResult: updated-by-fallback
+[controllable.dl] Iteration#5 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,0!=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#5 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[controllable.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor(address(11)) [msgSender: 12, value: 0]
+[1] recv_mint(address(11),13672) [msgSender: 12, value: 0]
+[2] recv_controllerRedeem(address(11),38823) [msgSender: 11, value: 0]
+[controllable.dl] Iteration#5 RestrictedSolveStatus: relation=recv_controllerRedeem, status=SAT
+[controllable.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#5 SynthesisResult: updated
+[controllable.dl] Iteration#6 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#6 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[controllable.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor(address(8)) [msgSender: 9, value: 0]
+[1] recv_mint(address(8),2237) [msgSender: 9, value: 0]
+[2] recv_controllerRedeem(address(12),1200) [msgSender: 8, value: 0]
+[controllable.dl] Iteration#6 RestrictedSolveStatus: relation=recv_controllerRedeem, status=SAT
+[controllable.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,n==balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#6 SynthesisResult: updated
+[controllable.dl] Iteration#7 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,n==balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+[controllable.dl] Iteration#7 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[controllable.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor(address(4)) [msgSender: 11, value: 0]
+[1] recv_mint(address(12),1) [msgSender: 11, value: 0]
+[2] recv_burn(address(12),37965) [msgSender: 0, value: 0]
+[controllable.dl] Iteration#7 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[controllable.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,n==balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#7 SynthesisResult: updated
+[controllable.dl] Iteration#8 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,n==balanceOf_x1,msgSender(msgSender),recv_controllerRedeem(p,n),controller(c),balanceOf(msgSender,balanceOf_x1).
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#8 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[controllable.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor(address(12)) [msgSender: 8, value: 0]
+[1] recv_mint(address(12),1) [msgSender: 8, value: 0]
+[2] recv_controllerRedeem(address(16),1) [msgSender: 12, value: 0]
+[controllable.dl] Iteration#8 RestrictedSolveStatus: relation=recv_controllerRedeem, status=SAT
+[controllable.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#8 SynthesisResult: updated
+[controllable.dl] Iteration#9 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#9 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor(address(2)) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(7),address(7),1) [msgSender: 8, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(14),12831) [msgSender: 15, value: 0]
+[controllable.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#9 SynthesisResult: updated
+[controllable.dl] Iteration#10 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#10 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 14, value: 0]
+[1] recv_increaseAllowance(address(13),address(13),1) [msgSender: 14, value: 0]
+[2] recv_transferFrom(address(13),address(13),address(15),1) [msgSender: 16, value: 0]
+[controllable.dl] Iteration#10 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#10 SynthesisResult: updated
+[controllable.dl] Iteration#11 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#11 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor(address(2)) [msgSender: 11, value: 0]
+[1] recv_increaseAllowance(address(10),address(10),29162) [msgSender: 11, value: 0]
+[2] recv_transferFrom(address(10),address(10),address(14),28099) [msgSender: 15, value: 0]
+[controllable.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#11 SynthesisResult: updated
+[controllable.dl] Iteration#12 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#12 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor(address(5)) [msgSender: 8, value: 0]
+[1] recv_increaseAllowance(address(6),address(7),25192) [msgSender: 8, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(7),25193) [msgSender: 8, value: 0]
+[controllable.dl] Iteration#12 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#12 SynthesisResult: updated
+[controllable.dl] Iteration#13 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#13 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 9, value: 0]
+[1] recv_mint(address(17),1) [msgSender: 9, value: 0]
+[2] recv_transfer(address(11),address(11),-21392) [msgSender: 12, value: 0]
+[3] recv_transfer(address(17),address(11),21392) [msgSender: 18, value: 0]
+[controllable.dl] Iteration#13 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[controllable.dl] Iteration#13 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#13 SynthesisResult: updated
+[controllable.dl] Iteration#14 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n),controller(c),msgSender(s),s==c.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#14 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor(address(17)) [msgSender: 8, value: 0]
+[1] recv_mint(address(13),11747) [msgSender: 8, value: 0]
+[2] recv_mint(address(17),11748) [msgSender: 14, value: 0]
+[3] recv_controllerTransfer(address(17),address(13),-23496) [msgSender: 17, value: 0]
+[controllable.dl] Iteration#14 RestrictedSolveStatus: relation=recv_controllerTransfer, status=SAT
+[controllable.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#14 SynthesisResult: updated
+[controllable.dl] Iteration#15 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#15 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor(address(12)) [msgSender: 7, value: 0]
+[1] recv_mint(address(21),124233) [msgSender: 7, value: 0]
+[2] recv_controllerTransfer(address(12),address(12),278876) [msgSender: 12, value: 0]
+[3] recv_transfer(address(21),address(12),141645) [msgSender: 22, value: 0]
+[controllable.dl] Iteration#15 RestrictedSolveStatus: relation=recv_transfer, status=UNSAT
+[controllable.dl] Iteration#15 FallbackToFull: reason=UNSAT, relations=transfer
+[controllable.dl] Iteration#15 ProgramAfterFallbackSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#15 SynthesisResult: updated-by-fallback
+[controllable.dl] Iteration#16 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1),0!=balanceOf_x1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#16 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor(address(12)) [msgSender: 7, value: 0]
+[1] recv_mint(address(19),1) [msgSender: 7, value: 0]
+[2] recv_controllerTransfer(address(12),address(12),117343) [msgSender: 12, value: 0]
+[3] recv_transfer(address(12),address(19),-117345) [msgSender: 13, value: 0]
+[controllable.dl] Iteration#16 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[controllable.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#16 SynthesisResult: updated
+[controllable.dl] Iteration#17 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),n>0,s==c,controller(c),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+[controllable.dl] Iteration#17 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor(address(12)) [msgSender: 38, value: 0]
+[1] recv_mint(address(15),27142) [msgSender: 38, value: 0]
+[2] recv_controllerTransfer(address(12),address(12),44405) [msgSender: 12, value: 0]
+[3] recv_controllerTransfer(address(12),address(15),44406) [msgSender: 12, value: 0]
+[controllable.dl] Iteration#17 RestrictedSolveStatus: relation=recv_controllerTransfer, status=SAT
+[controllable.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#17 SynthesisResult: updated
+[controllable.dl] Iteration#18 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(r,balanceOf_x1_1),n>0,n<balanceOf_x1_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#18 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=3
+[BMC] CounterexampleReturned: rule=negativeBalance, k=3
+[controllable.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor(address(7)) [msgSender: 4, value: 0]
+[1] recv_mint(address(6),20983) [msgSender: 4, value: 0]
+[2] recv_controllerTransfer(address(7),address(7),20984) [msgSender: 7, value: 0]
+[3] recv_transfer(address(7),address(6),20982) [msgSender: 8, value: 0]
+[controllable.dl] Iteration#18 RestrictedSolveStatus: relation=recv_transfer, status=SAT
+[controllable.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#18 SynthesisResult: updated
+[controllable.dl] Iteration#19 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#19 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor(address(20)) [msgSender: 21, value: 0]
+[1] recv_increaseAllowance(address(16),address(20),395289) [msgSender: 21, value: 0]
+[2] recv_mint(address(20),1) [msgSender: 17, value: 0]
+[3] recv_transferFrom(address(16),address(16),address(20),183248) [msgSender: 21, value: 0]
+[4] recv_transferFrom(address(16),address(20),address(20),183249) [msgSender: 21, value: 0]
+[controllable.dl] Iteration#19 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1),n<balanceOf_x1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+[controllable.dl] Iteration#19 SynthesisResult: updated
+[controllable.dl] Iteration#20 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(s,balanceOf_x1),n<balanceOf_x1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+[controllable.dl] Iteration#20 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor(address(16)) [msgSender: 17, value: 0]
+[1] recv_mint(address(16),2) [msgSender: 17, value: 0]
+[2] recv_transferFrom(address(16),address(16),address(16),1) [msgSender: 17, value: 0]
+[controllable.dl] Iteration#20 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),n<allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#20 SynthesisResult: updated
+[controllable.dl] Iteration#21 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2),n<allowance_x2.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#21 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[controllable.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor(address(6)) [msgSender: 15, value: 0]
+[1] recv_increaseAllowance(address(6),address(14),2) [msgSender: 15, value: 0]
+[2] recv_transferFrom(address(14),address(14),address(6),1) [msgSender: 7, value: 0]
+[controllable.dl] Iteration#21 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<=allowance_x2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#21 SynthesisResult: updated
+[controllable.dl] Iteration#22 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2),n<=allowance_x2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#22 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor(address(12)) [msgSender: 13, value: 0]
+[1] recv_mint(address(23),60056) [msgSender: 13, value: 0]
+[2] recv_increaseAllowance(address(12),address(19),34221) [msgSender: 20, value: 0]
+[3] recv_controllerTransfer(address(12),address(12),49225) [msgSender: 12, value: 0]
+[4] recv_transferFrom(address(23),address(12),address(19),-65098) [msgSender: 20, value: 0]
+[controllable.dl] Iteration#22 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#22 SynthesisResult: updated
+[controllable.dl] Iteration#23 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<=allowance_x2_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#23 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor(address(26)) [msgSender: 27, value: 0]
+[1] recv_increaseAllowance(address(16),address(26),709667) [msgSender: 27, value: 0]
+[2] recv_mint(address(26),453037) [msgSender: 11, value: 0]
+[3] recv_transferFrom(address(16),address(16),address(26),226518) [msgSender: 27, value: 0]
+[4] recv_transferFrom(address(26),address(16),address(26),483149) [msgSender: 27, value: 0]
+[controllable.dl] Iteration#23 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<allowance_x2_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+[controllable.dl] Iteration#23 SynthesisResult: updated
+[controllable.dl] Iteration#24 ProgramBeforeBMC:
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_1),n>0,n<allowance_x2_1.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+[controllable.dl] Iteration#24 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor(address(17)) [msgSender: 18, value: 0]
+[1] recv_increaseAllowance(address(17),address(17),564824) [msgSender: 18, value: 0]
+[2] recv_mint(address(16),338893) [msgSender: 8, value: 0]
+[3] recv_mint(address(17),225929) [msgSender: 12, value: 0]
+[4] recv_transferFrom(address(16),address(17),address(17),564823) [msgSender: 18, value: 0]
+[controllable.dl] Iteration#24 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),n<allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+[controllable.dl] Iteration#24 SynthesisResult: updated
+[controllable.dl] Iteration#25 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,r,allowance_x2_0),n<allowance_x2_0,recv_transferFrom(o,r,s,n),0!=allowance_x2_1,allowance(o,s,allowance_x2_1).
+[controllable.dl] Iteration#25 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#25 Counterexample:
+Trace:
+[0] constructor(address(2)) [msgSender: 18, value: 0]
+[1] recv_increaseAllowance(address(14),address(17),2655) [msgSender: 18, value: 0]
+[2] recv_increaseAllowance(address(14),address(14),31252) [msgSender: 15, value: 0]
+[3] recv_transferFrom(address(14),address(14),address(17),31251) [msgSender: 18, value: 0]
+[controllable.dl] Iteration#25 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#25 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance(o,r,allowance_x2_0),0!=allowance_x2_0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#25 SynthesisResult: updated
+[controllable.dl] Iteration#26 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance(o,r,allowance_x2_0),0!=allowance_x2_0,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#26 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#26 Counterexample:
+Trace:
+[0] constructor(address(9)) [msgSender: 24, value: 0]
+[1] recv_increaseAllowance(address(9),address(23),1) [msgSender: 24, value: 0]
+[2] recv_controllerTransfer(address(9),address(9),30384) [msgSender: 9, value: 0]
+[3] recv_mint(address(23),344198) [msgSender: 18, value: 0]
+[4] recv_transferFrom(address(9),address(23),address(23),-664486) [msgSender: 24, value: 0]
+[controllable.dl] Iteration#26 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#26 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n<=allowance_x2_0,0!=allowance_x2_1,recv_transferFrom(o,r,s,n),allowance(r,o,allowance_x2_1),allowance(o,s,allowance_x2_0).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#26 SynthesisResult: updated
+[controllable.dl] Iteration#27 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n<=allowance_x2_0,0!=allowance_x2_1,recv_transferFrom(o,r,s,n),allowance(r,o,allowance_x2_1),allowance(o,s,allowance_x2_0).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#27 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=illegalRedeem, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[controllable.dl] Iteration#27 Counterexample:
+Trace:
+[0] constructor(address(4)) [msgSender: 4, value: 0]
+[1] recv_controllerTransfer(address(4),address(4),130892) [msgSender: 4, value: 0]
+[2] recv_increaseAllowance(address(4),address(4),192993) [msgSender: 5, value: 0]
+[3] recv_mint(address(28),130890) [msgSender: 5, value: 0]
+[4] recv_increaseAllowance(address(28),address(4),192994) [msgSender: 5, value: 0]
+[5] recv_transferFrom(address(4),address(28),address(4),160292) [msgSender: 5, value: 0]
+[controllable.dl] Iteration#27 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#27 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance_x2_0>0,n<allowance_x2_1,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+[controllable.dl] Iteration#27 SynthesisResult: updated
+[controllable.dl] Iteration#28 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_1),allowance_x2_0>0,n<allowance_x2_1,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+[controllable.dl] Iteration#28 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=illegalRedeem, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[controllable.dl] Iteration#28 Counterexample:
+Trace:
+[0] constructor(address(16)) [msgSender: 17, value: 0]
+[1] recv_increaseAllowance(address(25),address(16),14807) [msgSender: 17, value: 0]
+[2] recv_increaseAllowance(address(25),address(25),14806) [msgSender: 26, value: 0]
+[3] recv_transferFrom(address(25),address(25),address(25),-283019) [msgSender: 26, value: 0]
+[4] recv_controllerTransfer(address(16),address(16),-297824) [msgSender: 16, value: 0]
+[5] recv_transferFrom(address(25),address(16),address(25),-297825) [msgSender: 26, value: 0]
+[controllable.dl] Iteration#28 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#28 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n),n<=allowance_x2_2,n<allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#28 SynthesisResult: updated
+[controllable.dl] Iteration#29 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n),n<=allowance_x2_2,n<allowance_x2_1.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#29 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=illegalRedeem, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[controllable.dl] Iteration#29 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 3, value: 0]
+[1] recv_controllerTransfer(address(3),address(3),46663) [msgSender: 3, value: 0]
+[2] recv_increaseAllowance(address(36),address(32),92814) [msgSender: 33, value: 0]
+[3] recv_increaseAllowance(address(32),address(3),77459) [msgSender: 4, value: 0]
+[4] recv_mint(address(36),63517) [msgSender: 20, value: 0]
+[5] recv_transferFrom(address(36),address(3),address(32),77458) [msgSender: 33, value: 0]
+[controllable.dl] Iteration#29 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#29 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,allowance(s,o,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#29 SynthesisResult: updated
+[controllable.dl] Iteration#30 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,allowance(s,o,allowance_x2_1),balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<=balanceOf_x1_2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#30 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#30 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 17, value: 0]
+[1] recv_mint(address(17),31582) [msgSender: 17, value: 0]
+[2] recv_increaseAllowance(address(16),address(17),19293) [msgSender: 18, value: 0]
+[3] recv_transferFrom(address(17),address(17),address(16),1315) [msgSender: 17, value: 0]
+[controllable.dl] Iteration#30 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#30 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_2),allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#30 SynthesisResult: updated
+[controllable.dl] Iteration#31 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_2),allowance(s,r,allowance_x2_1),recv_transferFrom(o,r,s,n),n<=allowance_x2_1,n<balanceOf_x1_2.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#31 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#31 Counterexample:
+Trace:
+[0] constructor(address(14)) [msgSender: 15, value: 0]
+[1] recv_increaseAllowance(address(13),address(14),3020) [msgSender: 15, value: 0]
+[2] recv_mint(address(13),48303) [msgSender: 6, value: 0]
+[3] recv_transferFrom(address(14),address(14),address(13),1915) [msgSender: 14, value: 0]
+[controllable.dl] Iteration#31 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#31 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#31 SynthesisResult: updated
+[controllable.dl] Iteration#32 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1.
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#32 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#32 Counterexample:
+Trace:
+[0] constructor(address(2)) [msgSender: 7, value: 0]
+[1] recv_mint(address(20),196099) [msgSender: 7, value: 0]
+[2] recv_controllerTransfer(address(2),address(2),0) [msgSender: 2, value: 0]
+[3] recv_increaseAllowance(address(20),address(2),421289) [msgSender: 3, value: 0]
+[4] recv_transferFrom(address(20),address(2),address(2),392199) [msgSender: 3, value: 0]
+[controllable.dl] Iteration#32 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#32 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- n>0,allowance_x2_1>0,recv_transferFrom(o,r,s,n),n<balanceOf_x1_2,allowance(o,r,allowance_x2_1),balanceOf(s,balanceOf_x1_2).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+[controllable.dl] Iteration#32 SynthesisResult: updated
+[controllable.dl] Iteration#33 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- n>0,allowance_x2_1>0,recv_transferFrom(o,r,s,n),n<balanceOf_x1_2,allowance(o,r,allowance_x2_1),balanceOf(s,balanceOf_x1_2).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+[controllable.dl] Iteration#33 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#33 Counterexample:
+Trace:
+[0] constructor(address(5)) [msgSender: 24, value: 0]
+[1] recv_increaseAllowance(address(23),address(23),2) [msgSender: 24, value: 0]
+[2] recv_mint(address(23),4) [msgSender: 15, value: 0]
+[3] recv_transferFrom(address(23),address(23),address(23),3) [msgSender: 24, value: 0]
+[controllable.dl] Iteration#33 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#33 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n<allowance_x2_0,allowance(r,o,allowance_x2_1),allowance_x2_1>0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#33 SynthesisResult: updated
+[controllable.dl] Iteration#34 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n<allowance_x2_0,allowance(r,o,allowance_x2_1),allowance_x2_1>0,recv_transferFrom(o,r,s,n),allowance(s,r,allowance_x2_0).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#34 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#34 Counterexample:
+Trace:
+[0] constructor(address(13)) [msgSender: 14, value: 0]
+[1] recv_increaseAllowance(address(13),address(13),13023) [msgSender: 14, value: 0]
+[2] recv_increaseAllowance(address(14),address(13),13022) [msgSender: 14, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(14),13021) [msgSender: 15, value: 0]
+[controllable.dl] Iteration#34 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#34 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(r,s,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#34 SynthesisResult: updated
+[controllable.dl] Iteration#35 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- n>0,allowance(o,r,allowance_x2_1),n<=allowance_x2_2,recv_transferFrom(o,r,s,n),n<=allowance_x2_1,allowance(r,s,allowance_x2_2).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#35 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=illegalRedeem, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=5
+[BMC] CounterexampleReturned: rule=negativeBalance, k=5
+[controllable.dl] Iteration#35 Counterexample:
+Trace:
+[0] constructor(address(29)) [msgSender: 30, value: 0]
+[1] recv_increaseAllowance(address(32),address(29),544794) [msgSender: 30, value: 0]
+[2] recv_controllerTransfer(address(29),address(29),0) [msgSender: 29, value: 0]
+[3] recv_increaseAllowance(address(29),address(32),544793) [msgSender: 33, value: 0]
+[4] recv_mint(address(32),91048) [msgSender: 28, value: 0]
+[5] recv_transferFrom(address(29),address(32),address(29),544793) [msgSender: 30, value: 0]
+[controllable.dl] Iteration#35 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#35 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),n<=balanceOf_x1_1,allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#35 SynthesisResult: updated
+[controllable.dl] Iteration#36 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,n<allowance_x2_2,balanceOf(o,balanceOf_x1_1),n<=balanceOf_x1_1,allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#36 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#36 Counterexample:
+Trace:
+[0] constructor(address(2)) [msgSender: 18, value: 0]
+[1] recv_mint(address(13),14861) [msgSender: 18, value: 0]
+[2] recv_increaseAllowance(address(13),address(13),31567) [msgSender: 14, value: 0]
+[3] recv_transferFrom(address(13),address(13),address(17),2058) [msgSender: 18, value: 0]
+[controllable.dl] Iteration#36 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#36 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,0!=balanceOf_x1_1,allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#36 SynthesisResult: updated
+[controllable.dl] Iteration#37 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,0!=balanceOf_x1_1,allowance(r,o,allowance_x2_2),recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#37 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=3
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=3
+[controllable.dl] Iteration#37 Counterexample:
+Trace:
+[0] constructor(address(6)) [msgSender: 17, value: 0]
+[1] recv_mint(address(18),28252) [msgSender: 17, value: 0]
+[2] recv_increaseAllowance(address(16),address(16),2) [msgSender: 17, value: 0]
+[3] recv_transferFrom(address(16),address(16),address(18),1) [msgSender: 19, value: 0]
+[controllable.dl] Iteration#37 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#37 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,balanceOf(s,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#37 SynthesisResult: updated
+[controllable.dl] Iteration#38 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transferFrom(o,r,s,n) :- allowance(o,s,allowance_x2_2),n>0,balanceOf(s,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#38 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#38 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 26, value: 0]
+[1] recv_increaseAllowance(address(24),address(25),67052) [msgSender: 26, value: 0]
+[2] recv_mint(address(25),146238) [msgSender: 8, value: 0]
+[3] recv_mint(address(24),4052) [msgSender: 26, value: 0]
+[4] recv_transferFrom(address(24),address(25),address(25),53251) [msgSender: 26, value: 0]
+[controllable.dl] Iteration#38 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#38 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#38 SynthesisResult: updated
+[controllable.dl] Iteration#39 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#39 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#39 Counterexample:
+Trace:
+[0] constructor(address(3)) [msgSender: 21, value: 0]
+[1] recv_increaseAllowance(address(20),address(20),54332) [msgSender: 21, value: 0]
+[2] recv_mint(address(20),55574) [msgSender: 11, value: 0]
+[3] recv_controllerTransfer(address(3),address(3),46747) [msgSender: 3, value: 0]
+[4] recv_transferFrom(address(3),address(20),address(20),54332) [msgSender: 21, value: 0]
+[controllable.dl] Iteration#39 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#39 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#39 SynthesisResult: updated
+[controllable.dl] Iteration#40 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,balanceOf(s,balanceOf_x1_1),n<allowance_x2_2,n<balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#40 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=4
+[BMC] CounterexampleReturned: rule=negativeBalance, k=4
+[controllable.dl] Iteration#40 Counterexample:
+Trace:
+[0] constructor(address(5)) [msgSender: 5, value: 0]
+[1] recv_controllerTransfer(address(5),address(5),192453) [msgSender: 5, value: 0]
+[2] recv_increaseAllowance(address(21),address(21),3) [msgSender: 22, value: 0]
+[3] recv_mint(address(21),192454) [msgSender: 18, value: 0]
+[4] recv_transferFrom(address(5),address(21),address(21),2) [msgSender: 22, value: 0]
+[controllable.dl] Iteration#40 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#40 ProgramAfterRestrictedSynthesis:
+transferFrom(o,r,s,n) :- n>0,balanceOf(o,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#40 SynthesisResult: updated
+[controllable.dl] Iteration#41 ProgramBeforeBMC:
+transferFrom(o,r,s,n) :- n>0,balanceOf(o,balanceOf_x1_1),n<=allowance_x2_2,n<=balanceOf_x1_1,recv_transferFrom(o,r,s,n),allowance(r,s,allowance_x2_2).
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#41 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=4
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=4
+[controllable.dl] Iteration#41 Counterexample:
+Trace:
+[0] constructor(address(4)) [msgSender: 5, value: 0]
+[1] recv_increaseAllowance(address(4),address(4),65496) [msgSender: 5, value: 0]
+[2] recv_controllerTransfer(address(4),address(4),-5722) [msgSender: 4, value: 0]
+[3] recv_mint(address(23),100712) [msgSender: 15, value: 0]
+[4] recv_transferFrom(address(23),address(4),address(4),63597) [msgSender: 5, value: 0]
+[controllable.dl] Iteration#41 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[controllable.dl] Iteration#41 ProgramAfterRestrictedSynthesis:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#41 SynthesisResult: updated
+[controllable.dl] Iteration#42 ProgramBeforeBMC:
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+[controllable.dl] Iteration#42 BMCInput: bound=5, violationRules=illegalControllerTransfer,illegalRedeem,negativeAllowance,negativeBalance,unequalBalance
+[BMC] TransitionSystemReady: program=Controllable
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=unequalBalance, formula=(and (= totalBalances kv_s) (= totalSupply kv_n) (not (= kv_s kv_n)))
+[BMC] TemporalSpec(tx): rule=illegalControllerTransfer, formula=(and (or (= recv_controllerTransfer0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] TemporalSpec(tx): rule=illegalRedeem, formula=(and (or (= recv_controllerRedeem0 1))
+     (= controller kv_c)
+     (= msgSender kv_s)
+     (not (= kv_s kv_c)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=illegalRedeem, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=illegalRedeem, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=illegalRedeem, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=illegalRedeem, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=illegalRedeem, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=illegalControllerTransfer, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unequalBalance, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[controllable.dl] Iteration#42 BMCResult: no-counterexample
+[controllable.dl] BenchmarkEnd: reason=sat, totalTimeMs=39156, bmcTimeMs=15058, cegisIterations=42, finalRules=
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.

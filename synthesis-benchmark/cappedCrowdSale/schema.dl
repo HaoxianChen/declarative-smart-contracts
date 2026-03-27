@@ -4,23 +4,23 @@
 .decl *owner(p: address)
 
 // views
-.decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
+.decl *totalSupply(n: int >= 0)
+.decl balanceOf(p: address, n: int >= 0)[0]
 .decl constructor(c: int, r: int)
 
 // New views
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 
 // Transactions
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address <> 0, amount: int > 0)
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 // New transactions
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address <> 0, to: address <> 0, spender: address <> 0, amount: int > 0)
 .decl recv_increaseAllowance(o: address, s: address, n:int)
 .decl increaseAllowance(o: address, s: address, n:int)
 // .decl recv_approve(o: address, s: address, n:int)
@@ -73,15 +73,15 @@
 .public start(0)
 .public end(0)
 
-.decl *rate(r: int)
-.decl recv_buyToken(p:address, amount: int)
+.decl *rate(r: int > 0)
+.decl recv_buyToken(p:address <> 0, amount: int > 0)
 .decl buyToken(p:address, amount: int)
 .public recv_buyToken
 
 // finalized(f), f==false, p!=0, m!=0, now(t), start(s), end(e), t>s, t<e.
 
-.decl *raised(n: int)
-.decl *cap(n: int)
+.decl *raised(n: int >= 0)
+.decl *cap(n: int > 0)
 .public raised(0)
 .public cap(0)
 
@@ -96,11 +96,18 @@
 .decl buyAfterFinalize()
 .violation buyAfterFinalize
 
+.decl finalizeNotByOwner()
+.violation finalizeNotByOwner
+
+.decl raisedAboveCap()
+.violation raisedAboveCap
+
 .decl negativeBalance(p:address,n:int)[0]
 .violation negativeBalance
 
 .decl negativeAllowance(s:address,p:address,n:int)[0,1]
 .violation negativeAllowance
+.decl *onceBuyAfterFinalize(b: bool)
 
 .decl invalidTx()
 .violation invalidTx

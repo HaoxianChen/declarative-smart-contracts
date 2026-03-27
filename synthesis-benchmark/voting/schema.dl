@@ -16,9 +16,9 @@
 .public isVoter(1)
 
 // NOTE: avoid `count:` aggregator (it crashes ImperativeTranslator/CountView in this repo).
-// Model votes count as int via summation over a derived unit relation.
-.decl voteUnit(proposal: uint, one: int)[0]
-.decl votes(proposal: uint, c: int)[0]
+// Include voter address in voteUnit to avoid set-semantics collapsing multiple votes.
+.decl voteUnit(voter: address, proposal: uint, one: int)[0]
+.decl votes(proposal: uint, c: int >= 0)[0]
 .public votes(1)
 .decl wins(proposal: uint, b: bool)[0]
 .public wins(1)
@@ -30,7 +30,7 @@
 .decl *hasWinner(b: bool)
 .public hasWinner(0)
 
-.decl *quorumSize(q: int)
+.decl *quorumSize(q: int >= 0)
 
 // Properties
 .decl inconsistency(p1: uint, p2: uint)[0,1]

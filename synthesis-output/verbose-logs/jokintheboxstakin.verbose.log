@@ -1,0 +1,235 @@
+[Audit] BenchmarkStart: name=jokintheboxstakin.dl, benchDir=synthesis-benchmark/jokintheboxstakin
+[Audit] InputSpecFiles: schema=synthesis-benchmark/jokintheboxstakin/schema.dl, rules=synthesis-benchmark/jokintheboxstakin/rules.dl, properties=synthesis-benchmark/jokintheboxstakin/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/jokintheboxstakin.dl, stats=synthesis-output/synthesis_stats.csv
+[jokintheboxstakin.dl] BenchmarkStart: program=Jokintheboxstakin, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[jokintheboxstakin.dl] SeededPredicatesFromTxProperties: Map()
+[jokintheboxstakin.dl] InitialTransactionRules:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day).
+[jokintheboxstakin.dl] Iteration#0 ProgramBeforeBMC:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day).
+[jokintheboxstakin.dl] Iteration#0 BMCInput: bound=5, violationRules=invalidLockPeriod,invalidWithdrawSignature,repeatedUnstake
+[BMC] TransitionSystemReady: program=Jokintheboxstakin
+[BMC] TemporalSpec(tx): rule=invalidWithdrawSignature, formula=(and (or (= recv_withdraw0 1))
+     (= msgSender kv_sender)
+     (not (isValidSignature kv_sender
+                            kv_total
+                            i0_inETH
+                            i0_messageHash
+                            i0_v
+                            i0_r
+                            i0_s
+                            (select nonce kv_sender)))
+     (>= kv_total 0)
+     (>= i0_v 0)
+     (= kv_total (+ i0_earnings i0_affiliateEarnings)))
+[BMC] TemporalSpec(tx): rule=invalidLockPeriod, formula=(and (or (= recv_stake0 1))
+     (not (or (= i0_lockPeriod 1)
+              (= i0_lockPeriod 30)
+              (= i0_lockPeriod 60)
+              (= i0_lockPeriod 90)))
+     (>= i0_lockPeriod 0))
+[BMC] TemporalSpec(tx): rule=repeatedUnstake, formula=(and (or (= recv_unstake0 1))
+     (= msgSender kv_sender)
+     (select onceUnstake (onceUnstake_keyTuple kv_sender i0_stakeId))
+     (select onceUnstake__exists (onceUnstake_keyTuple kv_sender i0_stakeId)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=repeatedUnstake, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=invalidLockPeriod, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=invalidLockPeriod, k=1
+[BMC] CounterexampleReturned: rule=invalidLockPeriod, k=1
+[jokintheboxstakin.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_stake(3,5,0) [msgSender: 2, value: 0]
+[jokintheboxstakin.dl] Iteration#0 RestrictedSolveStatus: relation=recv_stake, status=SAT
+[jokintheboxstakin.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=lockPeriod.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#0 SynthesisResult: updated
+[jokintheboxstakin.dl] Iteration#1 ProgramBeforeBMC:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=lockPeriod.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#1 BMCInput: bound=5, violationRules=invalidLockPeriod,invalidWithdrawSignature,repeatedUnstake
+[BMC] TransitionSystemReady: program=Jokintheboxstakin
+[BMC] TemporalSpec(tx): rule=invalidWithdrawSignature, formula=(and (or (= recv_withdraw0 1))
+     (= msgSender kv_sender)
+     (not (isValidSignature kv_sender
+                            kv_total
+                            i0_inETH
+                            i0_messageHash
+                            i0_v
+                            i0_r
+                            i0_s
+                            (select nonce kv_sender)))
+     (>= kv_total 0)
+     (>= i0_v 0)
+     (= kv_total (+ i0_earnings i0_affiliateEarnings)))
+[BMC] TemporalSpec(tx): rule=invalidLockPeriod, formula=(and (or (= recv_stake0 1))
+     (not (or (= i0_lockPeriod 1)
+              (= i0_lockPeriod 30)
+              (= i0_lockPeriod 60)
+              (= i0_lockPeriod 90)))
+     (>= i0_lockPeriod 0))
+[BMC] TemporalSpec(tx): rule=repeatedUnstake, formula=(and (or (= recv_unstake0 1))
+     (= msgSender kv_sender)
+     (select onceUnstake (onceUnstake_keyTuple kv_sender i0_stakeId))
+     (select onceUnstake__exists (onceUnstake_keyTuple kv_sender i0_stakeId)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=repeatedUnstake, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=invalidLockPeriod, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=invalidLockPeriod, k=1
+[BMC] CounterexampleReturned: rule=invalidLockPeriod, k=1
+[jokintheboxstakin.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_stake(3,5,91) [msgSender: 2, value: 0]
+[jokintheboxstakin.dl] Iteration#1 RestrictedSolveStatus: relation=recv_stake, status=SAT
+[jokintheboxstakin.dl] Iteration#1 ProgramAfterRestrictedSynthesis:
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0==stakeId.
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#1 SynthesisResult: updated
+[jokintheboxstakin.dl] Iteration#2 ProgramBeforeBMC:
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0==stakeId.
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#2 BMCInput: bound=5, violationRules=invalidLockPeriod,invalidWithdrawSignature,repeatedUnstake
+[BMC] TransitionSystemReady: program=Jokintheboxstakin
+[BMC] TemporalSpec(tx): rule=invalidWithdrawSignature, formula=(and (or (= recv_withdraw0 1))
+     (= msgSender kv_sender)
+     (not (isValidSignature kv_sender
+                            kv_total
+                            i0_inETH
+                            i0_messageHash
+                            i0_v
+                            i0_r
+                            i0_s
+                            (select nonce kv_sender)))
+     (>= kv_total 0)
+     (>= i0_v 0)
+     (= kv_total (+ i0_earnings i0_affiliateEarnings)))
+[BMC] TemporalSpec(tx): rule=invalidLockPeriod, formula=(and (or (= recv_stake0 1))
+     (not (or (= i0_lockPeriod 1)
+              (= i0_lockPeriod 30)
+              (= i0_lockPeriod 60)
+              (= i0_lockPeriod 90)))
+     (>= i0_lockPeriod 0))
+[BMC] TemporalSpec(tx): rule=repeatedUnstake, formula=(and (or (= recv_unstake0 1))
+     (= msgSender kv_sender)
+     (select onceUnstake (onceUnstake_keyTuple kv_sender i0_stakeId))
+     (select onceUnstake__exists (onceUnstake_keyTuple kv_sender i0_stakeId)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=repeatedUnstake, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=invalidLockPeriod, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=invalidLockPeriod, k=1
+[BMC] CounterexampleReturned: rule=invalidLockPeriod, k=1
+[jokintheboxstakin.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_stake(0,4,0) [msgSender: 2, value: 0]
+[jokintheboxstakin.dl] Iteration#2 RestrictedSolveStatus: relation=recv_stake, status=SAT
+[jokintheboxstakin.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),0!=lockPeriod,msgSender(p),now(day),0==stakeId.
+[jokintheboxstakin.dl] Iteration#2 SynthesisResult: updated
+[jokintheboxstakin.dl] Iteration#3 ProgramBeforeBMC:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),0!=lockPeriod,msgSender(p),now(day),0==stakeId.
+[jokintheboxstakin.dl] Iteration#3 BMCInput: bound=5, violationRules=invalidLockPeriod,invalidWithdrawSignature,repeatedUnstake
+[BMC] TransitionSystemReady: program=Jokintheboxstakin
+[BMC] TemporalSpec(tx): rule=invalidWithdrawSignature, formula=(and (or (= recv_withdraw0 1))
+     (= msgSender kv_sender)
+     (not (isValidSignature kv_sender
+                            kv_total
+                            i0_inETH
+                            i0_messageHash
+                            i0_v
+                            i0_r
+                            i0_s
+                            (select nonce kv_sender)))
+     (>= kv_total 0)
+     (>= i0_v 0)
+     (= kv_total (+ i0_earnings i0_affiliateEarnings)))
+[BMC] TemporalSpec(tx): rule=invalidLockPeriod, formula=(and (or (= recv_stake0 1))
+     (not (or (= i0_lockPeriod 1)
+              (= i0_lockPeriod 30)
+              (= i0_lockPeriod 60)
+              (= i0_lockPeriod 90)))
+     (>= i0_lockPeriod 0))
+[BMC] TemporalSpec(tx): rule=repeatedUnstake, formula=(and (or (= recv_unstake0 1))
+     (= msgSender kv_sender)
+     (select onceUnstake (onceUnstake_keyTuple kv_sender i0_stakeId))
+     (select onceUnstake__exists (onceUnstake_keyTuple kv_sender i0_stakeId)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=repeatedUnstake, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=invalidLockPeriod, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=invalidLockPeriod, k=1
+[BMC] CounterexampleReturned: rule=invalidLockPeriod, k=1
+[jokintheboxstakin.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_stake(0,4,91) [msgSender: 2, value: 0]
+[jokintheboxstakin.dl] Iteration#3 RestrictedSolveStatus: relation=recv_stake, status=SAT
+[jokintheboxstakin.dl] Iteration#3 ProgramAfterRestrictedSynthesis:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=stakeId.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#3 SynthesisResult: updated
+[jokintheboxstakin.dl] Iteration#4 ProgramBeforeBMC:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=stakeId.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#4 BMCInput: bound=5, violationRules=invalidLockPeriod,invalidWithdrawSignature,repeatedUnstake
+[BMC] TransitionSystemReady: program=Jokintheboxstakin
+[BMC] TemporalSpec(tx): rule=invalidWithdrawSignature, formula=(and (or (= recv_withdraw0 1))
+     (= msgSender kv_sender)
+     (not (isValidSignature kv_sender
+                            kv_total
+                            i0_inETH
+                            i0_messageHash
+                            i0_v
+                            i0_r
+                            i0_s
+                            (select nonce kv_sender)))
+     (>= kv_total 0)
+     (>= i0_v 0)
+     (= kv_total (+ i0_earnings i0_affiliateEarnings)))
+[BMC] TemporalSpec(tx): rule=invalidLockPeriod, formula=(and (or (= recv_stake0 1))
+     (not (or (= i0_lockPeriod 1)
+              (= i0_lockPeriod 30)
+              (= i0_lockPeriod 60)
+              (= i0_lockPeriod 90)))
+     (>= i0_lockPeriod 0))
+[BMC] TemporalSpec(tx): rule=repeatedUnstake, formula=(and (or (= recv_unstake0 1))
+     (= msgSender kv_sender)
+     (select onceUnstake (onceUnstake_keyTuple kv_sender i0_stakeId))
+     (select onceUnstake__exists (onceUnstake_keyTuple kv_sender i0_stakeId)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=repeatedUnstake, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=invalidLockPeriod, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=invalidLockPeriod, k=1
+[BMC] CounterexampleReturned: rule=invalidLockPeriod, k=1
+[jokintheboxstakin.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_stake(3,5,0) [msgSender: 2, value: 0]
+[jokintheboxstakin.dl] Iteration#4 RestrictedSolveStatus: relation=recv_stake, status=SAT
+[jokintheboxstakin.dl] Iteration#4 ProgramAfterRestrictedSynthesis:
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=stakeId.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).
+[jokintheboxstakin.dl] Iteration#4 SynthesisResult: nochange
+[jokintheboxstakin.dl] BenchmarkEnd: reason=nochange, totalTimeMs=2628, bmcTimeMs=1155, cegisIterations=4, finalRules=
+withdraw(sender,total) :- recv_withdraw(earnings,affiliateEarnings,inETH,messageHash,v,r,s),msgSender(sender),total := earnings+affiliateEarnings.
+stake(p,stakeId,amount,lockPeriod,day) :- recv_stake(stakeId,amount,lockPeriod),msgSender(p),now(day),0!=stakeId.
+unstake(p,stakeId,day) :- msgSender(p),onceUnstake(p,stakeId,false),stakeStakedDay(p,stakeId,staked),stakeStatus(p,stakeId,false),now(day),day>staked+lock,stakeLockPeriod(p,stakeId,lock),recv_unstake(stakeId).

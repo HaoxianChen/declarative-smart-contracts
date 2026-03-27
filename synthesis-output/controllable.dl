@@ -1,7 +1,7 @@
-controllerRedeem(p,n) :- s_1==c_1,n>0,n<=m_2,p!=address(0),controller(c_1),balanceOf(p,m_2),msgSender(s_1),recv_controllerRedeem(p,n).
-burn(p,n) :- o_1==s_1,n>0,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
-transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
+controllerRedeem(p,n) :- msgSender(s),s==c,n<=balanceOf_x1,controller(c),balanceOf(p,balanceOf_x1),recv_controllerRedeem(p,n).
+controllerTransfer(s,r,n) :- msgSender(s),s==c,controller(c),controller(controller_p),recv_controllerTransfer(s,r,n),r==controller_p.
+transferFrom(o,r,s,n) :- n>0,allowance(o,s,allowance_x2_1),n<allowance_x2_1,balanceOf(o,balanceOf_x1_2),recv_transferFrom(o,r,s,n),n<balanceOf_x1_2.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
-mint(p,n) :- o_1==s_1,n>0,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
-transferFrom(o,r,s,n) :- s!=address(0),msgSender(msgSender),balanceOf(s,balanceOf_x1_3),balanceOf(o,m_1),recv_transferFrom(o,r,s,n),o!=address(0),r==controller_p_1,controller(controller_p_1),n>0,n<balanceOf_x1_3,owner(owner_p_2),n<allowance_x2_0,r!=address(0),r==owner_p_2,allowance(msgSender,s,allowance_x2_0),n<=m_1.
-controllerTransfer(s,r,n) :- s_1==c_1,n>0,n<=m_2,s!=address(0),r!=address(0),msgSender(s_1),controller(c_1),balanceOf(s,m_2),recv_controllerTransfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),n>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.

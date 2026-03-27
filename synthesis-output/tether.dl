@@ -1,7 +1,7 @@
-transfer(s,r,n) :- fee_2<n,s!=address(0),computeFee(n,fee_2),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
 addBlackList(p) :- recv_addBlackList(p),owner(o),msgSender(s),o==s.
-transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),balanceOf(o,m_1),n>0,n<=m_1.
+destroyBlackFund(p,n) :- msgSender(s),recv_destroyBlackFund(p,n),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),isBlackListed(s,isBlackListed_x1),isBlackListed_x1==false.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
-redeem(p,n) :- recv_redeem(p,n),balanceOf(p,balanceOf_x1),n<balanceOf_x1.
-issue(p,n) :- msgSender(s),n>0,recv_issue(p,n),o==s,owner(o).
-destroyBlackFund(p,n) :- msgSender(s),recv_destroyBlackFund(p,n),balanceOf(p,balanceOf_x1),o==s,balanceOf_x1>0,owner(o).
+issue(p,n) :- msgSender(s),n>0,recv_issue(p,n),owner(o),s==o.
+redeem(p,n) :- msgSender(s),recv_redeem(p,n),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o.
+transferFrom(o,r,s,n) :- n>0,isBlackListed(msgSender,isBlackListed_x1_3),msgSender(msgSender),recv_transferFrom(o,r,s,n),n<=balanceOf_x1_2,n<allowance_x2_1,isBlackListed_x1_3==false,allowance(s,r,allowance_x2_1),balanceOf(o,balanceOf_x1_2).

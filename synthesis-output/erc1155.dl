@@ -1,5 +1,5 @@
-transferFrom(t,o,r,sp,n) :- n<=m_2,balanceOf(t,o,m_2),success_0!=false,allowance(t,o,sp,k_1),r!=address(0),n<=k_1,o!=address(0),recv_transferFrom(t,o,r,sp,n),onERC1155Received(r,t,n,success_0).
-transfer(t,s,r,n) :- s!=address(0),recv_transfer(t,s,r,n),r!=address(0),balanceOf(t,s,m_1),n<=m_1.
-increaseAllowance(t,o,s,d) :- recv_increaseAllowance(t,o,s,d).
-burn(t,p,n) :- o_1==s_1,n<=m_2,p!=address(0),msgSender(s_1),owner(o_1),recv_burn(t,p,n),balanceOf(t,p,m_2).
-mint(t,p,n) :- o_1==s_1,p!=address(0),msgSender(s_1),recv_mint(t,p,n),owner(o_1).
+transferFrom(t,o,r,sp,n) :- recv_transferFrom(t,o,r,sp,n),allowance(t,sp,msgSender,allowance_x3),msgSender(msgSender),n<allowance_x3.
+increaseAllowance(t,o,s,d) :- recv_increaseAllowance(t,o,s,d),d>0.
+mint(t,p,n) :- msgSender(s),n>0,o==s,owner(o),recv_mint(t,p,n).
+transfer(t,s,r,n) :- recv_transfer(t,s,r,n),balanceOf(t,s,balanceOf_x2_1),n>0,n<=balanceOf_x2_1.
+burn(t,p,n) :- msgSender(s),balanceOf(t,p,balanceOf_x2),n==balanceOf_x2,o==s,recv_burn(t,p,n),owner(o).

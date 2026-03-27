@@ -10,7 +10,7 @@
 ////////////////////////////
 
 // Transactions (recv_* are public interfaces)
-.decl recv_stake(stakeId: uint, amount: uint, lockPeriod: uint)
+.decl recv_stake(stakeId: uint, amount: uint > 0, lockPeriod: uint > 0)
 .decl stake(staker: address, stakeId: uint, amount: uint, lockPeriod: uint, stakedDay: uint)
 .public recv_stake
 
@@ -96,5 +96,14 @@
 .udf isValidLockPeriod
 
 // Properties / validity
+.decl invalidLockPeriod()
+.violation invalidLockPeriod
+
+.decl invalidWithdrawSignature()
+.violation invalidWithdrawSignature
+
+.decl repeatedUnstake()
+.violation repeatedUnstake
+
 .decl invalidTx()
 .violation invalidTx

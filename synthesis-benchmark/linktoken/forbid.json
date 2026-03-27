@@ -1,0 +1,78 @@
+{
+  "relations": [
+    {
+      "txRelation": "recv_transfer",
+      "singlePredicates": [
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n>balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1_1)"], "functor": "0==balanceOf_x1_1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "0==balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n<balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "0!=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "balanceOf_x1>0"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "n<=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "n<balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "n>balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(r,balanceOf_x1)"], "functor": "n==balanceOf_x1"}
+      ]
+    },
+    {
+      "txRelation": "recv_transferFrom",
+      "singlePredicates": [
+        {"bindingLiterals": ["allowance(o,s,allowance_x2)"], "functor": "0==allowance_x2"},
+        {"bindingLiterals": ["allowance(o,s,allowance_x2)"], "functor": "n>allowance_x2"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "n>balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "0==balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "n<balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n<balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n<=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n>balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "0!=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "0==balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n==balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(s,balanceOf_x1)"], "functor": "n>=balanceOf_x1"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_0)"], "functor": "n>=totalSupply_n_0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_0)"], "functor": "n>totalSupply_n_0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_1)"], "functor": "n>=totalSupply_n_1"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_1)"], "functor": "n>totalSupply_n_1"}
+      ]
+    },
+    {
+      "txRelation": "recv_burn",
+      "singlePredicates": [
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "0==balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "n>=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(p,balanceOf_x1)"], "functor": "n==balanceOf_x1"}
+      ]
+    },
+    {
+      "txRelation": "recv_decreaseApproval",
+      "singlePredicates": [
+        {"bindingLiterals": ["totalSupply(totalSupply_n_0)"], "functor": "n==totalSupply_n_0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_0)"], "functor": "n>=totalSupply_n_0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_0)"], "functor": "n>totalSupply_n_0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n>totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "n<=totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_1)"], "functor": "n>=totalSupply_n_1"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n_1)"], "functor": "n>totalSupply_n_1"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "n<=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "n<=balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "n<balanceOf_x1"},
+        {"bindingLiterals": ["balanceOf(o,balanceOf_x1)"], "functor": "0!=balanceOf_x1"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n<0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n<=0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n>0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "totalSupply_n>=0"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "0==totalSupply_n"},
+        {"bindingLiterals": ["totalSupply(totalSupply_n)"], "functor": "0!=totalSupply_n"}
+      ]
+    }
+  ]
+}

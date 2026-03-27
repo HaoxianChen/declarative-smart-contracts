@@ -3,26 +3,26 @@
 
 // views
 .decl *totalSupply(n: int)
-.decl balanceOf(p: address, n: int)[0]
-.decl allowance(p: address, s: address, n:int)[0,1]
+.decl balanceOf(p: address, n: int >= 0)[0]
+.decl allowance(p: address, s: address, n:int >= 0)[0,1]
 .decl constructor()
 
 ////////////////////
 // ERC20-like transactions
 ////////////////////
 .decl mint(p: address, amount: int)
-.decl recv_mint(p: address, amount: int)
+.decl recv_mint(p: address <> 0, amount: int > 0)
 .decl burn(p: address, amount: int)
-.decl recv_burn(p: address, amount: int)
+.decl recv_burn(p: address <> 0, amount: int > 0)
 
 .decl transfer(from: address, to: address, amount: int)
-.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address <> 0, to: address <> 0, amount: int > 0)
 
 .decl transferFrom(from: address, to: address, spender: address, amount: int)
-.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl recv_transferFrom(from: address <> 0, to: address <> 0, spender: address <> 0, amount: int > 0)
 
 .decl increaseAllowance(p: address, s: address, d: int)
-.decl recv_increaseAllowance(p: address, s: address, d: int)
+.decl recv_increaseAllowance(p: address, s: address, d: int >= 0)
 
 ////////////////////
 // ERC777 operator state/transactions
@@ -32,16 +32,16 @@
 .decl defaultOperator(o:address, b:bool)[0]
 
 .decl approveOperator(p: address, o: address)
-.decl recv_approveOperator(p: address, o: address)
+.decl recv_approveOperator(p: address <> 0, o: address <> 0)
 
 .decl revokeDefaultOperator(p: address, o: address)
-.decl recv_revokeDefaultOperator(p: address, o: address)
+.decl recv_revokeDefaultOperator(p: address <> 0, o: address <> 0)
 
 .decl operatorSend(o:address,r:address,s:address,n:int,data:int,operatorData:int)
-.decl recv_operatorSend(o:address,r:address,s:address,n:int,data:int,operatorData:int)
+.decl recv_operatorSend(o:address <> 0, r:address <> 0, s:address <> 0, n:int > 0, data:int >= 0, operatorData:int >= 0)
 
 .decl operatorBurn(p:address,s:address,n:int,data:int,operatorData:int)
-.decl recv_operatorBurn(p:address,s:address,n:int,data:int,operatorData:int)
+.decl recv_operatorBurn(p:address <> 0, s:address <> 0, n:int > 0, data:int >= 0, operatorData:int >= 0)
 
 ////////////////////
 // Interfaces
@@ -77,18 +77,31 @@
 .decl allowanceTotal(o:address, s:address, m:int)[0,1]
 .decl spentTotal(o:address, s:address, m:int)[0,1]
 
-// UDF: ERC777 tokensReceived hook (called on transfer to notify receiver contracts)
-.decl callTokensReceived(from: address, to: address, amount: int, success: bool)
-.udf callTokensReceived
-
 ////////////////////
-// Properties (preserve original)
+// Properties
 ////////////////////
 .decl inconsistentOperator(p:address, o:address)[0,1]
 .violation inconsistentOperator
 
-.decl invalidTx()
-.violation invalidTx
+.decl negativeBalance(p: address, n: int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s: address, p: address, n: int)[0,1]
+.violation negativeAllowance
+
+.decl unauthorizedMint()
+.violation unauthorizedMint
+
+.decl unauthorizedBurn()
+.violation unauthorizedBurn
+
+.decl *onceUnauthorizedOperatorSend(b: bool)
+.decl unauthorizedOperatorSend()
+.violation unauthorizedOperatorSend
+
+.decl *onceUnauthorizedOperatorBurn(b: bool)
+.decl unauthorizedOperatorBurn()
+.violation unauthorizedOperatorBurn
 
 ////////////////////
 // Transaction placeholder rules
@@ -103,4 +116,3 @@ approveOperator(p,o) :- recv_approveOperator(p,o).
 revokeDefaultOperator(p,o) :- recv_revokeDefaultOperator(p,o).
 operatorSend(o,r,s,n,data,operatorData) :- recv_operatorSend(o,r,s,n,data,operatorData).
 operatorBurn(p,s,n,data,operatorData) :- recv_operatorBurn(p,s,n,data,operatorData).
-

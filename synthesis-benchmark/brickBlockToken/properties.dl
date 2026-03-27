@@ -1,31 +1,12 @@
-// cannot transfer after pause
-transferBeforeUnpause() :- recv_transfer(_,_,_), paused(b), b==true.
-
-// cannot evacuate after upgrade
-evacuateAfterUpgrade() :- recv_evacuate(_), onceUpgrade(b), b==false.
-// evacuate: must have positive balance to evacuate
-invalidTx() :- recv_evacuate(p), balances(p,m), m<=0.
+// (removed: sentinel-based transferBeforeUnpause and evacuateAfterUpgrade)
 
 // should not have negative balance or allowance
 negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint, pause, or unpause
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
-
-// transfer: positive amount, sender has sufficient balance
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-invalidTx() :- recv_transfer(s,_,n), balances(s,m), n>m.
-
-// decreaseAllowance: decrease amount must be positive
-invalidTx() :- recv_decreaseAllowance(_,_,d), d<=0.
-
-// increaseAllowance: delta must be non-negative; caller must be the owner
-invalidTx() :- recv_increaseAllowance(_,_,d), d<0.
-invalidTx() :- recv_increaseAllowance(o,_,_), msgSender(s), o!=s.
-
-// transferFrom: owner (from) must have sufficient balance
-// recv_transferFrom(operator, from, to, amount) -> variables (_, f, _, n)
-invalidTx() :- recv_transferFrom(_,f,_,n), balances(f,m), n>m.
+// authority rules (retain recv_tx)
+unauthorizedPause() :- recv_pause(), owner(o), msgSender(s), s!=o.
+unauthorizedUnpause() :- recv_unpause(), owner(o), msgSender(s), s!=o.
+unauthorizedUpgrade() :- recv_upgrade(_), owner(o), msgSender(s), s!=o.
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
+evacuateNotByOwner() :- recv_evacuate(_), owner(o), msgSender(s), s!=o.

@@ -1,0 +1,2054 @@
+[Audit] BenchmarkStart: name=wbtc.dl, benchDir=synthesis-benchmark/wbtc
+[Audit] InputSpecFiles: schema=synthesis-benchmark/wbtc/schema.dl, rules=synthesis-benchmark/wbtc/rules.dl, properties=synthesis-benchmark/wbtc/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/wbtc.dl, stats=synthesis-output/synthesis_stats.csv
+[wbtc.dl] BenchmarkStart: program=Wbtc, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[wbtc.dl] SeededPredicatesFromTxProperties: HashMap(claimOwnership(p) :- recv_claimOwnership(p). -> Set(Predicate(context: tx: recv_claimOwnership(p), bindings: [pendingOwner(expected)], functor: p==expected), Predicate(context: tx: recv_claimOwnership(_), bindings: [pendingOwner(expected), msgSender(s)], functor: s==expected)), mint(p,n) :- recv_mint(p,n). -> Set(Predicate(context: tx: recv_mint(_,_), bindings: [owner(o), msgSender(s)], functor: s==o)), transferOwnership(p) :- recv_transferOwnership(p). -> Set(Predicate(context: tx: recv_transferOwnership(_), bindings: [owner(o), msgSender(s)], functor: s==o)), paused(false) :- recv_unpause(). -> Set(Predicate(context: tx: recv_unpause(), bindings: [owner(o), msgSender(s)], functor: s==o)), paused(true) :- recv_pause(). -> Set(Predicate(context: tx: recv_pause(), bindings: [owner(o), msgSender(s)], functor: s==o)))
+[wbtc.dl] InitialTransactionRules:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burn(p,n) :- recv_burn(p,n).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#0 ProgramBeforeBMC:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+burn(p,n) :- recv_burn(p,n).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#0 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[wbtc.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(5),-1) [msgSender: 3, value: 0]
+[wbtc.dl] Iteration#0 RestrictedSolveStatus: relation=recv_mint, status=SAT
+[wbtc.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- recv_burn(p,n).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#0 SynthesisResult: updated
+[wbtc.dl] Iteration#1 ProgramBeforeBMC:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+burn(p,n) :- recv_burn(p,n).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#1 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=1
+[BMC] CounterexampleReturned: rule=negativeBalance, k=1
+[wbtc.dl] Iteration#1 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_burn(address(7),1) [msgSender: 2, value: 0]
+[wbtc.dl] Iteration#1 RestrictedSolveStatus: relation=recv_burn, status=UNSAT
+[wbtc.dl] Iteration#1 FallbackToFull: reason=UNSAT, relations=burn
+[wbtc.dl] Iteration#1 ProgramAfterFallbackSynthesis:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#1 SynthesisResult: updated-by-fallback
+[wbtc.dl] Iteration#2 ProgramBeforeBMC:
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+[wbtc.dl] Iteration#2 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[wbtc.dl] Iteration#2 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_increaseApproval(address(8),address(9),-1) [msgSender: 6, value: 0]
+[wbtc.dl] Iteration#2 RestrictedSolveStatus: relation=recv_increaseApproval, status=SAT
+[wbtc.dl] Iteration#2 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#2 SynthesisResult: updated
+[wbtc.dl] Iteration#3 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#3 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[wbtc.dl] Iteration#3 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_transferFrom(address(4),address(4),address(7),1) [msgSender: 3, value: 0]
+[wbtc.dl] Iteration#3 RestrictedSolveStatus: relation=recv_transferFrom, status=UNSAT
+[wbtc.dl] Iteration#3 FallbackToFull: reason=UNSAT, relations=transferFrom
+[wbtc.dl] Iteration#3 ProgramAfterFallbackSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#3 SynthesisResult: updated-by-fallback
+[wbtc.dl] Iteration#4 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#4 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=1
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=1
+[wbtc.dl] Iteration#4 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_decreaseApproval(address(6),address(7),1) [msgSender: 2, value: 0]
+[wbtc.dl] Iteration#4 RestrictedSolveStatus: relation=recv_decreaseApproval, status=UNSAT
+[wbtc.dl] Iteration#4 FallbackToFull: reason=UNSAT, relations=decreaseApproval
+[wbtc.dl] Iteration#4 ProgramAfterFallbackSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+[wbtc.dl] Iteration#4 SynthesisResult: updated-by-fallback
+[wbtc.dl] Iteration#5 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+[wbtc.dl] Iteration#5 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeBalance, k=2
+[BMC] CounterexampleReturned: rule=negativeBalance, k=2
+[wbtc.dl] Iteration#5 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(15),1) [msgSender: 2, value: 0]
+[2] recv_burn(address(15),3) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#5 RestrictedSolveStatus: relation=recv_burn, status=SAT
+[wbtc.dl] Iteration#5 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+[wbtc.dl] Iteration#5 SynthesisResult: updated
+[wbtc.dl] Iteration#6 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),0!=allowance_x2.
+[wbtc.dl] Iteration#6 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#6 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseApproval(address(5),address(5),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(5),address(5),address(9),14586) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#6 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[wbtc.dl] Iteration#6 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#6 SynthesisResult: updated
+[wbtc.dl] Iteration#7 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<=allowance_x2.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#7 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#7 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseApproval(address(6),address(6),14022) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(6),address(6),address(9),14022) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#7 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[wbtc.dl] Iteration#7 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#7 SynthesisResult: updated
+[wbtc.dl] Iteration#8 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),0!=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#8 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#8 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(7),1) [msgSender: 2, value: 0]
+[2] recv_decreaseApproval(address(7),address(10),31594) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#8 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#8 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#8 SynthesisResult: updated
+[wbtc.dl] Iteration#9 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,r,allowance_x2),n<allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#9 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#9 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_increaseApproval(address(7),address(7),2) [msgSender: 3, value: 0]
+[2] recv_transferFrom(address(7),address(7),address(8),1) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#9 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[wbtc.dl] Iteration#9 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#9 SynthesisResult: updated
+[wbtc.dl] Iteration#10 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<=balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#10 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#10 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(12),1) [msgSender: 5, value: 0]
+[2] recv_decreaseApproval(address(12),address(13),1) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#10 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#10 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#10 SynthesisResult: updated
+[wbtc.dl] Iteration#11 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),0!=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#11 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#11 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_increaseApproval(address(5),address(6),1) [msgSender: 2, value: 0]
+[2] recv_transferFrom(address(5),address(5),address(6),35325) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#11 RestrictedSolveStatus: relation=recv_transferFrom, status=SAT
+[wbtc.dl] Iteration#11 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#11 SynthesisResult: updated
+[wbtc.dl] Iteration#12 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(o,balanceOf_x1),n<balanceOf_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#12 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#12 Counterexample:
+Trace:
+[0] constructor() [msgSender: 8, value: 0]
+[1] recv_mint(address(14),2) [msgSender: 8, value: 0]
+[2] recv_decreaseApproval(address(14),address(15),1) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#12 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#12 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(s,balanceOf_x1),0!=balanceOf_x1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#12 SynthesisResult: updated
+[wbtc.dl] Iteration#13 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(s,balanceOf_x1),0!=balanceOf_x1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#13 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#13 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(11),1) [msgSender: 4, value: 0]
+[2] recv_decreaseApproval(address(10),address(11),24338) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#13 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#13 ProgramAfterRestrictedSynthesis:
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#13 SynthesisResult: updated
+[wbtc.dl] Iteration#14 ProgramBeforeBMC:
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(s,balanceOf_x1),n<=balanceOf_x1.
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#14 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#14 Counterexample:
+Trace:
+[0] constructor() [msgSender: 5, value: 0]
+[1] recv_mint(address(12),78680) [msgSender: 5, value: 0]
+[2] recv_decreaseApproval(address(11),address(12),31500) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#14 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#14 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,balanceOf(o,balanceOf_x1_1),n<=balanceOf_x1_1,balanceOf(s,balanceOf_x1_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#14 SynthesisResult: updated
+[wbtc.dl] Iteration#15 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,balanceOf(o,balanceOf_x1_1),n<=balanceOf_x1_1,balanceOf(s,balanceOf_x1_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#15 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#15 Counterexample:
+Trace:
+[0] constructor() [msgSender: 3, value: 0]
+[1] recv_mint(address(14),1) [msgSender: 3, value: 0]
+[2] recv_decreaseApproval(address(14),address(14),1) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#15 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#15 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,balanceOf(s,balanceOf_x1_0).
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#15 SynthesisResult: updated
+[wbtc.dl] Iteration#16 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,balanceOf(o,balanceOf_x1_1),n<balanceOf_x1_1,balanceOf(s,balanceOf_x1_0).
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#16 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#16 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(5),16705) [msgSender: 2, value: 0]
+[2] recv_decreaseApproval(address(5),address(5),16704) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#16 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#16 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#16 SynthesisResult: updated
+[wbtc.dl] Iteration#17 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<=balanceOf_x1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#17 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#17 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(9),62196) [msgSender: 4, value: 0]
+[2] recv_decreaseApproval(address(12),address(13),62196) [msgSender: 9, value: 0]
+[wbtc.dl] Iteration#17 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#17 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#17 SynthesisResult: updated
+[wbtc.dl] Iteration#18 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),balanceOf(msgSender,balanceOf_x1),msgSender(msgSender),n<balanceOf_x1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#18 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#18 Counterexample:
+Trace:
+[0] constructor() [msgSender: 7, value: 0]
+[1] recv_mint(address(8),3) [msgSender: 7, value: 0]
+[2] recv_decreaseApproval(address(15),address(16),1) [msgSender: 8, value: 0]
+[wbtc.dl] Iteration#18 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#18 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(o,balanceOf_x1_1),balanceOf(msgSender,balanceOf_x1_0),balanceOf_x1_1>0.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#18 SynthesisResult: updated
+[wbtc.dl] Iteration#19 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(o,balanceOf_x1_1),balanceOf(msgSender,balanceOf_x1_0),balanceOf_x1_1>0.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#19 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#19 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_mint(address(13),1) [msgSender: 6, value: 0]
+[2] recv_decreaseApproval(address(13),address(14),1) [msgSender: 13, value: 0]
+[wbtc.dl] Iteration#19 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#19 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),0!=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#19 SynthesisResult: updated
+[wbtc.dl] Iteration#20 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),0!=balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#20 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#20 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(12),1) [msgSender: 2, value: 0]
+[2] recv_decreaseApproval(address(11),address(12),47804) [msgSender: 12, value: 0]
+[wbtc.dl] Iteration#20 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#20 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),n<balanceOf_x1_1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#20 SynthesisResult: updated
+[wbtc.dl] Iteration#21 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),0!=balanceOf_x1_0,msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),n<balanceOf_x1_1.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#21 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#21 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(15),2) [msgSender: 4, value: 0]
+[2] recv_decreaseApproval(address(14),address(15),1) [msgSender: 15, value: 0]
+[wbtc.dl] Iteration#21 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#21 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),n<=balanceOf_x1_0,msgSender(msgSender),balanceOf(o,balanceOf_x1_1),balanceOf(msgSender,balanceOf_x1_0),n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#21 SynthesisResult: updated
+[wbtc.dl] Iteration#22 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),n<=balanceOf_x1_0,msgSender(msgSender),balanceOf(o,balanceOf_x1_1),balanceOf(msgSender,balanceOf_x1_0),n<balanceOf_x1_1.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#22 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#22 Counterexample:
+Trace:
+[0] constructor() [msgSender: 6, value: 0]
+[1] recv_mint(address(16),2) [msgSender: 6, value: 0]
+[2] recv_decreaseApproval(address(16),address(17),1) [msgSender: 16, value: 0]
+[wbtc.dl] Iteration#22 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#22 ProgramAfterRestrictedSynthesis:
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),balanceOf_x1_2>0,n<=balanceOf_x1_0,n<balanceOf_x1_1,balanceOf(o,balanceOf_x1_2).
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#22 SynthesisResult: updated
+[wbtc.dl] Iteration#23 ProgramBeforeBMC:
+decreaseApproval(o,s,n) :- balanceOf(s,balanceOf_x1_1),recv_decreaseApproval(o,s,n),msgSender(msgSender),balanceOf(msgSender,balanceOf_x1_0),balanceOf_x1_2>0,n<=balanceOf_x1_0,n<balanceOf_x1_1,balanceOf(o,balanceOf_x1_2).
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#23 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#23 Counterexample:
+Trace:
+[0] constructor() [msgSender: 4, value: 0]
+[1] recv_mint(address(14),2) [msgSender: 4, value: 0]
+[2] recv_decreaseApproval(address(14),address(14),1) [msgSender: 14, value: 0]
+[wbtc.dl] Iteration#23 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#23 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),totalSupply(totalSupply_n),0!=totalSupply_n.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#23 SynthesisResult: updated
+[wbtc.dl] Iteration#24 ProgramBeforeBMC:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),totalSupply(totalSupply_n),0!=totalSupply_n.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#24 BMCInput: bound=5, violationRules=claimOwnershipWrongCaller,claimOwnershipWrongCaller,negativeAllowance,negativeBalance,pauseNotByOwner,pauseNotByOwner,transferOwnershipNotByOwner,unauthorizedMint
+[BMC] TransitionSystemReady: program=Wbtc
+[BMC] TemporalSpec(state): rule=negativeBalance, formula=(and (= (select balanceOf kv_p) kv_n)
+     (select balanceOf__exists kv_p)
+     (not (<= 0 kv_n))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(state): rule=negativeAllowance, formula=(and (= (select allowance (allowance_keyTuple kv_s kv_p)) kv_n)
+     (select allowance__exists (allowance_keyTuple kv_s kv_p))
+     (not (<= 0 kv_n))
+     (not (= kv_s 0))
+     (not (= kv_p 0)))
+[BMC] TemporalSpec(tx): rule=unauthorizedMint, formula=(and (or (= recv_mint0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (not (= i0_p kv_expected)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_unpause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=claimOwnershipWrongCaller, formula=(and (or (= recv_claimOwnership0 1))
+     (= pendingOwner kv_expected)
+     (= msgSender kv_s)
+     (not (= kv_s kv_expected)))
+[BMC] TemporalSpec(tx): rule=transferOwnershipNotByOwner, formula=(and (or (= recv_transferOwnership0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] TemporalSpec(tx): rule=pauseNotByOwner, formula=(and (or (= recv_pause0 1))
+     (= owner kv_o)
+     (= msgSender kv_s)
+     (not (= kv_s kv_o)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=transferOwnershipNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=pauseNotByOwner, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=claimOwnershipWrongCaller, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=unauthorizedMint, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeBalance, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=negativeAllowance, k=2, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=negativeAllowance, k=2
+[BMC] CounterexampleReturned: rule=negativeAllowance, k=2
+[wbtc.dl] Iteration#24 Counterexample:
+Trace:
+[0] constructor() [msgSender: 2, value: 0]
+[1] recv_mint(address(3),1) [msgSender: 2, value: 0]
+[2] recv_decreaseApproval(address(12),address(13),12457) [msgSender: 0, value: 0]
+[wbtc.dl] Iteration#24 RestrictedSolveStatus: relation=recv_decreaseApproval, status=SAT
+[wbtc.dl] Iteration#24 ProgramAfterRestrictedSynthesis:
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),totalSupply(totalSupply_n),0!=totalSupply_n.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.
+[wbtc.dl] Iteration#24 SynthesisResult: nochange
+[wbtc.dl] BenchmarkEnd: reason=nochange, totalTimeMs=14183, bmcTimeMs=2071, cegisIterations=24, finalRules=
+increaseApproval(o,s,n) :- recv_increaseApproval(o,s,n),n>0.
+claimOwnership(p) :- recv_claimOwnership(p),pendingOwner(expected_0),pendingOwner(expected_1),s_0==expected_0,p==expected_1,msgSender(s_0).
+decreaseApproval(o,s,n) :- recv_decreaseApproval(o,s,n),totalSupply(totalSupply_n),0!=totalSupply_n.
+paused(true) :- recv_pause(),owner(o),msgSender(s),s==o.
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n).
+burn(p,n) :- recv_burn(p,n),balanceOf(p,balanceOf_x1),n<=balanceOf_x1.
+paused(false) :- recv_unpause(),owner(o),msgSender(s),s==o.
+transferOwnership(p) :- recv_transferOwnership(p),owner(o),msgSender(s),s==o.

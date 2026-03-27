@@ -1,0 +1,1735 @@
+{
+  "relations": [
+    {
+      "txRelation": "recv_transfer",
+      "singlePredicates": [
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,s,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,s,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "0==t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "0!=t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<=0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "0==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "0!=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1>0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "0==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "0!=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1>0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t==totalSupply_x1"
+        }
+      ]
+    },
+    {
+      "txRelation": "recv_transferFrom",
+      "singlePredicates": [
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "n>allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "t<allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "t>allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "t<=allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "t>=allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "t==allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "0==allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "0!=allowance_x3"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "allowance_x3>0"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "allowance_x3<0"
+        },
+        {
+          "bindingLiterals": [
+            "allowance(t,o,sp,allowance_x3)"
+          ],
+          "functor": "allowance_x3<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(t,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,o,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,r,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,sp,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "0!=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "n==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t<=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t>=balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "t==balanceOf_x2"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2>0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<0"
+        },
+        {
+          "bindingLiterals": [
+            "balanceOf(n,msgSender,balanceOf_x2)"
+          ],
+          "functor": "balanceOf_x2<=0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "0==t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "0!=t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<=0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "0==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "0!=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1>0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "n==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(t,totalSupply_x1)"
+          ],
+          "functor": "t==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "0==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "0!=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1>0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "totalSupply_x1<=0"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "n==totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t<totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t>totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t<=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t>=totalSupply_x1"
+        },
+        {
+          "bindingLiterals": [
+            "totalSupply(n,totalSupply_x1)"
+          ],
+          "functor": "t==totalSupply_x1"
+        }
+      ]
+    },
+    {
+      "txRelation": "recv_burn",
+      "singlePredicates": [
+        {
+          "bindingLiterals": [],
+          "functor": "0==t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "0!=t"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t<=0"
+        },
+        {
+          "bindingLiterals": [],
+          "functor": "t>=0"
+        }
+      ]
+    }
+  ]
+}

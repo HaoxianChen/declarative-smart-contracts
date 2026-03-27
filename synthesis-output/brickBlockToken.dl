@@ -1,9 +1,9 @@
-evacuate(p) :- recv_evacuate(p),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
-pause() :- recv_pause(),owner(o),msgSender(s),o==s.
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+upgrade(p) :- recv_upgrade(p),owner(o),msgSender(s),s==o.
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,balances_x1),0!=balances_x1.
+unpause() :- recv_unpause(),owner(o),msgSender(s),s==o.
+evacuate(p) :- recv_evacuate(p),owner(o),msgSender(s),s==o.
+transfer(s,r,n) :- recv_transfer(s,r,n),balances(msgSender,balances_x1),msgSender(msgSender),0!=balances_x1.
+mint(p,n) :- msgSender(s),n>0,recv_mint(p,n),owner(o),s==o.
+pause() :- recv_pause(),owner(o),msgSender(s),s==o.
 increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
-mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),o==s.
-upgrade(p) :- recv_upgrade(p).
-transfer(s,r,n) :- paused(b_2),balances(s,m_1),recv_transfer(s,r,n),n>0,b_2!=true,n<=m_1.
-transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n),balances(f,m),n<=m.
-unpause() :- recv_unpause(),owner(o),msgSender(s),o==s.
-decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),balances(s,balances_x1),0!=balances_x1.

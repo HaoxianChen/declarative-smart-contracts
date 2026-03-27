@@ -1,3 +1,3 @@
-issueByPartition(p,q,n) :- o_1==s_1,n>0,recv_issueByPartition(p,q,n),p!=address(0),msgSender(s_1),owner(o_1).
-transferByPartition(s,r,q,n) :- n>0,s!=address(0),balanceOfByPartition(s,q,m_1),r!=address(0),n<=m_1,recv_transferByPartition(s,r,q,n).
-redeemByPartition(p,q,n) :- o_1==s_1,n>0,n<=m_2,recv_redeemByPartition(p,q,n),p!=address(0),msgSender(s_1),balanceOfByPartition(p,q,m_2),owner(o_1).
+redeemByPartition(p,q,n) :- msgSender(s),recv_redeemByPartition(p,q,n),owner(o),balanceOfByPartition(p,q,balanceOfByPartition_x2),s==o,n<=balanceOfByPartition_x2.
+issueByPartition(p,q,n) :- msgSender(s),n>0,recv_issueByPartition(p,q,n),owner(o),s==o.
+transferByPartition(s,r,q,n) :- recv_transferByPartition(s,r,q,n),balanceOfByPartition(s,q,balanceOfByPartition_x2_1),n>0,n<balanceOfByPartition_x2_1.

@@ -1,0 +1,73 @@
+{
+  "relations": [
+    {
+      "txRelation": "recv_issue",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==n"},
+        {"bindingLiterals": [], "functor": "n==0"},
+        {"bindingLiterals": [], "functor": "n<=0"},
+        {"bindingLiterals": [], "functor": "n<0"}
+      ]
+    },
+    {
+      "txRelation": "recv_redeem",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==n"},
+        {"bindingLiterals": [], "functor": "n==0"},
+        {"bindingLiterals": [], "functor": "n<=0"},
+        {"bindingLiterals": [], "functor": "n<0"},
+        {"bindingLiterals": [], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": [], "functor": "balanceOf_x1<=0"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "balanceOf_x1<=0"},
+        {"bindingLiterals": ["balanceOf(p,balanceOf_x1)"], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": ["balanceOf(p,balanceOf_x1)"], "functor": "balanceOf_x1<=0"}
+      ]
+    },
+    {
+      "txRelation": "recv_transfer",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==n"},
+        {"bindingLiterals": [], "functor": "n==0"},
+        {"bindingLiterals": [], "functor": "n<=0"},
+        {"bindingLiterals": [], "functor": "n<0"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "isBlackListed_x1==false"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "isBlackListed_x1==true"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "0==isBlackListed_x1"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "0!=isBlackListed_x1"}
+      ]
+    },
+    {
+      "txRelation": "recv_transferFrom",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==n"},
+        {"bindingLiterals": [], "functor": "n==0"},
+        {"bindingLiterals": [], "functor": "n<=0"},
+        {"bindingLiterals": [], "functor": "n<0"},
+        {"bindingLiterals": ["isBlackListed(o,isBlackListed_x1)"], "functor": "isBlackListed_x1==false"},
+        {"bindingLiterals": ["isBlackListed(o,isBlackListed_x1)"], "functor": "isBlackListed_x1==true"},
+        {"bindingLiterals": ["isBlackListed(o,isBlackListed_x1)"], "functor": "0==isBlackListed_x1"},
+        {"bindingLiterals": ["isBlackListed(o,isBlackListed_x1)"], "functor": "0!=isBlackListed_x1"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "isBlackListed_x1==false"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "isBlackListed_x1==true"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "0==isBlackListed_x1"},
+        {"bindingLiterals": ["isBlackListed(r,isBlackListed_x1)"], "functor": "0!=isBlackListed_x1"}
+      ]
+    },
+    {
+      "txRelation": "recv_destroyBlackFund",
+      "singlePredicates": [
+        {"bindingLiterals": [], "functor": "0==n"},
+        {"bindingLiterals": [], "functor": "n==0"},
+        {"bindingLiterals": [], "functor": "n<=0"},
+        {"bindingLiterals": [], "functor": "n<0"},
+        {"bindingLiterals": [], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": [], "functor": "balanceOf_x1<=0"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": ["balanceOf(msgSender,balanceOf_x1)"], "functor": "balanceOf_x1<=0"},
+        {"bindingLiterals": ["balanceOf(p,balanceOf_x1)"], "functor": "balanceOf_x1<0"},
+        {"bindingLiterals": ["balanceOf(p,balanceOf_x1)"], "functor": "balanceOf_x1<=0"}
+      ]
+    }
+  ]
+}

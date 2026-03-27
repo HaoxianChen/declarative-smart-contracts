@@ -1,3 +1,3 @@
-burn(p,n) :- o_1==s_1,n>0,n<=m_2,p!=address(0),msgSender(s_1),balanceOf(p,m_2),owner(o_1),recv_burn(p,n).
-transfer(s,r,n) :- s!=address(0),r!=address(0),n<=m_1,balanceOf(s,m_1),recv_transfer(s,r,n),n>0.
-mint(p,n) :- o_1==s_1,n>0,p!=address(0),recv_mint(p,n),msgSender(s_1),owner(o_1).
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),owner(o),s==o,recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+mint(p,n) :- recv_mint(p,n),owner(o),msgSender(s),s==o.

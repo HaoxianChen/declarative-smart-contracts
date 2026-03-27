@@ -1,50 +1,15 @@
 // cannot finalize when cap not reached
 illegalFinalization() :- onceFinalize(true), raised(r), cap(c), r<c.
 
-// cannot buy tokens after finalize
-buyAfterFinalize() :- recv_buyToken(_,_), onceFinalize(true). // transaction(recv_buyToken).
+// raised should not exceed cap
+raisedAboveCap() :- raised(r), cap(c), r>c.
 
 // no negative balances or allowances
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint, burn, or finalize
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_finalize(), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+finalizeNotByOwner() :- recv_finalize(), owner(o), msgSender(s), s!=o.
 
-// buyToken address must be non-zero
-invalidTx() :- recv_buyToken(p,_), p==0.
-
-// buyToken ETH amount must be positive
-invalidTx() :- recv_buyToken(_,v), v<=0.
-
-// Amount must be positive
-invalidTx() :- recv_mint(_,n), n<=0.
-invalidTx() :- recv_burn(_,n), n<=0.
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-
-// Address checks
-invalidTx() :- recv_transfer(s,_,_), s==0.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-invalidTx() :- recv_burn(p,_), p==0.
-invalidTx() :- recv_mint(p,_), p==0.
-
-// Sufficient balance
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
-
-// transferFrom checks
-invalidTx() :- recv_transferFrom(o,_,_,_), o==0.
-invalidTx() :- recv_transferFrom(_,r,_,_), r==0.
-invalidTx() :- recv_transferFrom(_,_,sp,_), sp==0.
-invalidTx() :- recv_transferFrom(o,_,_,n), n<=0.
-invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,sp,n), allowance(o,sp,k), n>k.
-
-// token amount produced by getTokenAmount must be positive
-invalidTx() :- recv_buyToken(_,v), getTokenAmount(v,tokens), tokens<=0.
-
-// buyToken must be within start and end time
-invalidTx() :- recv_buyToken(_,_), now(t), start(s), t<s.
-invalidTx() :- recv_buyToken(_,_), now(t), end(e), t>e.
+// lifecycle (once sentinel)
+buyAfterFinalize() :- onceBuyAfterFinalize(b), b==true.

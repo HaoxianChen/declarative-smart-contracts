@@ -1,7 +1,7 @@
 package verification
 
 import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, FuncDecl, IntExpr, IntSort, Sort, Status, TupleSort}
-import datalog.{Balance, Constant, Literal, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
+import datalog.{Balance, Constant, FieldConstraint, FieldNonNegative, FieldNonZero, FieldPositive, FieldZero, Literal, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
 import imp.{AbstractImperativeTranslator, DeleteTuple, ImperativeAbstractProgram, IncrementValue, InsertTuple, ReplacedByKey, Trigger}
@@ -110,8 +110,30 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram,
     } else None
   }
 
+  private def fieldConstraintToZ3(ctx: Context, p: Parameter, constraint: FieldConstraint, prefix: String): BoolExpr = {
+    val c = paramToConst(ctx, p, prefix)._1.asInstanceOf[Expr[ArithSort]]
+    constraint match {
+      case FieldNonZero     => ctx.mkNot(ctx.mkEq(c, ctx.mkInt(0)))
+      case FieldPositive    => ctx.mkGt(c, ctx.mkInt(0))
+      case FieldZero        => ctx.mkEq(c, ctx.mkInt(0))
+      case FieldNonNegative => ctx.mkGe(c, ctx.mkInt(0))
+    }
+  }
+
+  private def schemaFieldConstraints(ctx: Context, lit: Literal, prefix: String): List[BoolExpr] = {
+    val constraintsByField = program.fieldConstraints(lit.relation)
+    require(
+      constraintsByField.size == lit.fields.size,
+      s"Relation '${lit.relation.name}' has ${constraintsByField.size} schema constraint slots but ${lit.fields.size} fields."
+    )
+    lit.fields.zip(constraintsByField).flatMap { case (field, constraints) =>
+      constraints.map(fieldConstraintToZ3(ctx, field, _, prefix))
+    }
+  }
+
   private def txLiteralToConst(ctx: Context, lit: Literal, prefix: String): BoolExpr = {
-    val baseConstraints = lit.fields.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix))
+    val baseConstraints =
+      lit.fields.flatMap(p => uintNonNegativeConstraint(ctx, p, prefix)) ++ schemaFieldConstraints(ctx, lit, prefix)
     val txNameConstraint = {
       val txConst = ctx.mkConst("transaction", ctx.mkStringSort())
       ctx.mkEq(txConst, ctx.mkString(lit.relation.name))

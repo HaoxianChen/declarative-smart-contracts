@@ -1,5 +1,0 @@
-withdrawMoney(user,amount) :- recv_withdrawMoney(amount),amount>0,msgSender(msgSender),villageNeighbor(msgSender,villageNeighbor_x1),msgSender(user),villageNeighbor_x1==msgSender.
-upgradeVillage(user,farm,sheep,y,c) :- getUpgradePrice(farm,sheep,c),msgSender(msgSender),villageNeighbor(msgSender,villageNeighbor_x1),getYield(farm,sheep,y),recv_upgradeVillage(farm,sheep),msgSender(user),villageNeighbor_x1==msgSender.
-collectMoney(user,wool,t) :- msgSender(user),recv_collectMoney(),villageTimestamp(msgSender,villageTimestamp_x1),msgSender(msgSender),villageTimestamp_x1>0,now(t),syncYield(user,wool).
-addGems(user,gems) :- recv_addGems(gems),gems>0,msgSender(msgSender),villageNeighbor(msgSender,villageNeighbor_x1),msgSender(user),villageNeighbor_x1==msgSender.
-register(user,ref,10,t) :- msgSender(user),villageTimestamp(user,t),now(t),recv_register(ref),t==0.

@@ -7,19 +7,14 @@ refundAndWithdraw() :- onceWithdraw(true), onceRefund(true).
 // cannot refund if target is met
 illegalRefund() :- onceRefund(true), raised(r), target(t), r>=t.
 
-// NOTE: balances are modeled as uint in this benchmark; we avoid negative-balance checks.
+// no negative balances (refundTotal exceeds investTotal)
+negativeBalance(p) :- investTotal(p,i), refundTotal(p,r), r>i.
 
-// only owner can close the crowdfunding
-invalidTx() :- recv_close(), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+closeNotByOwner() :- recv_close(), owner(o), msgSender(s), s!=o.
+withdrawNotByBeneficiary() :- recv_withdraw(p,_), beneficiary(b), p!=b.
 
-// refund is only valid once the campaign is closed, the goal is missed, and the caller requests a positive amount
-invalidTx() :- recv_refund(_,_), closed(b), b==false.
-invalidTx() :- recv_refund(_,_), raised(r), target(t), r>=t.
-invalidTx() :- recv_refund(p,_), msgSender(s), p!=s.
-invalidTx() :- recv_refund(_,n), n<=0.
-
-// cannot withdraw if target is not met
-invalidTx() :- recv_withdraw(_,_), raised(r), target(t), r<t.
-
-// only beneficiary can withdraw funds
-invalidTx() :- recv_withdraw(p,_), beneficiary(b), p!=b.
+// lifecycle (once sentinel)
+investAfterClose() :- onceInvestAfterClose(b), b==true.
+withdrawBeforeTarget() :- onceWithdrawBeforeTarget(b), b==true.
+refundBeforeClose() :- onceRefundBeforeClose(b), b==true.

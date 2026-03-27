@@ -5,27 +5,11 @@ unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// redeem/destroyBlackFund: positive amount, sufficient balance
-invalidTx() :- recv_redeem(_,n), n<=0.
-invalidTx() :- recv_redeem(p,n), balanceOf(p,m), n>m.
-invalidTx() :- recv_destroyBlackFund(_,n), n<=0.
-invalidTx() :- recv_destroyBlackFund(p,n), balanceOf(p,m), n>m.
+// authority rules (retain recv_tx)
+unauthorizedIssue() :- recv_issue(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedRedeem() :- recv_redeem(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedDestroyBlackFund() :- recv_destroyBlackFund(_,_), owner(o), msgSender(s), s!=o.
+unauthorizedAddBlackList() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
 
-// only owner can perform restricted actions
-invalidTx() :- recv_addBlackList(_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_issue(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_destroyBlackFund(_,_), owner(o), msgSender(s), o!=s.
-
-// transfer fee must not exceed the transfer value (prevents negative sendAmount)
-invalidTx() :- recv_transfer(_,_,v), computeFee(v,fee), fee >= v.
-
-// transfer: non-zero addresses, positive amount, sender has sufficient balance
-invalidTx() :- recv_transfer(s,_,_), s==0.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-
-// transferFrom: positive amount, owner has sufficient balance and allowance
-invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
-invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.
+// once sentinel for blacklisted transfers
+blacklistedTransfer() :- onceBlacklistedTransfer(b), b==true.

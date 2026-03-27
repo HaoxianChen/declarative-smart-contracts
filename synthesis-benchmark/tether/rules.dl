@@ -19,3 +19,7 @@ spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
 allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
 totalBalances(s) :- s = sum n: balanceOf(_,n).
 
+// Sentinel initialization and triggers
+onceBlacklistedTransfer(false) :- constructor(_).
+onceBlacklistedTransfer(true) :- transfer(from,_,_), isBlackListed(from,b), b==true.
+onceBlacklistedTransfer(true) :- transfer(_,to,_), isBlackListed(to,b), b==true.

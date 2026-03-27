@@ -1,0 +1,72 @@
+[Audit] BenchmarkStart: name=voting.dl, benchDir=synthesis-benchmark/voting
+[Audit] InputSpecFiles: schema=synthesis-benchmark/voting/schema.dl, rules=synthesis-benchmark/voting/rules.dl, properties=synthesis-benchmark/voting/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=synthesis-benchmark/voting/forbid.json
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/voting.dl, stats=synthesis-output/synthesis_stats.csv
+[voting.dl] BenchmarkStart: program=Voting, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[voting.dl] SeededPredicatesFromTxProperties: Map()
+[voting.dl] InitialTransactionRules:
+finalize(p) :- recv_finalize(p).
+vote(v,p) :- recv_vote(v,p).
+[voting.dl] Iteration#0 ProgramBeforeBMC:
+finalize(p) :- recv_finalize(p).
+vote(v,p) :- recv_vote(v,p).
+[voting.dl] Iteration#0 BMCInput: bound=5, violationRules=inconsistency
+[BMC] TransitionSystemReady: program=Voting
+[BMC] TemporalSpec(state): rule=inconsistency, formula=(and (= (select wins kv_p1) kv_b1)
+     (select wins__exists kv_p1)
+     (= (select wins kv_p2) kv_b2)
+     (select wins__exists kv_p2)
+     kv_b1
+     kv_b2
+     (not (= kv_p1 kv_p2)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=inconsistency, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=inconsistency, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=inconsistency, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=inconsistency, k=4, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=inconsistency, k=4
+[BMC] CounterexampleReturned: rule=inconsistency, k=4
+[voting.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor() [msgSender: 0, value: 0]
+[1] recv_vote(address(8),3) [msgSender: 0, value: 0]
+[2] recv_finalize(3) [msgSender: 0, value: 0]
+[3] recv_vote(address(3),8) [msgSender: 0, value: 0]
+[4] recv_finalize(8) [msgSender: 0, value: 0]
+[voting.dl] Iteration#0 RestrictedSolveStatus: relation=recv_finalize, status=UNSAT
+[voting.dl] Iteration#0 FallbackToFull: reason=UNSAT, relations=finalize
+[voting.dl] Iteration#0 ProgramAfterFallbackSynthesis:
+finalize(p) :- recv_finalize(p),hasWinner(hasWinner_b),hasWinner_b==false.
+vote(v,p) :- recv_vote(v,p).
+[voting.dl] Iteration#0 SynthesisResult: updated-by-fallback
+[voting.dl] Iteration#1 ProgramBeforeBMC:
+finalize(p) :- recv_finalize(p),hasWinner(hasWinner_b),hasWinner_b==false.
+vote(v,p) :- recv_vote(v,p).
+[voting.dl] Iteration#1 BMCInput: bound=5, violationRules=inconsistency
+[BMC] TransitionSystemReady: program=Voting
+[BMC] TemporalSpec(state): rule=inconsistency, formula=(and (= (select wins kv_p1) kv_b1)
+     (select wins__exists kv_p1)
+     (= (select wins kv_p2) kv_b2)
+     (select wins__exists kv_p2)
+     kv_b1
+     kv_b2
+     (not (= kv_p1 kv_p2)))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=inconsistency, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=inconsistency, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=inconsistency, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=inconsistency, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=inconsistency, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[voting.dl] Iteration#1 BMCResult: no-counterexample
+[voting.dl] BenchmarkEnd: reason=sat, totalTimeMs=126, bmcTimeMs=62, cegisIterations=1, finalRules=
+finalize(p) :- recv_finalize(p),hasWinner(hasWinner_b),hasWinner_b==false.
+vote(v,p) :- recv_vote(v,p).

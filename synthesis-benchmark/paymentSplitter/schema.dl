@@ -32,6 +32,9 @@
 .decl overpaid(p: address, n: uint)[0]
 .violation overpaid
 
+.decl totalReleasedExceedsReceived()
+.violation totalReleasedExceedsReceived
+
 .decl invalidTx()
 .violation invalidTx
 

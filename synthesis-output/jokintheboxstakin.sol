@@ -50,26 +50,34 @@ contract Jokintheboxstakin is JokintheboxstakinUDF {
   mapping(address=>mapping(uint=>StakeAmountTuple)) stakeAmount;
   mapping(address=>mapping(uint=>OnceUnstakeTuple)) onceUnstake;
   MaxPercentageTuple maxPercentage;
+  event InvalidWithdrawSignature();
   event Withdraw(address sender,uint total);
-  event InvalidTx();
+  event RepeatedUnstake();
   event Unstake(address staker,uint stakeId,uint unstakedDay);
+  event InvalidLockPeriod();
   event Stake(address staker,uint stakeId,uint amount,uint lockPeriod,uint stakedDay);
   constructor() public {
-    updateHundredOnInsertConstructor_r24();
-    updateMaxPercentageOnInsertConstructor_r10();
-    updateEthTaxOnInsertConstructor_r18();
+    updateMaxPercentageOnInsertConstructor_r9();
+    updateInitializedOnInsertConstructor_r6();
+    updateHundredOnInsertConstructor_r20();
+    updateEthTaxOnInsertConstructor_r17();
     updateTotalStakedOnInsertConstructor_r0();
-    updateInitializedOnInsertConstructor_r8();
   }
   function withdraw(uint earnings,uint affiliateEarnings,bool inETH,bytes32 messageHash,uint v,bytes32 r,bytes32 s) public    {
-      bool r12 = updateWithdrawOnInsertRecv_withdraw_r12(earnings,affiliateEarnings,inETH,messageHash,v,r,s);
-      if(r12==false) {
+      bool r13 = updateWithdrawOnInsertRecv_withdraw_r13(earnings,affiliateEarnings,inETH,messageHash,v,r,s);
+      if(r13==false) {
+        revert("Rule condition failed");
+      }
+  }
+  function unstake(uint stakeId) public    {
+      bool r7 = updateUnstakeOnInsertRecv_unstake_r7(stakeId);
+      if(r7==false) {
         revert("Rule condition failed");
       }
   }
   function stake(uint stakeId,uint amount,uint lockPeriod) public    {
-      bool r1 = updateStakeOnInsertRecv_stake_r1(stakeId,amount,lockPeriod);
-      if(r1==false) {
+      bool r2 = updateStakeOnInsertRecv_stake_r2(stakeId,amount,lockPeriod);
+      if(r2==false) {
         revert("Rule condition failed");
       }
   }
@@ -88,12 +96,6 @@ contract Jokintheboxstakin is JokintheboxstakinUDF {
   function getHundred() public view  returns (uint) {
       uint value = hundred.value;
       return value;
-  }
-  function unstake(uint stakeId) public    {
-      bool r13 = updateUnstakeOnInsertRecv_unstake_r13(stakeId);
-      if(r13==false) {
-        revert("Rule condition failed");
-      }
   }
   function getStakeAmount(address staker,uint stakeId) public view  returns (uint) {
       uint amount = stakeAmount[staker][stakeId].amount;
@@ -115,28 +117,30 @@ contract Jokintheboxstakin is JokintheboxstakinUDF {
       bool b = initialized.b;
       return b;
   }
-  function updateStakeStakedDayOnInsertStake_r15(address p,uint stakeId,uint day) private    {
-      stakeStakedDay[p][stakeId] = StakeStakedDayTuple(day,true);
-  }
-  function updateStakeStatusOnInsertStake_r2(address p,uint stakeId) private    {
-      stakeStatus[p][stakeId] = StakeStatusTuple(false,true);
-  }
-  function updateStakeLockPeriodOnInsertStake_r6(address p,uint stakeId,uint lockPeriod) private    {
-      stakeLockPeriod[p][stakeId] = StakeLockPeriodTuple(lockPeriod,true);
-  }
-  function updateWithdrawOnInsertRecv_withdraw_r12(uint earnings,uint affiliateEarnings,bool inETH,bytes32 messageHash,uint v,bytes32 r,bytes32 s) private   returns (bool) {
-      address sender = msg.sender;
-      if(inETH==true) {
-        uint total = earnings+affiliateEarnings;
-        bool valid = isValidSignature(sender,total,inETH,messageHash,v,r,s);
-        if(valid!=false) {
-          emit Withdraw(sender,total);
-          return true;
+  function updateUnstakeOnInsertRecv_unstake_r7(uint stakeId) private   returns (bool) {
+      uint day = block.timestamp;
+      address p = msg.sender;
+      uint staked = stakeStakedDay[p][stakeId].stakedDay;
+      if(false==stakeStatus[p][stakeId].unstaked) {
+        if(false==onceUnstake[p][stakeId].b) {
+          uint lock = stakeLockPeriod[p][stakeId].lockPeriod;
+          if(day>staked+lock) {
+            updateOnceUnstakeOnInsertUnstake_r21(p,stakeId);
+            updateStakeStatusOnInsertUnstake_r11(p,stakeId);
+            emit Unstake(p,stakeId,day);
+            return true;
+          }
         }
       }
       return false;
   }
-  function updateOnceUnstakeOnInsertUnstake_r25(address p,uint stakeId) private    {
+  function updateTotalStakedOnInsertStake_r19(uint a) private    {
+      totalStaked.n += a;
+  }
+  function updateOnceUnstakeOnInsertStake_r5(address p,uint stakeId) private    {
+      onceUnstake[p][stakeId] = OnceUnstakeTuple(false,true);
+  }
+  function updateOnceUnstakeOnInsertUnstake_r21(address p,uint stakeId) private    {
       onceUnstake[p][stakeId] = OnceUnstakeTuple(true,true);
   }
   function updateuintByint(uint x,int delta) private   returns (uint) {
@@ -145,66 +149,56 @@ contract Jokintheboxstakin is JokintheboxstakinUDF {
       uint convertedValue = uint(value);
       return convertedValue;
   }
-  function updateHundredOnInsertConstructor_r24() private    {
-      hundred = HundredTuple(100,true);
+  function updateInitializedOnInsertConstructor_r6() private    {
+      initialized = InitializedTuple(true,true);
   }
-  function updateUnstakeOnInsertRecv_unstake_r13(uint stakeId) private   returns (bool) {
+  function updateStakeOnInsertRecv_stake_r2(uint stakeId,uint amount,uint lockPeriod) private   returns (bool) {
       uint day = block.timestamp;
       address p = msg.sender;
-      uint staked = stakeStakedDay[p][stakeId].stakedDay;
-      if(false==stakeStatus[p][stakeId].unstaked) {
-        if(false==onceUnstake[p][stakeId].b) {
-          uint lock = stakeLockPeriod[p][stakeId].lockPeriod;
-          if(day>staked+lock && day>staked+lock) {
-            updateStakeStatusOnInsertUnstake_r11(p,stakeId);
-            updateOnceUnstakeOnInsertUnstake_r25(p,stakeId);
-            emit Unstake(p,stakeId,day);
-            return true;
-          }
-        }
+      if(0!=stakeId) {
+        updateStakeStakedDayOnInsertStake_r15(p,stakeId,day);
+        updateOnceUnstakeOnInsertStake_r5(p,stakeId);
+        updateStakeStatusOnInsertStake_r1(p,stakeId);
+        updateStakeLockPeriodOnInsertStake_r4(p,stakeId,lockPeriod);
+        updateTotalStakedOnInsertStake_r19(amount);
+        updateStakeAmountOnInsertStake_r16(p,stakeId,amount);
+        emit Stake(p,stakeId,amount,lockPeriod,day);
+        return true;
       }
       return false;
   }
-  function updateEthTaxOnInsertConstructor_r18() private    {
-      ethTax = EthTaxTuple(5,true);
-  }
-  function updateMaxPercentageOnInsertConstructor_r10() private    {
+  function updateMaxPercentageOnInsertConstructor_r9() private    {
       maxPercentage = MaxPercentageTuple(10,true);
   }
-  function updateTotalStakedOnInsertStake_r22(uint a) private    {
-      totalStaked.n += a;
+  function updateTotalStakedOnInsertConstructor_r0() private    {
+      totalStaked = TotalStakedTuple(0,true);
   }
-  function updateStakeAmountOnInsertStake_r17(address p,uint stakeId,uint amount) private    {
+  function updateStakeStatusOnInsertStake_r1(address p,uint stakeId) private    {
+      stakeStatus[p][stakeId] = StakeStatusTuple(false,true);
+  }
+  function updateStakeAmountOnInsertStake_r16(address p,uint stakeId,uint amount) private    {
       stakeAmount[p][stakeId] = StakeAmountTuple(amount,true);
   }
   function updateStakeStatusOnInsertUnstake_r11(address p,uint stakeId) private    {
       stakeStatus[p][stakeId] = StakeStatusTuple(true,true);
   }
-  function updateOnceUnstakeOnInsertStake_r7(address p,uint stakeId) private    {
-      onceUnstake[p][stakeId] = OnceUnstakeTuple(false,true);
+  function updateStakeLockPeriodOnInsertStake_r4(address p,uint stakeId,uint lockPeriod) private    {
+      stakeLockPeriod[p][stakeId] = StakeLockPeriodTuple(lockPeriod,true);
   }
-  function updateTotalStakedOnInsertConstructor_r0() private    {
-      totalStaked = TotalStakedTuple(0,true);
+  function updateEthTaxOnInsertConstructor_r17() private    {
+      ethTax = EthTaxTuple(5,true);
   }
-  function updateStakeOnInsertRecv_stake_r1(uint stakeId,uint amount,uint lockPeriod) private   returns (bool) {
-      uint day = block.timestamp;
-      address p = msg.sender;
-      if(amount>0) {
-        bool ok_1 = this.isValidLockPeriod(lockPeriod);
-        if(ok_1!=false) {
-          updateStakeAmountOnInsertStake_r17(p,stakeId,amount);
-          updateOnceUnstakeOnInsertStake_r7(p,stakeId);
-          updateTotalStakedOnInsertStake_r22(amount);
-          updateStakeStatusOnInsertStake_r2(p,stakeId);
-          updateStakeStakedDayOnInsertStake_r15(p,stakeId,day);
-          updateStakeLockPeriodOnInsertStake_r6(p,stakeId,lockPeriod);
-          emit Stake(p,stakeId,amount,lockPeriod,day);
-          return true;
-        }
-      }
+  function updateWithdrawOnInsertRecv_withdraw_r13(uint earnings,uint affiliateEarnings,bool inETH,bytes32 messageHash,uint v,bytes32 r,bytes32 s) private   returns (bool) {
+      address sender = msg.sender;
+      uint total = earnings+affiliateEarnings;
+      emit Withdraw(sender,total);
+      return true;
       return false;
   }
-  function updateInitializedOnInsertConstructor_r8() private    {
-      initialized = InitializedTuple(true,true);
+  function updateHundredOnInsertConstructor_r20() private    {
+      hundred = HundredTuple(100,true);
+  }
+  function updateStakeStakedDayOnInsertStake_r15(address p,uint stakeId,uint day) private    {
+      stakeStakedDay[p][stakeId] = StakeStakedDayTuple(day,true);
   }
 }

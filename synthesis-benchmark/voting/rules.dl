@@ -7,11 +7,11 @@ winningProposal(0) :- constructor().
 // Make the deployer (constructor msgSender) a valid voter so vote() is reachable.
 isVoter(v, true) :- constructor(), msgSender(v).
 
-// Voting
-voteUnit(p,1) :- vote(_,p).
-votes(p,c) :- voteUnit(p,_), c = sum one: voteUnit(p,one).
+// Voting — include voter address in voteUnit so each voter contributes a distinct tuple
+voteUnit(v,p,1) :- vote(v,p).
+votes(p,c) :- voteUnit(_,p,_), c = sum one: voteUnit(_,p,one).
 
-// Finalize: materialize winner state (avoid derived incremental maintenance that can introduce ReadTuple)
+// Finalize: materialize winner state
 wins(p, true) :- finalize(p), votes(p,c), quorumSize(q), c >= q.
 hasWinner(true) :- finalize(p), votes(p,c), quorumSize(q), c >= q.
 winningProposal(p) :- finalize(p), votes(p,c), quorumSize(q), c >= q.

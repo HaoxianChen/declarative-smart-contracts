@@ -2,6 +2,9 @@
 // Constructor
 ////////////////////
 _finalized(false) :- constructor(_,_,_,_,_).
+onceWithdrawOutsideSuccess(false) :- constructor(_,_,_,_,_).
+onceClaimRefundOutsideRefund(false) :- constructor(_,_,_,_,_).
+onceBuyAfterFinalize(false) :- constructor(_,_,_,_,_).
 _primary(s) :- constructor(_,_,_,_,_), msgSender(s).
 state(0) :- constructor(_,_,_,_,_).
 _wallet(p) :- constructor(_,_,p,_,_).
@@ -98,4 +101,6 @@ state(1) :-
 closeEscrow() :- state(2).
 enableRefunds() :- state(1).
 
-// claimRefund(p) is a transaction placeholder rule (see schema.dl); constraints are expressed as invalidTx in properties.
+onceWithdrawOutsideSuccess(true) :- withdraw(_), state(s), s!=2.
+onceClaimRefundOutsideRefund(true) :- claimRefund(_), state(s), s!=1.
+onceBuyAfterFinalize(true) :- buyToken(_,_), _finalized(b), b==true.

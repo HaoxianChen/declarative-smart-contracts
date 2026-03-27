@@ -1,0 +1,78 @@
+[Audit] BenchmarkStart: name=paymentSplitter.dl, benchDir=synthesis-benchmark/paymentSplitter
+[Audit] InputSpecFiles: schema=synthesis-benchmark/paymentSplitter/schema.dl, rules=synthesis-benchmark/paymentSplitter/rules.dl, properties=synthesis-benchmark/paymentSplitter/properties.dl
+[Audit] ForbidConfig: global=<none>, perBenchmark=<none>
+[Audit] LeakageCheck: synthesizer consumes specification + BMC counterexamples only; it does not load synthesized outputs as supervision labels.
+[Audit] OutputTargets: datalogOut=synthesis-output/paymentSplitter.dl, stats=synthesis-output/synthesis_stats.csv
+[paymentSplitter.dl] BenchmarkStart: program=PaymentSplitter, maxBound=5, maxIters=120, maxSolutionsPerStep=20
+[paymentSplitter.dl] SeededPredicatesFromTxProperties: Map()
+[paymentSplitter.dl] InitialTransactionRules:
+fund(n) :- recv_fund(n),n>=0,n<=1000.
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n).
+[paymentSplitter.dl] Iteration#0 ProgramBeforeBMC:
+fund(n) :- recv_fund(n),n>=0,n<=1000.
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n).
+[paymentSplitter.dl] Iteration#0 BMCInput: bound=5, violationRules=overpaid,totalReleasedExceedsReceived
+[BMC] TransitionSystemReady: program=PaymentSplitter
+[BMC] TemporalSpec(state): rule=totalReleasedExceedsReceived, formula=(and (= totalReleased kv_r) (= totalReceived kv_n) (not (<= kv_r kv_n)))
+[BMC] TemporalSpec(state): rule=overpaid, formula=(let ((a!1 (not (<= kv_e (div (* kv_m kv_r) kv_s)))))
+  (and (= totalReceived kv_r)
+       (= (select shares kv_p) kv_m)
+       (select shares__exists kv_p)
+       (= totalShares kv_s)
+       (= (select released kv_p) kv_e)
+       (select released__exists kv_p)
+       (not (<= kv_s 0))
+       a!1))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=1, result=SATISFIABLE
+[BMC] CounterexampleFound: rule=totalReleasedExceedsReceived, k=1
+[BMC] CounterexampleReturned: rule=totalReleasedExceedsReceived, k=1
+[paymentSplitter.dl] Iteration#0 Counterexample:
+Trace:
+[0] constructor(address(0),address(0),1,0) [msgSender: 0, value: 0]
+[1] recv_fund(-1) [msgSender: 0, value: 0]
+[paymentSplitter.dl] Iteration#0 RestrictedSolveStatus: relation=recv_fund, status=SAT
+[paymentSplitter.dl] Iteration#0 ProgramAfterRestrictedSynthesis:
+fund(n) :- recv_fund(n),n>0.
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n),n>=0,n<=1000,n>0.
+[paymentSplitter.dl] Iteration#0 SynthesisResult: updated
+[paymentSplitter.dl] Iteration#1 ProgramBeforeBMC:
+fund(n) :- recv_fund(n),n>0.
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n),n>=0,n<=1000,n>0.
+[paymentSplitter.dl] Iteration#1 BMCInput: bound=5, violationRules=overpaid,totalReleasedExceedsReceived
+[BMC] TransitionSystemReady: program=PaymentSplitter
+[BMC] TemporalSpec(state): rule=totalReleasedExceedsReceived, formula=(and (= totalReleased kv_r) (= totalReceived kv_n) (not (<= kv_r kv_n)))
+[BMC] TemporalSpec(state): rule=overpaid, formula=(let ((a!1 (not (<= kv_e (div (* kv_m kv_r) kv_s)))))
+  (and (= totalReceived kv_r)
+       (= (select shares kv_p) kv_m)
+       (select shares__exists kv_p)
+       (= totalShares kv_s)
+       (= (select released kv_p) kv_e)
+       (select released__exists kv_p)
+       (not (<= kv_s 0))
+       a!1))
+[BMC] CheckBound: k=1
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=1, result=UNSATISFIABLE
+[BMC] SolverResult: rule=overpaid, k=1, result=UNSATISFIABLE
+[BMC] CheckBound: k=2
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=2, result=UNSATISFIABLE
+[BMC] SolverResult: rule=overpaid, k=2, result=UNSATISFIABLE
+[BMC] CheckBound: k=3
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=3, result=UNSATISFIABLE
+[BMC] SolverResult: rule=overpaid, k=3, result=UNSATISFIABLE
+[BMC] CheckBound: k=4
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=4, result=UNSATISFIABLE
+[BMC] SolverResult: rule=overpaid, k=4, result=UNSATISFIABLE
+[BMC] CheckBound: k=5
+[BMC] SolverResult: rule=totalReleasedExceedsReceived, k=5, result=UNSATISFIABLE
+[BMC] SolverResult: rule=overpaid, k=5, result=UNSATISFIABLE
+[BMC] CheckFinished: no-counterexample-within-bound
+[paymentSplitter.dl] Iteration#1 BMCResult: no-counterexample
+[paymentSplitter.dl] BenchmarkEnd: reason=sat, totalTimeMs=86, bmcTimeMs=72, cegisIterations=1, finalRules=
+fund(n) :- recv_fund(n),n>0.
+release(p) :- recv_release(p).
+fund(n) :- recv_fund(n),n>=0,n<=1000,n>0.

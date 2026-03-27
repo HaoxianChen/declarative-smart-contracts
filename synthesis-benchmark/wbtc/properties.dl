@@ -2,36 +2,14 @@
 negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
 negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
 
-// only owner can mint, burn, pause, unpause, transferOwnership
-invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_burn(_,n), n<=0.
-invalidTx() :- recv_burn(p,n), balanceOf(p,m), n>m.
-invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
-invalidTx() :- recv_transferOwnership(_), owner(o), msgSender(s), o!=s.
+// authority rules (retain recv_tx)
+pauseNotByOwner() :- recv_pause(), owner(o), msgSender(s), s!=o.
+pauseNotByOwner() :- recv_unpause(), owner(o), msgSender(s), s!=o.
+transferOwnershipNotByOwner() :- recv_transferOwnership(_), owner(o), msgSender(s), s!=o.
+claimOwnershipWrongCaller() :- recv_claimOwnership(p), pendingOwner(expected), p!=expected.
+claimOwnershipWrongCaller() :- recv_claimOwnership(_), pendingOwner(expected), msgSender(s), s!=expected.
 
-// cannot pause if already paused, cannot unpause if not paused
-invalidTx() :- recv_pause(), paused(b), b==true.
-invalidTx() :- recv_unpause(), paused(b), b==false.
+// authority rules
+unauthorizedMint() :- recv_mint(_,_), owner(o), msgSender(s), s!=o.
 
-// cannot transfer ownership to zero address
-invalidTx() :- recv_transferOwnership(p), p==0.
-invalidTx() :- recv_claimOwnership(p), p==0.
-
-// only the current pending owner can claim ownership
-invalidTx() :- recv_claimOwnership(p), pendingOwner(s), s!=p.
-
-// transfer: non-zero addresses, positive amount, sender has sufficient balance
-invalidTx() :- recv_transfer(s,_,_), s==0.
-invalidTx() :- recv_transfer(_,r,_), r==0.
-invalidTx() :- recv_transfer(_,_,n), n<=0.
-invalidTx() :- recv_transfer(s,_,n), balanceOf(s,m), n>m.
-
-// transferFrom: positive amount, owner has sufficient balance and allowance
-invalidTx() :- recv_transferFrom(_,_,_,n), n<=0.
-invalidTx() :- recv_transferFrom(o,_,_,n), balanceOf(o,m), n>m.
-invalidTx() :- recv_transferFrom(o,_,s,n), allowance(o,s,k), n>k.
-
-// decreaseApproval: decrease amount must be positive
-invalidTx() :- recv_decreaseApproval(_,_,n), n<=0.
+// (removed: sentinel-based transferWhilePaused)

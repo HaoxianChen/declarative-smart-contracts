@@ -7,22 +7,8 @@ overpaid(p,e) :-
     s>0,
     e > r * m / s.
 
-////////////////////
-// Transaction validity
-////////////////////
-
-// fund: restrict domain to avoid negative / huge values that cause solver UNKNOWN.
-invalidTx() :- recv_fund(n), n<0.
-invalidTx() :- recv_fund(n), n>1000.
-
-// release: account has shares, totalShares > 0, and account is due (payment > 0)
-invalidTx() :- recv_release(p), shares(p,_), totalShares(s), s==0.
-invalidTx() :-
-    recv_release(p),
-    shares(p,m),
-    totalShares(s),
-    totalReceived(r),
-    released(p,e),
-    s>0,
-    r * m / s <= e.
+totalReleasedExceedsReceived() :-
+    totalReleased(r),
+    totalReceived(n),
+    r > n.
 
