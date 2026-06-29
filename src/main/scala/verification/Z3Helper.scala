@@ -31,8 +31,9 @@ object Z3Helper {
           case "address" => ctx.mkInt(name.toInt)
           case "int"|"uint" => ctx.mkInt(name.toInt)
           case "bool" => name match {
-            case "true" => ctx.mkTrue()
-            case "false" => ctx.mkFalse()
+            case "true" | "1" => ctx.mkTrue()
+            case "false" | "0" => ctx.mkFalse()
+            case other => throw new IllegalArgumentException(s"Invalid bool constant: $other")
           }
           case _ => ???
         }

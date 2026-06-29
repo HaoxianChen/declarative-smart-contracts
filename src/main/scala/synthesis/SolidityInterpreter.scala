@@ -254,7 +254,7 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
       lit.relation match {
         case sr: SingletonRelation =>
           lit.fields.headOption.collect { case v: Variable => v }.foreach { v =>
-            singletonBindings(v.name) = state.lookup(sr.name)
+            singletonBindings(v.name) = state.lookupSingleton(sr.name)
           }
         case _ =>
       }
@@ -403,7 +403,11 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
             case AnyType() => ???
             case SymbolType(_) => name.toInt
             case NumberType(_) => name.toInt
-            case BooleanType() => if (name.toBoolean) 1 else 0
+            case BooleanType() => name match {
+              case "true" | "1" => 1
+              case "false" | "0" => 0
+              case other => throw new IllegalArgumentException(s"Invalid bool constant: $other")
+            }
             case compoundType: CompoundType => ???
           }
           case Variable(_, name) => state.lookup(name)
@@ -458,7 +462,11 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
         case _:NumberType | _:SymbolType => name.toInt
         case UnitType() => ???
         case AnyType() => ???
-        case BooleanType() => if (name.toBoolean) 1 else 0
+        case BooleanType() => name match {
+          case "true" | "1" => 1
+          case "false" | "0" => 0
+          case other => throw new IllegalArgumentException(s"Invalid bool constant: $other")
+        }
         case compoundType: CompoundType => ???
       }
       case Variable(_type, name) => state.lookup(name)
@@ -503,7 +511,7 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
               }
             }
           case sr: SingletonRelation =>
-            val value = state.lookup(sr.name)
+            val value = state.lookupSingleton(sr.name)
             sr.memberNames.headOption.foreach { n => state.updateInt(s"$outputVar.$n", value) }
             state.updateInt(s"$outputVar._valid", 1)
           case _ =>
@@ -533,7 +541,10 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
           state.lookup(relation.name, keyIds)
         }
         else {
-          state.lookup(relation.name)
+          relation match {
+            case _: SingletonRelation => state.lookupSingleton(relation.name)
+            case _ => state.lookup(relation.name)
+          }
         }
         state.updateInt(p.name,value)
       }
@@ -559,6 +570,7 @@ case class SolidityInterpreter(programOpt: Option[datalog.Program] = None,
         val varId = relation.name
         val value = _interpretParam(params.head)
         state.updateInt(varId, value)
+        state.updateTuple(varId, Vector(value))
       }
       case ConvertType(from, to) => {
         val v = _interpretExpr(from)
