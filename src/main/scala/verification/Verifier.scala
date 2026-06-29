@@ -22,6 +22,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
   private val program = addBuiltInRules(_program)
 
   private val ctx: Context = new Context()
+  def context: Context = ctx
   protected val relations: Set[Relation] = program.relations
   protected val indices: Map[SimpleRelation, List[Int]] = impAbsProgram.indices
 

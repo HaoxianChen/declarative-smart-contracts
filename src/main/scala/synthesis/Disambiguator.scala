@@ -8,7 +8,10 @@ import imp.SolidityTranslator.transactionRelationPrefix
 
 case class Disambiguator(sketch: Program,
                          solInterpreter: SolidityInterpreter,
-                         txDefs: Map[String, SolidityStatement]) {
+                         txDefs: Map[String, SolidityStatement],
+                         seed: Long = 0L) {
+
+  private val rng = new Random(seed)
 
   val interfaceRelations = sketch.interfaces.map(_.relation)
     .filter(_.name.startsWith(transactionRelationPrefix)).toList
@@ -23,18 +26,18 @@ case class Disambiguator(sketch: Program,
 
   private def randomConstant(t: Type): Constant = t match {
       case SymbolType(_) =>
-        datalog.Constant(t, addresses(Random.nextInt(addresses.length)))
+        datalog.Constant(t, addresses(rng.nextInt(addresses.length)))
       case _: NumberType =>
-        datalog.Constant(t, (Random.nextInt(10) + 1).toString)
+        datalog.Constant(t, (rng.nextInt(10) + 1).toString)
       case _ =>
-        datalog.Constant(t, Random.nextInt(3).toString)
+        datalog.Constant(t, rng.nextInt(3).toString)
   }
 
 
   private def randomTransaction(rel: datalog.Relation): Transaction = {
     val params = rel.sig.map(randomConstant)
-    val msgSender = Random.nextInt(addresses.size)
-    val msgValue = Random.nextInt(numberRange)
+    val msgSender = rng.nextInt(addresses.size)
+    val msgValue = rng.nextInt(numberRange)
     Transaction(rel, params, ImplicitParameters(msgSender,msgValue))
   }
 
@@ -50,15 +53,15 @@ case class Disambiguator(sketch: Program,
     val params = rel.sig.zipWithIndex.map { case (t, idx) =>
       t match {
         case SymbolType(_) =>
-          datalog.Constant(t, addresses(Random.nextInt(addresses.length)))
+          datalog.Constant(t, addresses(rng.nextInt(addresses.length)))
         case _: NumberType =>
-          datalog.Constant(t, (Random.nextInt(numberRange) + 1).toString)
+          datalog.Constant(t, (rng.nextInt(numberRange) + 1).toString)
         case _ =>
-          datalog.Constant(t, Random.nextInt(numberRange).toString)
+          datalog.Constant(t, rng.nextInt(numberRange).toString)
       }
     }
-    val implicitParameters = ImplicitParameters(Random.nextInt(addresses.length),
-              Random.nextInt(numberRange))
+    val implicitParameters = ImplicitParameters(rng.nextInt(addresses.length),
+              rng.nextInt(numberRange))
     Transaction(rel, params, implicitParameters)
   }
 
@@ -158,7 +161,7 @@ case class Disambiguator(sketch: Program,
     // build per-relation traces
     val perRelTraces: Seq[Seq[Trace]] = txRelations.map { rel =>
       val relTxs = allTransactions(rel)
-      Random.shuffle(relTxs).map(tx => Trace(constructorTx +: setupTxs :+ tx))
+      rng.shuffle(relTxs).map(tx => Trace(constructorTx +: setupTxs :+ tx))
     }
 
     // take up to per-transaction quota per relation

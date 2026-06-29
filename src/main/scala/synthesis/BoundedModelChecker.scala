@@ -155,32 +155,53 @@ case class BoundedModelChecker() {
       val violationExpr: BoolExpr = {
         val prefix = "kv" // this is the top-level transaction relation parameter prefix.
         val expr = verifier.getTxViolationCheck(ctx, r, prefix)
+        val triggeredRulesForInterface =
+          program.transactionRules().filter(_.body.exists(_.relation == recvLit.relation)).toSeq
 
-        // recvLit is available in the outer scope (the transaction literal for this rule)
-        val params = recvLit.fields
-
-        // Build from/to arrays for substitution: kv<name> -> i0_<name>
-        val fromArr = params.map { p =>
-          ctx.mkConst(s"${prefix}_${p.name}", Z3Helper.typeToSort(ctx, p._type) )
-        }.toArray[Expr[_]]
-
-        val toArr = params.map { p =>
-          ctx.mkConst(s"i0_${p.name}", Z3Helper.typeToSort(ctx, p._type))
-        }.toArray[Expr[_]]
-
-        val subsExpr = expr.substitute(fromArr, toArr).asInstanceOf[BoolExpr]
-
-        // Create the indicator constant and implication: indicator = 1 => (violation with params)
-        val anyIndicatorEq1: BoolExpr = {
-          val triggeredRulesForInterface = program.transactionRules().filter(_.body.exists(_.relation == recvLit.relation)).toSeq
-          val indicatorLits: Seq[BoolExpr] = triggeredRulesForInterface.zipWithIndex.map { case (_, i) =>
-            val indicatorConst: IntExpr = indicatorConstForTransactionTriggerRelation(ctx, recvLit.relation, i)
-            ctx.mkEq(indicatorConst, ctx.mkInt(1))
-          }
-          if (indicatorLits.isEmpty) ctx.mkFalse() else ctx.mkOr(indicatorLits: _*)
+        def txFieldExpr(p: Parameter): Expr[_] = p match {
+          case v: datalog.Variable =>
+            ctx.mkConst(s"i0_${v.name}", Z3Helper.typeToSort(ctx, v._type))
+          case c: datalog.Constant =>
+            ctx.mkInt(c.name.toInt)
         }
 
-        ctx.mkAnd(anyIndicatorEq1, subsExpr)
+        val activeBranches = triggeredRulesForInterface.zipWithIndex.map { case (triggeredRule, i) =>
+          val indicatorConst: IntExpr = indicatorConstForTransactionTriggerRelation(ctx, recvLit.relation, i)
+          val triggerLit = triggeredRule.body
+            .find(_.relation == recvLit.relation)
+            .getOrElse(throw new Exception(s"No trigger literal ${recvLit.relation.name} in $triggeredRule"))
+
+          var from = List.empty[Expr[_]]
+          var to = List.empty[Expr[_]]
+          var equalityConstraints = List.empty[BoolExpr]
+          val seen = scala.collection.mutable.Map.empty[String, Expr[_]]
+
+          recvLit.fields.zip(triggerLit.fields).foreach {
+            case (v: datalog.Variable, target) if v.name != "_" =>
+              val source = ctx.mkConst(s"${prefix}_${v.name}", Z3Helper.typeToSort(ctx, v._type))
+              val targetExpr = txFieldExpr(target)
+              seen.get(v.name) match {
+                case Some(previous) =>
+                  equalityConstraints ::= ctx.mkEq(previous, targetExpr)
+                case None =>
+                  seen += (v.name -> targetExpr)
+                  from ::= source
+                  to ::= targetExpr
+              }
+            case (_: datalog.Variable, _) =>
+              ()
+            case (c: datalog.Constant, target) =>
+              equalityConstraints ::= ctx.mkEq(txFieldExpr(target), ctx.mkInt(c.name.toInt))
+          }
+
+          val subsExpr =
+            if (from.nonEmpty) expr.substitute(from.reverse.toArray, to.reverse.toArray).asInstanceOf[BoolExpr]
+            else expr
+          val branchExpr = ctx.mkAnd((ctx.mkEq(indicatorConst, ctx.mkInt(1)) :: subsExpr :: equalityConstraints): _*)
+          branchExpr
+        }
+
+        if (activeBranches.isEmpty) ctx.mkFalse() else ctx.mkOr(activeBranches: _*)
       }
 
       // Find candidate transition expressions that mention the transaction relation or indicator

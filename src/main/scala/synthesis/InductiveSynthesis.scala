@@ -1,9 +1,13 @@
 package synthesis
 
-import com.microsoft.z3.{BoolExpr, BoolSort, Context, Expr, IntExpr, Model}
+import com.microsoft.z3.{ArraySort, BoolExpr, BoolSort, Context, Expr, IntExpr, Model, Quantifier, Sort}
 import datalog.{Constant, Functor, Literal, Parameter, Program, Relation, ReservedRelation, Rule, SimpleRelation, SingletonRelation, Variable}
 import synthesis.EvaluatedTrace.shiftTrace
+import imp.ImperativeTranslator
 import imp.SolidityTranslator.transactionRelationPrefix
+import verification.{TransitionSystem, Verifier}
+import verification.Verifier.indicatorConstForTransactionTriggerRelation
+import verification.Z3Helper.{fieldsToConst, functorToZ3, getSort, literalToConst, mkTupleKey, paramToConst, typeToSort}
 import scala.collection.mutable
 
 /** Given an EvaluatedTrace object, a set of predicates, return
@@ -12,7 +16,9 @@ import scala.collection.mutable
  * condition guard. */
 case class InductiveSynthesis(
   predicatesPerRule: Map[Rule,Set[Predicate]],
-  interpreterContext: InterpreterContext
+  interpreterContext: InterpreterContext,
+  programForEncoding: Program,
+  encodingMode: EncodingMode = EncodingMode.Concrete
 ) {
 
   case class Representation(map: Map[Relation, Set[Predicate]]) {
@@ -34,8 +40,27 @@ case class InductiveSynthesis(
     }
   }
 
-  // Initialize Z3 context as a member
-  val z3ctx: Context = new Context()
+  private val orderedPredicates: Map[Relation, List[Predicate]] =
+    predicates.map { case (rel, preds) => rel -> preds.toList.sortBy(_.toString) }
+
+  private lazy val symbolicVerifier: Verifier = {
+    val impTranslator = new ImperativeTranslator(programForEncoding, Set(),
+      isInstrument = true, monitorViolations = false,
+      arithmeticOptimization = true, enableProjection = true)
+    new Verifier(programForEncoding, impTranslator.translate())
+  }
+
+  private lazy val symbolicTransitionSystem: TransitionSystem =
+    symbolicVerifier.getTransitionSystem()
+
+  // Symbolic mode must use the verifier context that owns the transition-system expressions.
+  val z3ctx: Context = encodingMode match {
+    case EncodingMode.SymbolicCexBlocking => symbolicVerifier.context
+    case EncodingMode.Concrete => new Context()
+  }
+
+  var traceBlockingTimeMs: Long = 0L
+  var inductiveSolverTimeMs: Long = 0L
 
   // Initialize encoding as a member using makeEncoding
   val encodings: Map[Relation, List[BoolExpr]] = makeEncoding(z3ctx)
@@ -43,8 +68,8 @@ case class InductiveSynthesis(
   /** For each Rule, create a list of Z3 Bool variables, one for each predicate.
    * The length of the list matches the number of predicates for that Rule. */
   def makeEncoding(z3ctx: Context): Map[Relation, List[BoolExpr]] = {
-    predicates.map { case (rel, preds) =>
-      val boolVars = preds.toList.zipWithIndex.map { case (_, i) =>
+    orderedPredicates.map { case (rel, preds) =>
+      val boolVars = preds.zipWithIndex.map { case (_, i) =>
         z3ctx.mkBoolConst(s"pred_${rel.name}_$i")
       }
       rel -> boolVars
@@ -59,8 +84,8 @@ case class InductiveSynthesis(
   def evaluatePredicates(evaluatedTrace: EvaluatedTrace): Seq[(Transaction, List[Boolean])] = {
     val pairs = shiftTrace(evaluatedTrace)
     pairs.map { case (state, tx) =>
-      val preds = predicates(tx.relation)
-      val results = preds.toList.map(p => interpreter.evaluate(state, tx, p))
+      val preds = orderedPredicates(tx.relation)
+      val results = preds.map(p => interpreter.evaluate(state, tx, p))
       (tx, results)
     }
   }
@@ -73,7 +98,7 @@ case class InductiveSynthesis(
    *     Conjunct all transaction constraints into a single Z3 BoolExpr and return.
    *     Assert that the trace cannot go through.
    */
-  def makeConstraints(evalResults: Seq[(Transaction, List[Boolean])]): BoolExpr = {
+  private def makeAcceptExpr(evalResults: Seq[(Transaction, List[Boolean])]): BoolExpr = {
     val txConstraints = evalResults.map { case (tx, boolList) =>
       val boolVars = encodings(tx.relation)
       val assertions = boolList.zipWithIndex.map { case (b, i) =>
@@ -83,8 +108,11 @@ case class InductiveSynthesis(
       }
       z3ctx.mkAnd(assertions: _*)
     }
-    val acceptTrace = z3ctx.mkAnd(txConstraints: _*)
-    z3ctx.mkNot(acceptTrace)
+    z3ctx.mkAnd(txConstraints: _*)
+  }
+
+  def makeConstraints(evalResults: Seq[(Transaction, List[Boolean])]): BoolExpr = {
+    z3ctx.mkNot(makeAcceptExpr(evalResults))
   }
 
   /**
@@ -94,7 +122,7 @@ case class InductiveSynthesis(
    */
   private def interpretModel(model: Model): Representation = {
     val mapping = encodings.map { case (rel, boolVars) =>
-      val preds = predicates(rel).toList
+      val preds = orderedPredicates(rel)
       val assignments = boolVars.map { v =>
         val value = model.eval(v, true)
         value.isTrue
@@ -111,7 +139,7 @@ case class InductiveSynthesis(
   }
 
   /** Rename relation in trace with the recv_ prefix */
-  private def renameTxRelationInTrace(old: EvaluatedTrace): EvaluatedTrace = {
+  private def renameTxRelationInTrace(old: EvaluatedTrace, keepConstructor: Boolean = false): EvaluatedTrace = {
 
     def toTxTriggerRelation(relation: Relation): Relation = {
       require(!relation.name.startsWith(transactionRelationPrefix), "Assuming non tx relation")
@@ -124,10 +152,391 @@ case class InductiveSynthesis(
     }
 
     val newSteps = old.steps.map { case (tx, state) =>
-      val triggerRelation = toTxTriggerRelation(tx.relation)
-      (tx.updateRelation(triggerRelation), state)
+      if (keepConstructor && tx.relation.name == "constructor") {
+        (tx, state)
+      } else {
+        val triggerRelation = toTxTriggerRelation(tx.relation)
+        (tx.updateRelation(triggerRelation), state)
+      }
     }
     old.copy(steps = newSteps)
+  }
+
+  private case class EncodedTrace(pathConstraints: Seq[BoolExpr], acceptTrace: BoolExpr)
+  private case class SymbolicPredicateEncoding(facts: Seq[BoolExpr], truth: BoolExpr)
+
+  private def relationIndices(relation: Relation): List[Int] = relation match {
+    case sr: SimpleRelation => interpreterContext.relationIndices.getOrElse(sr, List())
+    case _: SingletonRelation => List()
+    case _: ReservedRelation => List()
+  }
+
+  private def safeZ3Name(raw: String): String =
+    raw.replaceAll("[^A-Za-z0-9_]", "_")
+
+  private def traceConstName(traceId: String, orig: String, step: Int): String =
+    s"${safeZ3Name(traceId)}_${safeZ3Name(orig)}_s$step"
+
+  private def isBuiltinConstName(name: String): Boolean =
+    name == "true" || name == "false" || name.matches("-?\\d+")
+
+  private def collectConstsFrom(root: Expr[_]): Set[Expr[_]] = {
+    val acc = mutable.HashSet.empty[Expr[_]]
+    val visited = mutable.HashSet.empty[Expr[_]]
+    val stack = mutable.Stack[(Expr[_], Int)]((root, 0))
+    val maxDepth = 200
+    while (stack.nonEmpty) {
+      val (x, depth) = stack.pop()
+      if (!visited.contains(x)) {
+        visited += x
+        try {
+          if (x.isConst) {
+            val name = x.getSExpr
+            if (!isBuiltinConstName(name)) acc += x
+          } else if (x.isQuantifier && depth < maxDepth) {
+            stack.push((x.asInstanceOf[Quantifier].getBody, depth + 1))
+          } else if (depth < maxDepth) {
+            val args = try x.getArgs catch { case _: Throwable => Array.empty[Expr[_]] }
+            if (args != null) {
+              args.reverse.foreach(arg => stack.push((arg, depth + 1)))
+            }
+          }
+        } catch {
+          case _: Throwable =>
+        }
+      }
+    }
+    acc.toSet
+  }
+
+  private lazy val symbolicStateVars: Seq[(Expr[_], Expr[_])] =
+    symbolicTransitionSystem.getVariables().toSeq
+
+  private lazy val symbolicOtherConsts: Set[Expr[_]] = {
+    val initConsts = collectConstsFrom(symbolicTransitionSystem.getInit())
+    val trConsts = collectConstsFrom(symbolicTransitionSystem.getTr())
+    val stateConsts = symbolicStateVars.flatMap { case (a, b) => Seq(a, b) }.toSet
+    (initConsts ++ trConsts).filterNot(stateConsts.contains)
+  }
+
+  private val symbolicStepSubstCache =
+    mutable.Map.empty[(String, Int), (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]])]
+
+  private def getStepSubst(traceId: String, step: Int): (Array[Expr[_]], Array[Expr[_]], Map[String, Expr[_]]) = {
+    symbolicStepSubstCache.getOrElseUpdate((traceId, step), {
+      var from = List.empty[Expr[_]]
+      var to = List.empty[Expr[_]]
+      val names = mutable.Map.empty[String, Expr[_]]
+
+      for ((vIn, vOut) <- symbolicStateVars) {
+        val inVar = z3ctx.mkConst(traceConstName(traceId, vIn.getSExpr, step), vIn.getSort.asInstanceOf[Sort])
+        val outVar = z3ctx.mkConst(traceConstName(traceId, vIn.getSExpr, step + 1), vOut.getSort.asInstanceOf[Sort])
+        from ::= vIn
+        to ::= inVar
+        from ::= vOut
+        to ::= outVar
+        names += (vIn.getSExpr -> inVar)
+        names += (vOut.getSExpr -> outVar)
+      }
+
+      for (c <- symbolicOtherConsts) {
+        val orig = c.getSExpr
+        val renamed = z3ctx.mkConst(traceConstName(traceId, orig, step), c.getSort.asInstanceOf[Sort])
+        from ::= c
+        to ::= renamed
+        names += (orig -> renamed)
+      }
+
+      (from.reverse.toArray, to.reverse.toArray, names.toMap)
+    })
+  }
+
+  private def renameForTraceStep(e: Expr[_], traceId: String, step: Int): Expr[_] = {
+    val (fromArr, toArr, _) = getStepSubst(traceId, step)
+    e.substitute(fromArr, toArr)
+  }
+
+  private def stepConst(traceId: String, step: Int, originalName: String, sort: Sort): Expr[_] = {
+    val (_, _, names) = getStepSubst(traceId, step)
+    names.getOrElse(originalName, z3ctx.mkConst(traceConstName(traceId, originalName, step), sort))
+  }
+
+  private def constantExpr(c: Constant): Expr[_] =
+    paramToConst(z3ctx, c, "")._1
+
+  private lazy val symbolicTriggerIndicators: Map[Relation, Set[(IntExpr, Literal)]] = {
+    val txInterfaces = programForEncoding.interfaces
+      .filter(_.relation.name.startsWith(transactionRelationPrefix))
+    txInterfaces.map { iface =>
+      val triggeredRules = programForEncoding.rules.diff(programForEncoding.violationRules)
+        .filter(r => r.body.exists(lit => lit.relation == iface.relation))
+      val indicators = triggeredRules.zipWithIndex.map { case (triggeredRule, i) =>
+        val const = indicatorConstForTransactionTriggerRelation(z3ctx, iface.relation, i)
+        val triggerLiteral = triggeredRule.body
+          .find(_.relation.name.startsWith(transactionRelationPrefix))
+          .getOrElse(throw new IllegalArgumentException(s"No transaction literal found in $triggeredRule"))
+        (const, triggerLiteral)
+      }
+      iface.relation -> indicators
+    }.toMap
+  }
+
+  private def bindTxInputs(traceId: String, step: Int, tx: Transaction): Seq[BoolExpr] = {
+    val indicators = symbolicTriggerIndicators.getOrElse(tx.relation, Set.empty)
+    if (indicators.isEmpty) {
+      throw new UnsupportedOperationException(s"Symbolic CEX blocking has no verifier trigger for ${tx.relation.name}")
+    }
+
+    val activeIndicator = z3ctx.mkOr(indicators.toSeq.map { case (indicator, _) =>
+      z3ctx.mkEq(renameForTraceStep(indicator, traceId, step), z3ctx.mkInt(1))
+    }: _*)
+
+    val fieldBindings = indicators.toSeq.flatMap { case (_, triggerLiteral) =>
+      triggerLiteral.fields.zip(tx.parameters).flatMap { case (field, value) =>
+        if (field.name == "_") None
+        else {
+          val variable = stepConst(traceId, step, s"i0_${field.name}", typeToSort(z3ctx, field._type))
+          Some(z3ctx.mkEq(variable, constantExpr(value)))
+        }
+      }
+    }
+
+    val msgSender = z3ctx.mkEq(
+      stepConst(traceId, step, "msgSender", z3ctx.getIntSort),
+      z3ctx.mkInt(tx.implicitParameters.msgSender))
+    val msgValue = z3ctx.mkEq(
+      stepConst(traceId, step, "msgValue", z3ctx.getIntSort),
+      z3ctx.mkInt(tx.implicitParameters.value))
+
+    activeIndicator +: (fieldBindings :+ msgSender :+ msgValue)
+  }
+
+  private def bindConstructorInputs(traceId: String, tx: Transaction): Seq[BoolExpr] = {
+    val fieldBindings = tx.relation.paramList.zip(tx.parameters).flatMap { case (field, value) =>
+      if (field.name == "_") None
+      else {
+        val variable = stepConst(traceId, 0, s"_${field.name}", typeToSort(z3ctx, field._type))
+        Some(z3ctx.mkEq(variable, constantExpr(value)))
+      }
+    }
+    val msgSender = z3ctx.mkEq(
+      stepConst(traceId, 0, "msgSender", z3ctx.getIntSort),
+      z3ctx.mkInt(tx.implicitParameters.msgSender))
+    val msgValue = z3ctx.mkEq(
+      stepConst(traceId, 0, "msgValue", z3ctx.getIntSort),
+      z3ctx.mkInt(tx.implicitParameters.value))
+    fieldBindings :+ msgSender :+ msgValue
+  }
+
+  private def symbolicPathConstraints(trace: EvaluatedTrace, traceId: String): Seq[BoolExpr] = {
+    val init = renameForTraceStep(symbolicTransitionSystem.getInit(), traceId, 0).asInstanceOf[BoolExpr]
+    val (constructorBindings, nonConstructorSteps) = trace.steps.headOption match {
+      case Some((tx, _)) if tx.relation.name == "constructor" =>
+        (bindConstructorInputs(traceId, tx), trace.steps.tail)
+      case _ =>
+        (Seq.empty[BoolExpr], trace.steps)
+    }
+    val transitions = nonConstructorSteps.zipWithIndex.flatMap { case ((tx, _), step) =>
+      val tr = renameForTraceStep(symbolicTransitionSystem.getTr(), traceId, step).asInstanceOf[BoolExpr]
+      tr +: bindTxInputs(traceId, step, tx)
+    }
+    (init +: constructorBindings) ++ transitions
+  }
+
+  private def constToInt(c: Constant): Int = c.name match {
+    case "true" | "1" => 1
+    case "false" | "0" => 0
+    case other => other.toInt
+  }
+
+  private def bindPredicateInputs(prefix: String, tx: Transaction, predicate: Predicate): Seq[BoolExpr] = {
+    val txBindings = predicate.context.tx.fields.zip(tx.parameters).flatMap { case (field, value) =>
+      if (field.name == "_") None
+      else Some(z3ctx.mkEq(paramToConst(z3ctx, field, prefix)._1, constantExpr(value)))
+    }
+
+    val msgSender = z3ctx.mkEq(
+      paramToConst(z3ctx, synthesis.Context.msgSender.fields.head, prefix)._1,
+      z3ctx.mkInt(tx.implicitParameters.msgSender))
+    val msgValue = z3ctx.mkEq(
+      paramToConst(z3ctx, synthesis.Context.msgValue.fields.head, prefix)._1,
+      z3ctx.mkInt(tx.implicitParameters.value))
+
+    txBindings :+ msgSender :+ msgValue
+  }
+
+  private def concreteScalarBindings(state: State, tx: Transaction, predicate: Predicate): Map[String, Int] = {
+    val txBindings = predicate.context.tx.fields.zip(tx.parameters).collect {
+      case (field, value) if field.name != "_" => field.name -> constToInt(value)
+    }.toMap
+    val implicitBindings = Map(
+      synthesis.Context.msgSender.fields.head.name -> tx.implicitParameters.msgSender,
+      synthesis.Context.msgValue.fields.head.name -> tx.implicitParameters.value)
+    val singletonBindings = predicate.context.bindingLiterals.collect {
+      case lit if lit.relation.isInstanceOf[SingletonRelation] && lit.fields.nonEmpty =>
+        lit.fields.head.name -> state.lookupSingleton(lit.relation.name)
+    }.toMap
+
+    txBindings ++ implicitBindings ++ singletonBindings
+  }
+
+  private def resolveConcreteInt(param: Parameter,
+                                 state: State,
+                                 scalars: Map[String, Int]): Int = param match {
+    case c: Constant => constToInt(c)
+    case Variable(_, name) => scalars.getOrElse(name, state.lookup(name))
+  }
+
+  private def concreteStateFacts(prefix: String,
+                                 state: State,
+                                 predicate: Predicate,
+                                 traceId: String,
+                                 step: Int,
+                                 tx: Transaction): Seq[BoolExpr] = {
+    val scalars = concreteScalarBindings(state, tx, predicate)
+    predicate.context.bindingLiterals.flatMap {
+      case lit@Literal(sr: SimpleRelation, _) =>
+        val indices = relationIndices(sr)
+        val (keyParams, valueParam) = interpreter.extractKeyValueVar(lit)
+        val keyValues = keyParams.map(p => resolveConcreteInt(p, state, scalars))
+        val concreteValue = state.lookup(sr, keyValues)
+
+        val arraySort = getSort(z3ctx, sr, indices).asInstanceOf[ArraySort[Sort, Sort]]
+        val arrayConst = stepConst(traceId, step, sr.name, arraySort).asInstanceOf[Expr[ArraySort[Sort, Sort]]]
+        val keyConsts = keyParams.zip(keyValues).map { case (p, value) =>
+          constantExpr(Constant(p._type, value.toString))
+        }.toArray
+        val keyExpr = mkTupleKey(z3ctx, arraySort.getDomain, keyConsts)
+        val valueExpr = constantExpr(Constant(valueParam._type, concreteValue.toString))
+        Seq(z3ctx.mkEq(
+          z3ctx.mkSelect(arrayConst, keyExpr.asInstanceOf[Expr[Sort]]),
+          valueExpr))
+
+      case lit if lit.relation.isInstanceOf[SingletonRelation] && lit.fields.nonEmpty =>
+        val value = state.lookupSingleton(lit.relation.name)
+        val sort = getSort(z3ctx, lit.relation, relationIndices(lit.relation))
+        val relationConst = stepConst(traceId, step, lit.relation.name, sort)
+        Seq(z3ctx.mkEq(relationConst, constantExpr(Constant(lit.fields.head._type, value.toString))))
+
+      case _ =>
+        Seq.empty
+    }.toSeq
+  }
+
+  private def predicateLiteralToConst(lit: Literal,
+                                      indices: List[Int],
+                                      prefix: String): BoolExpr = {
+    lit.relation match {
+      case sr: SimpleRelation =>
+        val keys = indices.map(i => lit.fields(i))
+        val valueIndices = lit.fields.indices.filterNot(i => indices.contains(i)).toList
+        val values = valueIndices.map(i => lit.fields(i))
+        val fieldNames = valueIndices.map(i => lit.relation.memberNames(i))
+
+        if (keys.nonEmpty && values.nonEmpty) {
+          val (valueConst, _) = fieldsToConst(z3ctx, lit.relation, values, fieldNames, prefix)
+          val sort = getSort(z3ctx, lit.relation, indices).asInstanceOf[ArraySort[Sort, Sort]]
+          val arrayConst = z3ctx.mkConst(sr.name, sort).asInstanceOf[Expr[ArraySort[Sort, Sort]]]
+          val keyConsts = keys.toArray.map(f => paramToConst(z3ctx, f, prefix)._1)
+          val keyExpr = mkTupleKey(z3ctx, sort.getDomain, keyConsts)
+          z3ctx.mkEq(
+            z3ctx.mkSelect(arrayConst, keyExpr.asInstanceOf[Expr[Sort]]),
+            valueConst)
+        } else {
+          literalToConst(z3ctx, lit, indices, prefix)
+        }
+
+      case _ =>
+        literalToConst(z3ctx, lit, indices, prefix)
+    }
+  }
+
+  private def symbolicPredicateEncoding(predicate: Predicate,
+                                        stateBefore: State,
+                                        tx: Transaction,
+                                        traceId: String,
+                                        step: Int,
+                                        predIdx: Int): SymbolicPredicateEncoding = {
+    val prefix = s"${safeZ3Name(traceId)}_t${step}_p$predIdx"
+    val inputBindings = bindPredicateInputs(prefix, tx, predicate)
+    val bindingExprs = predicate.context.bindingLiterals.map { lit =>
+      val expr = predicateLiteralToConst(lit, relationIndices(lit.relation), prefix)
+      renameForTraceStep(expr, traceId, step).asInstanceOf[BoolExpr]
+    }.toSeq
+    val functorExpr = functorToZ3(z3ctx, predicate.functor, prefix)
+    SymbolicPredicateEncoding(inputBindings ++ bindingExprs, functorExpr)
+  }
+
+  private def encodeConcreteTrace(trace: EvaluatedTrace): EncodedTrace = {
+    val evalResults = evaluatePredicates(trace)
+    EncodedTrace(Seq.empty, makeAcceptExpr(evalResults))
+  }
+
+  private def encodeSymbolicTrace(trace: EvaluatedTrace, traceId: String): EncodedTrace = {
+    val path = symbolicPathConstraints(trace, traceId)
+    val predicateFacts = mutable.ListBuffer.empty[BoolExpr]
+    val txAndStates = trace.iterateTxAndStateBefore.toSeq
+      .filterNot { case (_, tx) => tx.relation.name == "constructor" }
+    val accepts = txAndStates.zipWithIndex.map { case ((stateBefore, tx), step) =>
+      val preds = orderedPredicates.getOrElse(tx.relation, List.empty)
+      val boolVars = encodings.getOrElse(tx.relation, List.empty)
+      val assertions = preds.zipWithIndex.map { case (predicate, i) =>
+        val encoded = symbolicPredicateEncoding(predicate, stateBefore, tx, traceId, step, i)
+        predicateFacts ++= encoded.facts
+        z3ctx.mkImplies(boolVars(i), encoded.truth)
+      }
+      if (assertions.nonEmpty) z3ctx.mkAnd(assertions: _*) else z3ctx.mkTrue()
+    }
+    val acceptTrace = if (accepts.nonEmpty) z3ctx.mkAnd(accepts: _*) else z3ctx.mkTrue()
+    EncodedTrace(path ++ predicateFacts, acceptTrace)
+  }
+
+  private def encodeSafetyTrace(trace: EvaluatedTrace, traceId: String): EncodedTrace = {
+    encodingMode match {
+      case EncodingMode.Concrete => encodeConcreteTrace(trace)
+      case EncodingMode.SymbolicCexBlocking => encodeSymbolicTrace(trace, traceId)
+    }
+  }
+
+  private def blockTraceConstraint(encoded: EncodedTrace): BoolExpr =
+    z3ctx.mkNot(encoded.acceptTrace)
+
+  private def fixedSelectionConstraints(selection: Representation): Seq[BoolExpr] = {
+    encodings.toSeq.flatMap { case (rel, boolVars) =>
+      val selected = selection.getPredicates(rel)
+      val preds = orderedPredicates.getOrElse(rel, List.empty)
+      preds.zip(boolVars).map { case (predicate, boolVar) =>
+        if (selected.contains(predicate)) boolVar else z3ctx.mkNot(boolVar)
+      }
+    }
+  }
+
+  private def candidateBlocksAllSafetyTraces(selection: Representation,
+                                             traces: List[EvaluatedTrace],
+                                             rel: Relation): Boolean = {
+    if (encodingMode == EncodingMode.Concrete) return true
+
+    traces.zipWithIndex.forall { case (trace, i) =>
+      val encoded = encodeSafetyTrace(trace, s"validate_${safeZ3Name(rel.name)}_$i")
+      val solver = z3ctx.mkSolver()
+      val params = z3ctx.mkParams()
+      params.add("timeout", 10000)
+      params.add("smt.mbqi", true)
+      solver.setParameters(params)
+      encoded.pathConstraints.foreach(c => solver.add(c))
+      fixedSelectionConstraints(selection).foreach(c => solver.add(c))
+      solver.add(encoded.acceptTrace)
+      val status = solver.check()
+      status match {
+        case com.microsoft.z3.Status.UNSATISFIABLE => true
+        case com.microsoft.z3.Status.SATISFIABLE =>
+          println(s"[candidateValidation] rejected candidate for ${rel.name}: still accepts CEX trace $i")
+          false
+        case other =>
+          println(s"[candidateValidation] rejected candidate for ${rel.name}: validation returned $other on CEX trace $i")
+          false
+      }
+    }
   }
 
   def synthesize(sketch: Program,
@@ -146,11 +555,16 @@ case class InductiveSynthesis(
 
     val renamedDisambiguationTrace = {
       val strippedDisambiguationTraces = disambiguationTraces.map(stripConstructor)
-      strippedDisambiguationTraces.map(renameTxRelationInTrace)
+      strippedDisambiguationTraces.map(t => renameTxRelationInTrace(t))
     }
     val renamedSafetyTrace = {
-      val strippedSafetyTraces = evaluatedTraces.map(stripConstructor)
-      strippedSafetyTraces.map(renameTxRelationInTrace)
+      encodingMode match {
+        case EncodingMode.SymbolicCexBlocking =>
+          evaluatedTraces.map(t => renameTxRelationInTrace(t, keepConstructor = true))
+        case EncodingMode.Concrete =>
+          val strippedSafetyTraces = evaluatedTraces.map(stripConstructor)
+          strippedSafetyTraces.map(renameTxRelationInTrace(_))
+      }
     }
 
     // val renamedDisambiguationTrace = disambiguationTraces.map(renameTxRelationInTrace)
@@ -238,12 +652,15 @@ case class InductiveSynthesis(
           rel -> cached
         case None => {
           val solver = z3ctx.mkOptimize()
-          val traceConstraints = traces.map { t =>
-            val evalResults = evaluatePredicates(t)
-            makeConstraints(evalResults).asInstanceOf[Expr[BoolSort]]
+          val traceBlockingStart = System.currentTimeMillis()
+          val safetyEncodings = traces.zipWithIndex.map { case (t, i) =>
+            encodeSafetyTrace(t, s"cex_${rel.name}_$i")
           }
+          safetyEncodings.flatMap(_.pathConstraints).foreach(c => solver.Add(c))
+          val traceConstraints = safetyEncodings.map(blockTraceConstraint)
           val constraint = z3ctx.mkAnd(traceConstraints.toSeq: _*)
           solver.Add(constraint)
+          traceBlockingTimeMs += System.currentTimeMillis() - traceBlockingStart
 
           // Block all other relations
           val otherRelations = encodings.keySet - rel
@@ -272,7 +689,7 @@ case class InductiveSynthesis(
             }
             false
           }
-          val predsForRel = predicates.getOrElse(rel, Set.empty).toList
+          val predsForRel = orderedPredicates.getOrElse(rel, List.empty)
           val boolVarsForRel = encodings.getOrElse(rel, List.empty)
           val predsWithVars = predsForRel.zip(boolVarsForRel)
           // Candidate-vs-candidate: no two contradictory candidates can both be selected
@@ -301,7 +718,14 @@ case class InductiveSynthesis(
 
           var selections = List.empty[Representation]
           var found = 0
-          while (found < maxSolutions && solver.Check() == com.microsoft.z3.Status.SATISFIABLE) {
+          def timedCheck(): com.microsoft.z3.Status = {
+            val solverStart = System.currentTimeMillis()
+            val status = solver.Check()
+            inductiveSolverTimeMs += System.currentTimeMillis() - solverStart
+            status
+          }
+          var solverStatus = timedCheck()
+          while (found < maxSolutions && solverStatus == com.microsoft.z3.Status.SATISFIABLE) {
             val model = solver.getModel
             val selection = interpretModel(model)
 
@@ -314,8 +738,11 @@ case class InductiveSynthesis(
             }.toSeq
             solver.Add(z3ctx.mkOr(block: _*))
 
-            selections :+= selection
-            found += 1
+            if (candidateBlocksAllSafetyTraces(selection, traces, rel)) {
+              selections :+= selection
+              found += 1
+            }
+            if (found < maxSolutions) solverStatus = timedCheck()
           }
           synthesisCache.update(traces,selections)
           rel -> selections
@@ -325,8 +752,13 @@ case class InductiveSynthesis(
 
     // Disambiguate for each relation after collecting all solutions
     val bestSelections: Map[Relation, Set[Predicate]] = allSolutions.map { case (rel, candidates) =>
-      val best = disambiguate(disambiguationTraces, candidates)
-      rel -> best.getPredicates(rel)
+      if (candidates.isEmpty) {
+        println(s"[synthesizePerRelation] No validated candidates for relation ${rel.name}")
+        rel -> Set.empty[Predicate]
+      } else {
+        val best = disambiguate(disambiguationTraces, candidates)
+        rel -> best.getPredicates(rel)
+      }
     }
 
     // Combine best selections for all relations, defaulting to empty set for missing keys
@@ -553,7 +985,7 @@ case class InductiveSynthesis(
     // val penalty = z3ctx.mkMul(z3ctx.mkInt(1), numSelectedPredicates).asInstanceOf[IntExpr]
     val penaltyTerms = allBoolVars.map { b =>
       val boolExprToPredicate: Map[BoolExpr, Predicate] = encodings.flatMap { case (rel, boolVars) =>
-        val preds = predicates(rel).toList
+        val preds = orderedPredicates(rel)
         boolVars.zip(preds)
       }.toMap
       val predicate = boolExprToPredicate(b)
@@ -717,7 +1149,7 @@ case class InductiveSynthesis(
     // Create blocking clauses for each minimal subset
     val blockClauses = minimalBlocks.map { subset =>
       val vars = subset.flatMap { case (rel, p) =>
-        val idx = predicates(rel).toList.indexOf(p)
+        val idx = orderedPredicates(rel).indexOf(p)
         if (idx >= 0) Some(encodings(rel)(idx)) else None
       }
       // At least one must be false
@@ -747,7 +1179,7 @@ case class InductiveSynthesis(
 
     // Get the corresponding BoolExpr variables for these predicates
     val falseVars = alwaysFalsePredicates.flatMap { case (rel, p) =>
-      val idx = predicates(rel).toList.indexOf(p)
+      val idx = orderedPredicates(rel).indexOf(p)
       if (idx >= 0) Some(encodings(rel)(idx)) else None
     }
 
@@ -774,8 +1206,8 @@ case class InductiveSynthesis(
 
     // Get corresponding BoolExpr variables for these pairs
     val falsePairVars = alwaysFalsePairs.flatMap { case (rel, p1, p2) =>
-      val idx1 = predicates(rel).toList.indexOf(p1)
-      val idx2 = predicates(rel).toList.indexOf(p2)
+      val idx1 = orderedPredicates(rel).indexOf(p1)
+      val idx2 = orderedPredicates(rel).indexOf(p2)
       if (idx1 >= 0 && idx2 >= 0) Some((encodings(rel)(idx1), encodings(rel)(idx2))) else None
     }
 

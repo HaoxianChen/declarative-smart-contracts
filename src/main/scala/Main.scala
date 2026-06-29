@@ -1,6 +1,6 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
 import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner, SolidityTranslator, Translator}
-import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
+import synthesis.{BoundedModelChecker, Cegis, EncodingMode, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
 import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames, combineSplitFilesToFile, parseProgramFromSplitDir, parseAllProgramsFromSplitParent}
 import verification.{Prove, TransitionSystem, Verifier}
@@ -247,7 +247,7 @@ object Main extends App {
     println(s"[synthesis] candidate predicates: ${candidates.size}")
 
     /** Synthesize by adding validation condition */
-    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext, program)
     val testTrace = EvaluatedTrace.testTrace1(program)
     val synthesisOutput = synthesizer.synthesize(program, List(testTrace),
       maxSolutions = 1, disambiguationTraces = Set())
@@ -333,15 +333,41 @@ object Main extends App {
   else if (args(0) == "synthesis-all") {
     val test = false
     val synthesisBenchmarkDir = "synthesis-benchmark"
-    val datalogOutDir = "synthesis-output"
+    case class SynthesisAllOptions(
+      benchmarkNames: List[String] = Nil,
+      outDir: String = "synthesis-output",
+      encodingMode: EncodingMode = EncodingMode.Concrete,
+      traceCount: Int = 500,
+      seed: Long = 0L
+    )
+
+    def parseSynthesisAllArgs(raw: List[String], opts: SynthesisAllOptions = SynthesisAllOptions()): SynthesisAllOptions = raw match {
+      case Nil => opts
+      case "--encoding-mode" :: value :: tail =>
+        parseSynthesisAllArgs(tail, opts.copy(encodingMode = EncodingMode.fromString(value)))
+      case "--trace-count" :: value :: tail =>
+        parseSynthesisAllArgs(tail, opts.copy(traceCount = value.toInt))
+      case "--seed" :: value :: tail =>
+        parseSynthesisAllArgs(tail, opts.copy(seed = value.toLong))
+      case "--out-dir" :: value :: tail =>
+        parseSynthesisAllArgs(tail, opts.copy(outDir = value))
+      case unknown :: _ if unknown.startsWith("--") =>
+        println(s"Unknown option for synthesis-all: $unknown")
+        exit(1)
+      case name :: tail =>
+        parseSynthesisAllArgs(tail, opts.copy(benchmarkNames = opts.benchmarkNames :+ name))
+    }
+
+    val opts = parseSynthesisAllArgs(args.drop(1).toList)
+    val datalogOutDir = opts.outDir
     val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
     createDirectory(datalogOutDir)
     if (!isFileExists(statsFile)) {
-      Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
+      Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,encoding_mode,seed,disambig_trace_count,predicate_count,cex_trace_count,avg_trace_len,trace_blocking_time_s,inductive_solver_time_s,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound,result\n", statsFile)
     }
 
     // Extra CLI args override synthesisSplitDirs: java -jar ... synthesis-all name1 name2 ...
-    val cliDirs: List[String] = args.drop(1).toList
+    val cliDirs: List[String] = opts.benchmarkNames
     // parse all split-program subdirectories under parent into (name, Program)
     val dirsToRun = if (cliDirs.nonEmpty) cliDirs else synthesisSplitDirs
     val programsByName: Seq[(String, Program)] = if (dirsToRun.nonEmpty) {
@@ -372,7 +398,12 @@ object Main extends App {
 
         val extFunctionsPathForCegis = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
         val extFunctionsForCegis = if (isFileExists(extFunctionsPathForCegis)) Misc.fileToString(extFunctionsPathForCegis) else ""
-        val cegis = Cegis(sketch, extFunctionsForCegis)
+        val cegis = Cegis(
+          sketch,
+          externalFunctions = extFunctionsForCegis,
+          encodingMode = opts.encodingMode,
+          disambiguationTraceCount = opts.traceCount,
+          seed = opts.seed)
         val (program, stat) = cegis.run()
 
         /** here, only write transaction rules to file. */
@@ -397,7 +428,10 @@ object Main extends App {
 
         val synthesisTimeS = stat.synthesisTimeMs / 1000.0
         val bmcTimeS = stat.bmcTimeMs / 1000.0
-        val statsLine = s"${displayName},${relationCount},${interfaceCount},${rulesMinusInterfaceAndViolation},${violationRules},${synthesisTimeS},${bmcTimeS},${stat.cegisIterations},${stat.bmcBound}\n"
+        val traceBlockingTimeS = stat.traceBlockingTimeMs / 1000.0
+        val inductiveSolverTimeS = stat.inductiveSolverTimeMs / 1000.0
+        val sanitizedResult = stat.result.replace(",", ";").replace("\n", " ")
+        val statsLine = s"${displayName},${relationCount},${interfaceCount},${rulesMinusInterfaceAndViolation},${violationRules},${stat.encodingMode},${stat.seed},${stat.disambiguationTraceCount},${stat.predicateCount},${stat.cexTraceCount},${stat.avgTraceLen},${traceBlockingTimeS},${inductiveSolverTimeS},${synthesisTimeS},${bmcTimeS},${stat.cegisIterations},${stat.bmcBound},${sanitizedResult}\n"
         if (!test) Misc.appendToFile(statsLine, statsFile)
       } else {
         println(s"Output for ${displayName} exists, skipping.")

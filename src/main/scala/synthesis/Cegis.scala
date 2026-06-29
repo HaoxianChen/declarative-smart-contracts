@@ -9,10 +9,25 @@ case class SynthesisStat(
   synthesisTimeMs: Long,
   cegisIterations: Int,
   bmcTimeMs: Long,
-  bmcBound: Int
+  bmcBound: Int,
+  encodingMode: String = EncodingMode.Concrete.label,
+  seed: Long = 0L,
+  disambiguationTraceCount: Int = 0,
+  predicateCount: Int = 0,
+  cexTraceCount: Int = 0,
+  avgTraceLen: Double = 0.0,
+  traceBlockingTimeMs: Long = 0L,
+  inductiveSolverTimeMs: Long = 0L,
+  result: String = "unknown"
 )
 
-case class Cegis(sketch: Program, externalFunctions: String = "") {
+case class Cegis(
+  sketch: Program,
+  externalFunctions: String = "",
+  encodingMode: EncodingMode = EncodingMode.Concrete,
+  disambiguationTraceCount: Int = 500,
+  seed: Long = 0L
+) {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter(Some(sketch), externalFunctions)
@@ -22,8 +37,8 @@ case class Cegis(sketch: Program, externalFunctions: String = "") {
 //     numTraces = 1000, txsPerTrace = 5)
 
   val disambiguationTraces: Set[EvaluatedTrace] = {
-    val disambiguator = Disambiguator(sketch, interpreter, txDefs)
-    disambiguator.makeTracesHeuristic(500)
+    val disambiguator = Disambiguator(sketch, interpreter, txDefs, seed)
+    disambiguator.makeTracesHeuristic(disambiguationTraceCount)
   }
 
   /**  This is a composed object that :
@@ -44,10 +59,11 @@ case class Cegis(sketch: Program, externalFunctions: String = "") {
     val enumerator = PredicateEnumerator(interpreterContext)
     val candidates = enumerator.enumeratePredicates(program)
 
-    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    val bootstrapSynthesizer = InductiveSynthesis(candidates, interpreterContext, sketch, encodingMode)
 
     val predicatesFromTxRules = enumerator.extractPredicateFromTxProperties(program)
-    val augmented = synthesizer.augmentSketchWithPredicates(program, predicatesFromTxRules)
+    val augmented = bootstrapSynthesizer.augmentSketchWithPredicates(program, predicatesFromTxRules)
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext, augmented, encodingMode)
     println(predicatesFromTxRules)
     program = augmented
 
@@ -98,7 +114,30 @@ case class Cegis(sketch: Program, externalFunctions: String = "") {
       reason = "maxiters"
     }
     val totalTime = System.currentTimeMillis() - startTime
-    (program, SynthesisStat(totalTime, iter, bmcTime, maxBound))
+    val allTraceLengths = traces.map(_.length) ++ disambiguationTraces.map(_.length)
+    val avgTraceLen =
+      if (allTraceLengths.nonEmpty) allTraceLengths.sum.toDouble / allTraceLengths.size.toDouble
+      else 0.0
+    val finalResult = reason match {
+      case "sat" => "success"
+      case "" => "unknown"
+      case other => other
+    }
+    (program, SynthesisStat(
+      synthesisTimeMs = totalTime,
+      cegisIterations = iter,
+      bmcTimeMs = bmcTime,
+      bmcBound = maxBound,
+      encodingMode = encodingMode.label,
+      seed = seed,
+      disambiguationTraceCount = disambiguationTraces.size,
+      predicateCount = candidates.values.map(_.size).sum,
+      cexTraceCount = traces.size,
+      avgTraceLen = avgTraceLen,
+      traceBlockingTimeMs = synthesizer.traceBlockingTimeMs,
+      inductiveSolverTimeMs = synthesizer.inductiveSolverTimeMs,
+      result = finalResult
+    ))
   }
 
   private def extractTransactionDefinition(program: Program): Map[String, SolidityStatement] = {

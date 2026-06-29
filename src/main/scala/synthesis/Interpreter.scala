@@ -33,7 +33,7 @@ case class State() {
     val variableName = variable.name
     variable._type match {
       case _: NumberType => state(variableName) = value.name.toInt
-      case _: BooleanType => state(variableName) = if (value.name == "1") 1 else 0
+      case _: BooleanType => state(variableName) = constantToInt(value)
       case _: SymbolType => state(variableName) = value.name.toInt
       case _ => throw new IllegalArgumentException(s"Unsupported variable type: ${variable._type}")
     }
@@ -62,8 +62,13 @@ case class State() {
   }
 
   // Tuple API
-  def updateTuple(name: String, values: Vector[Int]): Unit = tuples(name) = values
+  def updateTuple(name: String, values: Vector[Int]): Unit = {
+    tuples(name) = values
+    if (values.size == 1) state(name) = values.head
+  }
   def lookupTuple(name: String): Vector[Int] = tuples.getOrElse(name, Vector())
+  def lookupSingleton(name: String): Int =
+    state.get(name).orElse(tuples.get(name).flatMap(_.headOption)).getOrElse(0)
 
   /** Apply bindings for the duration of `thunk`, then restore previous state. */
   def withTemporaryBindings[R](bindings: Seq[State.Binding])(thunk: => R): R = {
@@ -118,11 +123,13 @@ case class State() {
   private def constantToInt(value: Constant): Int = value.name match {
     case "1" => 1
     case "0" => 0
+    case "true" => 1
+    case "false" => 0
     case s   => s.toInt
   }
 
   private def resolveParamToInt(p: Parameter): Int = p match {
-    case Constant(_, name)   => name.toInt
+    case c: Constant         => constantToInt(c)
     case v: Variable         => lookup(v.name)
   }
 
@@ -205,7 +212,7 @@ case class Interpreter(interpreterContext: InterpreterContext) {
     val singletonBindings: Set[State.Binding] = context.bindingLiterals.collect {
       case lit if lit.relation.isInstanceOf[SingletonRelation] =>
         val variable = lit.fields.head.asInstanceOf[Variable]
-        val value = state.lookup(lit.relation.name)
+        val value = state.lookupSingleton(lit.relation.name)
         val valueConst = Constant(variable._type, value.toString)
         State.Binding.Scalar(variable, valueConst)
     }
@@ -304,7 +311,11 @@ case class Interpreter(interpreterContext: InterpreterContext) {
       case _:SymbolType | _:NumberType => name.toInt
       case AnyType() => ???
       case UnitType() => ???
-      case BooleanType() => if (name.toBoolean) 1 else 0
+      case BooleanType() => name match {
+        case "true" | "1" => 1
+        case "false" | "0" => 0
+        case other => throw new IllegalArgumentException(s"Invalid bool constant: $other")
+      }
       case compoundType: CompoundType => ???
     }
     case Variable(_type, name) => state.lookup(name)
