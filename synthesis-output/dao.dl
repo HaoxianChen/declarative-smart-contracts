@@ -1,0 +1,4 @@
+addMember(p) :- recv_addMember(p),owner(o),msgSender(s),o==s.
+vote(id,p) :- recv_vote(id,p),0!=quorum_n,id0==id,quorum(quorum_n),proposalExists(id0).
+execute(id) :- executionDone(id,b_0),votes(id,n_2),id0_1==id,b_0!=true,n_2>=q_2,proposalExists(id0_1),recv_execute(id),quorum(q_2).
+propose(id) :- recv_propose(id).

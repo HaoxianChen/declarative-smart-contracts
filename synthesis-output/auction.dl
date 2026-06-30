@@ -1,0 +1,3 @@
+endAuction() :- b_1!=true,recv_endAuction(),owner(o_0),o_0==s_0,auctionEnded(b_1),msgSender(s_0).
+bid(p,n) :- auctionEnded(b_0),highestBid(m_1),n>m_1,recv_bid(p,n),b_0!=true.
+withdraw(p,n) :- auctionEnded_b==false,b==true,auctionEnded(b),auctionEnded(auctionEnded_b),recv_withdraw(p,n).

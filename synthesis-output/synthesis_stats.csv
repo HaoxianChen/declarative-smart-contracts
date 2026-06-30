@@ -30,3 +30,7 @@ erc20capped.dl,25,9,31,8,12.608,2.691,11,5,,partial(transfer-wrong-address;trans
 uni.dl,21,9,25,7,2.687,0.24,2,5,,partial(transfer-no-balance-guard;transferFrom-supply-check)
 aave.dl,24,9,29,7,3.19,0.311,2,5,,partial(transfer-no-balance-guard;transferFrom-supply-check)
 
+aave.dl,24,9,29,7,6.724,0.673,2,5
+auction.dl,9,7,4,6,1.776,1.412,1,5
+comp.dl,21,8,25,7,18.876,6.259,9,5
+dai.dl,18,10,12,6,37.051,11.798,19,5
