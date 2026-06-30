@@ -116,18 +116,6 @@ contract Matic {
   function updateBalanceOfOnIncrementTotalOut_r26(address p,int o) private    {
       balanceOf[p].n -= o;
   }
-  function updateTransferFromOnInsertRecv_transferFrom_r1(address o,address r,address s,int n) private   returns (bool) {
-      bool b = paused.b;
-      int balanceOf_x1_2 = balanceOf[o].n;
-      int allowance_x2_1 = allowance[o][s].n;
-      if(b!=true && n>=0 && n<=allowance_x2_1 && n<=balanceOf_x1_2) {
-        updateSpentTotalOnInsertTransferFrom_r20(o,s,n);
-        updateTransferOnInsertTransferFrom_r25(o,r,n);
-        emit TransferFrom(o,r,s,n);
-        return true;
-      }
-      return false;
-  }
   function updateBurnOnInsertRecv_burn_r32(address p,int n) private   returns (bool) {
       address s = msg.sender;
       address o = owner.p;
@@ -151,6 +139,18 @@ contract Matic {
   function updateTotalOutOnInsertTransfer_r33(address p,int n) private    {
       int delta0 = int(n);
       updateBalanceOfOnIncrementTotalOut_r26(p,delta0);
+  }
+  function updateTransferFromOnInsertRecv_transferFrom_r1(address o,address r,address s,int n) private   returns (bool) {
+      bool b = paused.b;
+      int balanceOf_x1_2 = balanceOf[o].n;
+      int allowance_x2_1 = allowance[o][s].n;
+      if(b!=true && n>=0 && n<allowance_x2_1 && n<balanceOf_x1_2) {
+        updateSpentTotalOnInsertTransferFrom_r20(o,s,n);
+        updateTransferOnInsertTransferFrom_r25(o,r,n);
+        emit TransferFrom(o,r,s,n);
+        return true;
+      }
+      return false;
   }
   function updatePauseOnInsertRecv_pause_r4() private   returns (bool) {
       updatePausedOnInsertPause_r5();

@@ -1,4 +1,4 @@
-invest(p,n) :- recv_invest(p,n),closed(closed_b_1),n>0,closed_b_1==false.
 refund(p,n) :- recv_refund(p,n),closed(b_0),target(t_1),n<balanceOf_x1,balanceOf(p,balanceOf_x1),r_1<t_1,raised(r_1),b_0!=false.
-withdraw(p,r) :- beneficiary(b_0),recv_withdraw(p,r),p==b_0,target(t_1),r_1>=t_1,raised(r_1).
+invest(p,n) :- recv_invest(p,n),closed(closed_b_1),n>=0,closed_b_1==false.
 close() :- recv_close(),owner(o),msgSender(s),o==s.
+withdraw(p,r) :- beneficiary(b_1),recv_withdraw(p,r),r_p_0>=t_0,p==b_1,target(t_0),raised(r_p_0).

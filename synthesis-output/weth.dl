@@ -1,0 +1,5 @@
+deposit(p,n) :- recv_deposit(p,n),n>0.
+withdraw(p,n) :- n>0,n<=balanceOf_x1,p==s_1,recv_withdraw(p,n),balanceOf(p,balanceOf_x1),msgSender(s_1).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n),allowance(o,s,allowance_x2),n<=allowance_x2.
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.
