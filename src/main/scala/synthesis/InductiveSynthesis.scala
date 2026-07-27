@@ -133,7 +133,8 @@ case class InductiveSynthesis(
   def synthesize(sketch: Program,
                  evaluatedTraces: List[EvaluatedTrace],
                  maxSolutions: Int,
-                 disambiguationTraces: Set[EvaluatedTrace]): Program = {
+                 disambiguationTraces: Set[EvaluatedTrace],
+                 witnessTraces: List[EvaluatedTrace] = List()): Program = {
     // Remove the first constructor transaction from each trace if present
     def stripConstructor(trace: EvaluatedTrace): EvaluatedTrace = {
       val steps = trace.steps
@@ -166,8 +167,9 @@ case class InductiveSynthesis(
       }.toMap
     }
 
+    val renamedWitnessTraces = witnessTraces.map(stripConstructor).map(renameTxRelationInTrace)
     val selection = synthesizePerRelation(renamedSafetyTrace, maxSolutions,
-      renamedDisambiguationTrace, existingFunctorsPerRel)
+      renamedDisambiguationTrace, existingFunctorsPerRel, renamedWitnessTraces)
     makeProgram(sketch, selection)
   }
 
@@ -224,7 +226,8 @@ case class InductiveSynthesis(
   private def synthesizePerRelation(evaluatedTraces: List[EvaluatedTrace],
                                        maxSolutions: Int,
                                        disambiguationTraces: Set[EvaluatedTrace],
-                                       existingFunctorsPerRel: Map[Relation, Set[Functor]] = Map.empty
+                                       existingFunctorsPerRel: Map[Relation, Set[Functor]] = Map.empty,
+                                       witnessTraces: List[EvaluatedTrace] = List()
                                      ): Representation = {
     // Group traces by last transaction relation
     val grouped: Map[Relation, List[EvaluatedTrace]] =
@@ -233,10 +236,10 @@ case class InductiveSynthesis(
     // For each relation, synthesize and disambiguate
     val allSolutions: Map[Relation, List[Representation]] = grouped.map { case (rel, traces) =>
       synthesisCache.get(traces) match {
-        case Some(cached) =>
+        case Some(cached) if witnessTraces.isEmpty =>
           println(s"[synthesizePerRelation] Using cached synthesis for relation ${rel.name}")
           rel -> cached
-        case None => {
+        case _ => {
           val solver = z3ctx.mkOptimize()
           val traceConstraints = traces.map { t =>
             val evalResults = evaluatePredicates(t)
@@ -293,6 +296,23 @@ case class InductiveSynthesis(
             if areContradictory(pi.functor, ef)
           } {
             solver.Add(z3ctx.mkNot(vi))
+          }
+
+          // Hard witness constraints: any predicate that evaluates to false on a witness step
+          // for this relation is excluded — it would block a trace the contract must allow.
+          if (witnessTraces.nonEmpty) {
+            for (wt <- witnessTraces) {
+              for ((wState, wTx) <- EvaluatedTrace.shiftTrace(wt) if wTx.relation == rel) {
+                var blocked = 0
+                for ((pred, boolVar) <- predsForRel.zip(boolVarsForRel)) {
+                  if (!interpreter.evaluate(wState, wTx, pred)) {
+                    solver.Add(z3ctx.mkNot(boolVar))
+                    blocked += 1
+                  }
+                }
+                println(s"[Witness] blocked $blocked / ${predsForRel.size} predicates for ${rel.name}")
+              }
+            }
           }
 
           // Maximize permissiveness for this relation

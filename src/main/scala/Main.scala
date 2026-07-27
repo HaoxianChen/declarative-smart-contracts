@@ -372,7 +372,8 @@ object Main extends App {
 
         val extFunctionsPathForCegis = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
         val extFunctionsForCegis = if (isFileExists(extFunctionsPathForCegis)) Misc.fileToString(extFunctionsPathForCegis) else ""
-        val cegis = Cegis(sketch, extFunctionsForCegis)
+        val witnessPathForCegis = Paths.get(synthesisBenchmarkDir, name, "witness.dl").toString
+        val cegis = Cegis(sketch, extFunctionsForCegis, witnessPathForCegis)
         val (program, stat) = cegis.run()
 
         /** here, only write transaction rules to file. */

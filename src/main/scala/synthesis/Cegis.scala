@@ -12,18 +12,31 @@ case class SynthesisStat(
   bmcBound: Int
 )
 
-case class Cegis(sketch: Program, externalFunctions: String = "") {
+case class Cegis(sketch: Program, externalFunctions: String = "", witnessFilePath: String = "") {
 
   private val txDefs: Map[String, SolidityStatement] = extractTransactionDefinition(sketch)
   val interpreter = SolidityInterpreter(Some(sketch), externalFunctions)
-  // val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTraces(sketch, interpreter,
-  //   numTraces = 1000, txsPerTrace = 5)
-//   val disambiguationTraces: Set[EvaluatedTrace] = makeDisambiguationTracesHeuristic(sketch, interpreter,
-//     numTraces = 1000, txsPerTrace = 5)
 
   val disambiguationTraces: Set[EvaluatedTrace] = {
     val disambiguator = Disambiguator(sketch, interpreter, txDefs)
     disambiguator.makeTracesHeuristic(500)
+  }
+
+  /** Positive traces that MUST succeed, used as hard Z3 constraints to prevent degenerate guards.
+   *  Loaded from `witnessFilePath` if provided and the file exists; empty otherwise. */
+  val witnessTraces: List[EvaluatedTrace] = {
+    if (witnessFilePath.nonEmpty) {
+      val parsed = WitnessParser.parse(witnessFilePath, sketch)
+      if (parsed.nonEmpty) {
+        println(s"[CEGIS] Loaded ${parsed.size} witness trace(s) from $witnessFilePath")
+        parsed.map(t => interpreter.interpret(txDefs, t))
+      } else {
+        println(s"[CEGIS] No witness traces found in $witnessFilePath")
+        List.empty
+      }
+    } else {
+      List.empty
+    }
   }
 
   /**  This is a composed object that :
@@ -76,16 +89,14 @@ case class Cegis(sketch: Program, externalFunctions: String = "") {
             println(s"[CEGIS] Counterexample trace found: $trace")
 
             val evaluatedTrace = interpreter.interpret(txDefs, trace)
-
-            traces :+= evaluatedTrace
+            val candidateTraces = traces :+ evaluatedTrace
             println("[CEGIS] Running inductive synthesis to block the counterexample...")
-            val newProgram = synthesizer.synthesize(augmented, traces, maxSolutionsPerStep, disambiguationTraces)
+            val newProgram = synthesizer.synthesize(augmented, candidateTraces, maxSolutionsPerStep, disambiguationTraces, witnessTraces)
 
             if (newProgram == program) {
-              println("[CEGIS] Synthesizer produced no change. Stopping.")
-              finished = true
-              reason = "nochange"
+              println("[CEGIS] Synthesizer produced no change. Skipping trace and continuing.")
             } else {
+              traces = candidateTraces
               println("[CEGIS] Program updated by synthesizer. Continuing next iteration.")
               program = newProgram
               iter += 1
