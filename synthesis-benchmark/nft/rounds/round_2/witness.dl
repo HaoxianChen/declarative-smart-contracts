@@ -1,0 +1,4 @@
+// Round 2 witness: token owner must be able to transfer their token.
+constructor
+mint 1 42 | 0 0
+transfer 1 2 42 | 1 0

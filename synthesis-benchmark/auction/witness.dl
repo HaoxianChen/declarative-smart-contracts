@@ -1,0 +1,13 @@
+// Witness traces for auction (2 interactive rounds)
+// Round 1: a bidder must be able to withdraw after the auction ends
+constructor 1
+bid 2 100 | 2 0
+endAuction | 0 0
+withdraw 2 100 | 2 0
+---
+// Round 2: second bidder displaces first; first bidder withdraws losing bid
+constructor 1
+bid 2 50 | 2 0
+bid 3 100 | 3 0
+endAuction | 0 0
+withdraw 2 50 | 2 0

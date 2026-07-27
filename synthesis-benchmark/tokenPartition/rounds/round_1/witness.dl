@@ -1,0 +1,5 @@
+// Round 1 witness: user shows that a non-zero transfer by the holder should be allowed.
+// Without this trace, the synthesizer produces transferByPartition with guard 0==n (only allows zero amounts).
+constructor
+issueByPartition 1 0 5
+transferByPartition 1 2 0 3 | 1 0

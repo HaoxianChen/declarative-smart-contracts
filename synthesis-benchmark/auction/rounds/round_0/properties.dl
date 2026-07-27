@@ -1,0 +1,7 @@
+// Lean starting specification (round 0) — same as current properties.dl
+negativeBalance(p, n) :- balance(p, n), n < 0, p != 0.
+invalidTx() :- recv_bid(_, n), highestBid(m), n <= m.
+invalidTx() :- recv_bid(_, _), auctionEnded(b), b == true.
+invalidTx() :- recv_withdraw(_, _), auctionEnded(b), b != true.
+invalidTx() :- recv_endAuction(), auctionEnded(b), b == true.
+invalidTx() :- recv_endAuction(), owner(o), msgSender(s), o != s.

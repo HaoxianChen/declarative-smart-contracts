@@ -1,0 +1,10 @@
+// Witness traces for tokenPartition (2 interactive rounds)
+// Round 1: non-zero transfer by holder must be allowed
+constructor
+issueByPartition 1 0 5
+transferByPartition 1 2 0 3 | 1 0
+---
+// Round 2: redeeming the full balance must be allowed
+constructor
+issueByPartition 1 0 10
+redeemByPartition 1 0 10 | 0 0

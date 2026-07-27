@@ -1,0 +1,5 @@
+// Round 2 witness: user shows that redeeming the full balance should be allowed.
+// Without this trace, the synthesizer blocks redeemByPartition with guard 0==n.
+constructor
+issueByPartition 1 0 10
+redeemByPartition 1 0 10 | 0 0

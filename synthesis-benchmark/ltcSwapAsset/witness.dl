@@ -1,0 +1,20 @@
+// Witness traces for ltcSwapAsset (4 interactive rounds)
+// Round 1: positive-amount mint must be allowed
+constructor
+mint 1 5 | 0 0
+---
+// Round 2: transfer up to full balance must be allowed
+constructor
+mint 1 10 | 0 0
+transfer 1 2 10 | 1 0
+---
+// Round 3: burn up to full balance must be allowed
+constructor
+mint 1 10 | 0 0
+burn 1 10 | 0 0
+---
+// Round 4: transferFrom up to allowance must be allowed
+constructor
+mint 1 10 | 0 0
+increaseAllowance 1 2 5 | 1 0
+transferFrom 1 3 1 5 | 2 0

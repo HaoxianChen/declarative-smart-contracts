@@ -1,0 +1,20 @@
+// Witness traces for nft (4 interactive rounds)
+// Round 1: owner must be able to mint a token
+constructor
+mint 1 42 | 0 0
+---
+// Round 2: token owner must be able to transfer their token
+constructor
+mint 1 42 | 0 0
+transfer 1 2 42 | 1 0
+---
+// Round 3: approved spender must be able to call transferFrom
+constructor
+mint 1 42 | 0 0
+approve 1 3 42 | 1 0
+transferFrom 1 2 42 | 3 0
+---
+// Round 4: token owner must be able to burn their token
+constructor
+mint 1 42 | 0 0
+burn 42 | 1 0

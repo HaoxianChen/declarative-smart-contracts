@@ -1,0 +1,4 @@
+// Round 1 witness: owner must be able to mint a token.
+// Without this, synthesizer produces mint guard totalMinted_n<0 (never true), blocking all mints.
+constructor
+mint 1 42 | 0 0
