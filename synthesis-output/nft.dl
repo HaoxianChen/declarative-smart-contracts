@@ -1,0 +1,5 @@
+transferFrom(from,to,tokenId) :- recv_transferFrom(from,to,tokenId),approved(tokenId,a),msgSender(s),a==s.
+approve(o,spender,tokenId) :- recv_approve(spender,tokenId),ownerOf(tokenId,o),msgSender(s),o==s.
+burn(tokenId) :- recv_burn(tokenId),ownerOf(tokenId,o),msgSender(s),o==s.
+transfer(from,to,tokenId) :- recv_transfer(from,to,tokenId),ownerOf(tokenId,o),msgSender(s),o==s.
+mint(to,tokenId) :- msgSender(s),totalMinted(totalMinted_n),totalMinted_n<0,o==s,owner(o),recv_mint(to,tokenId).
