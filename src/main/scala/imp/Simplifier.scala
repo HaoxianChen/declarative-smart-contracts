@@ -4,11 +4,28 @@ import datalog.Arithmetic
 
 class Simplifier {
   def simplify(statement: Statement): Statement = statement match {
-    case Seq(a, b) => {
-      if (a.isInstanceOf[Empty]) simplify(b)
-      else if (b.isInstanceOf[Empty]) simplify(a)
-      else Seq(simplify(a),simplify(b))
-    }
+    case Seq(a, b) =>
+      // Helper to flatten nested Seq into a list
+      def flattenSeq(s: Statement): List[Statement] = s match {
+        case Seq(x, y) => flattenSeq(x) ++ flattenSeq(y)
+        case other => List(other)
+      }
+      // Flatten, simplify each, and keep up to first Return
+      val stmts = flattenSeq(Seq(a, b)).map(simplify)
+      val (beforeReturn, afterReturn) = stmts.span {
+        case _: Return => false
+        case _ => true
+      }
+      val result =
+        if (afterReturn.isEmpty) beforeReturn
+        else {
+          beforeReturn ++ afterReturn.take(1)
+        } // keep only the first Return
+      result match {
+        case Nil => Empty()
+        case single :: Nil => single
+        case _ => result.reduceLeft(Seq(_, _))
+      }
     case If(condition, _statement) => condition match {
         case True() => simplify(_statement)
         case False() => Empty()
@@ -16,6 +33,13 @@ class Simplifier {
         case Match(a, b) => if (a==b) simplify(_statement) else If(condition, simplify(_statement))
         case _ => If(condition, simplify(_statement))
       }
+    case Require(condition, _) => condition match {
+      case True() => Empty()
+      case False() => Revert("False.")
+      case Unequal(a, b) => if (a==b) Revert("False.") else statement
+      case Match(a, b) => if (a==b) Empty() else statement
+      case _ => statement
+    }
     case _on: OnStatement => _on match {
       case OnInsert(literal, updateTarget, _statement, ruleId) =>
         OnInsert(literal, updateTarget, simplify(_statement), ruleId)
@@ -36,6 +60,7 @@ class Simplifier {
       case DeclFunction(name, params, returnType, stmt, metaData) => {
         DeclFunction(name, params, returnType, simplify(stmt), metaData)
       }
+      case DeclContract(name, statement) => DeclContract(name, simplify(statement))
       case _ => solidityStatement
       // case Constructor(params, statement) => ???
       // case ReadTuple(relation, keyList, outputVar) => ???

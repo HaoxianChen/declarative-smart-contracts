@@ -1,0 +1,4 @@
+// Round 1 witness: positive-amount mint must be allowed.
+// Without this, mint guard allows n>=0 (permits zero-amount mints).
+constructor
+mint 1 5 | 0 0

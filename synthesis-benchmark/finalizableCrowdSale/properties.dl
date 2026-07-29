@@ -1,0 +1,11 @@
+// cannot have negative balances or allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can mint, burn, or finalize
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_finalize(), owner(o), msgSender(s), o!=s.
+
+// cannot buy zero or negative amount
+invalidTx() :- recv_buyToken(_, m), m <= 0.

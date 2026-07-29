@@ -1,0 +1,17 @@
+// StakingRewards state rules
+owner(s) :- constructor(), msgSender(s).
+rewardsDistributor(s) :- constructor(), msgSender(s).
+
+// Staked balance per user
+totalStakeIn(p,n) :- stake(p,_), n = sum m: stake(p,m).
+totalUnstakeOut(p,n) :- unstake(p,_), n = sum m: unstake(p,m).
+stakedBalance(p,n) :- totalStakeIn(p,i), totalUnstakeOut(p,o), n := i-o.
+
+// Global totals
+allStakeIn(s) :- s = sum n: stake(_,n).
+allUnstakeOut(s) :- s = sum n: unstake(_,n).
+totalStaked(n) :- allStakeIn(i), allUnstakeOut(o), n := i-o.
+
+// Reward pool grows with addRewards
+allRewards(s) :- s = sum n: addRewards(n).
+rewardPool(n) :- allRewards(s), n := s.

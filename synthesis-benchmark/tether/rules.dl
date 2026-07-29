@@ -1,0 +1,21 @@
+owner(s) :- constructor(_), msgSender(s).
+
+isBlackListed(p,true) :- addBlackList(p).
+redeem(p,n) :- destroyBlackFund(p,n).
+
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalIssue(p,s) :- issue(p,_), s = sum n: issue(p,n).
+totalRedeem(p,s) :- redeem(p,_), s = sum n: redeem(p,n).
+
+balanceOf(p,s) :- totalIssue(p,n), totalRedeem(p,m), totalOut(p,o), totalIn(p,i), s:=n+i-m-o.
+allIssue(s) :- s = sum n: issue(_,n).
+allRedeem(s) :- s = sum n: redeem(_,n).
+totalSupply(n) :- allIssue(m), allRedeem(b), n := m - b.
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), n := m-l.
+totalBalances(s) :- s = sum n: balanceOf(_,n).
+

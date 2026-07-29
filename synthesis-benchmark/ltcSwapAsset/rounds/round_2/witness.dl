@@ -1,0 +1,5 @@
+// Round 2 witness: transfer up to exact balance must be allowed.
+// Without this, transfer uses strict n<balance (cannot spend full balance).
+constructor
+mint 1 10 | 0 0
+transfer 1 2 10 | 1 0

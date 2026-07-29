@@ -1,0 +1,6 @@
+// Round 4 witness: transferFrom up to allowance must be allowed.
+// Without this, transferFrom has wrong allowance direction or strict inequality.
+constructor
+mint 1 10 | 0 0
+increaseAllowance 1 2 5 | 1 0
+transferFrom 1 3 1 5 | 2 0

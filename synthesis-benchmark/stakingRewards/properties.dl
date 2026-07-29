@@ -1,0 +1,16 @@
+// StakingRewards properties
+// Source: https://github.com/Synthetixio/synthetix/blob/master/contracts/StakingRewards.sol
+
+// Staked balance must never go negative (state-level – drives CEGIS)
+negativeStake(p,n) :- stakedBalance(p,n), n<0.
+
+// Only rewardsDistributor can add to the reward pool
+invalidTx() :- recv_addRewards(_), rewardsDistributor(d), msgSender(s), d!=s.
+
+// Amounts must be positive
+invalidTx() :- recv_stake(_, n), n <= 0.
+invalidTx() :- recv_unstake(_, n), n <= 0.
+
+// Only the staker can act on behalf of their position
+invalidTx() :- recv_stake(p, _), msgSender(s), p != s.
+invalidTx() :- recv_unstake(p, _), msgSender(s), p != s.

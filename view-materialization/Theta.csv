@@ -1,1 +1,1 @@
-allowance,balanceOf,unlockTime,owner,totalSupply,precirculated
+allowance,balanceOf,unlockTime,owner,totalSupply,precirculated,totalIn,totalOut,totalMint,totalBurn

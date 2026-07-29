@@ -1,0 +1,61 @@
+// Relation declarations
+.decl *target(t: int)
+.decl *beneficiary(p: address)
+.decl *owner(p: address)
+.decl *raised(n: int)
+.decl constructor(t: int, b: address)
+
+// Transactions
+.decl recv_close()
+.decl close()
+.decl recv_invest(p: address, n: int)
+.decl invest(p: address, n: int)
+.decl recv_refund(p: address, n: int)
+.decl refund(p: address, n: int)
+.decl recv_withdraw(p: address, n:int)
+.decl withdraw(p: address, n:int)
+
+.decl *closed(b: bool)
+
+// Interfaces
+.public recv_close
+.public recv_invest
+.public recv_refund
+.public recv_withdraw
+.public closed(0)
+.public raised(0)
+.public target(0)
+
+
+// Views
+
+.decl investTotal(p: address, n: int)[0]
+.decl refundTotal(p: address, n: int)[0]
+.decl balanceOf(p: address, n: int)[0]
+.public balanceOf(1)
+
+// Properties
+.decl *missingFund(m:int, r:int)
+.violation missingFund
+.decl *totalBalance(m:int)
+
+.decl *onceWithdraw(b: bool)
+.decl *onceRefund(b: bool)
+
+.decl *refundAndWithdraw()
+.violation refundAndWithdraw
+
+.decl *illegalRefund()
+.violation illegalRefund
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+invest(p,n) :- recv_invest(p,n).
+close() :- recv_close().
+refund(p,n) :- recv_refund(p,n).
+withdraw(p,r) :- recv_withdraw(p,r).

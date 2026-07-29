@@ -102,7 +102,11 @@ case class InvariantGenerator(ctx: Context, program: Program,
         val (v_in, _) = makeStateVar(ctx, rel.name, sort)
 
         // val (_init, _keys, _kts) = _getDefaultConstraints(ctx,rel, v_in, indices, isQuantified = false)
-        val (_init, _keys, _kts) = _getInitConstraints(rel, v_in)
+        val (_init, _keys, _kts) = rel match {
+          case SimpleRelation(name, sig, memberNames) =>_getDefaultConstraints(ctx,rel, v_in, indices, isQuantified = false)
+          case SingletonRelation(name, sig, memberNames) => _getInitConstraints(rel, v_in)
+          case relation: ReservedRelation => ???
+        }
         initConditions :+= _init
         _keyConsts ++= _keys
         _keyTypes ++= _kts

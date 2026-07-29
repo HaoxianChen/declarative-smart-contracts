@@ -1,0 +1,46 @@
+// Simple English auction contract (no time; ended by explicit endAuction call).
+// Based on the Solidity documentation example, adapted for synthesis.
+
+// Parameters
+.decl *owner(p: address)
+.decl *beneficiary(p: address)
+.decl *highestBid(n: int)
+.decl *highestBidder(p: address)
+.decl *auctionEnded(b: bool)
+
+// Per-bidder deposit balance (indexed by bidder address)
+.decl balance(p: address, n: int)[0]
+
+// Transactions
+.decl constructor(beneficiary: address)
+.decl bid(bidder: address, amount: int)
+.decl recv_bid(bidder: address, amount: int)
+.decl withdraw(bidder: address, amount: int)
+.decl recv_withdraw(bidder: address, amount: int)
+.decl endAuction()
+.decl recv_endAuction()
+
+// Interfaces
+.public recv_bid
+.public recv_withdraw
+.public recv_endAuction
+.public balance(1)
+.public highestBid(0)
+.public highestBidder(0)
+.public auctionEnded(0)
+
+// Auxiliary aggregation relations
+.decl bidTotal(p: address, n: int)[0]
+.decl withdrawTotal(p: address, n: int)[0]
+
+// Violations
+.decl negativeBalance(p: address, n: int)[0]
+.violation negativeBalance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules (guards to be synthesized)
+bid(p, n) :- recv_bid(p, n).
+withdraw(p, n) :- recv_withdraw(p, n).
+endAuction() :- recv_endAuction().

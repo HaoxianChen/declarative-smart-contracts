@@ -16,7 +16,9 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enable
   /** Interfaces */
   def insertRow(insertTuple: InsertTuple): OnStatement = {
     val insertedLiteral: Literal = getInsertedLiteral(insertTuple.relation)
-    val newValue: Param = Param(insertedLiteral.fields(max.valueIndex))
+    // Use max.literal for newValue so that the aggregate parameter (e.g. `m`) is used
+    // instead of a wildcard `_` that may appear in the corresponding rule body literal.
+    val newValue: Param = Param(max.literal.fields(max.valueIndex))
     val groupKeys: List[Parameter] = {
       val allKeys = max.literal.fields.filterNot(_==max.aggParam).filterNot(_.name=="_")
       rule.head.fields.intersect(allKeys)
@@ -28,9 +30,14 @@ case class MaxView(rule: Rule, primaryKeyIndices: List[Int], ruleId: Int, enable
       GroundVar(oldValue.p,rule.head.relation,groupKeys,valueIndexInHead,enableProjection)
     }
     val condition = imp.Greater(newValue,oldValue)
-    val insert: Insert = Insert(rule.head)
+    // Substitute aggResult (e.g. `n`) with newValue (e.g. `m`) in the head literal so that
+    // the generated insert uses the actual new-max variable, not an unbound aggregate result var.
+    val headWithNewValue = Literal(rule.head.relation,
+      rule.head.fields.map(f => if (f == max.aggResult) newValue.p else f))
+    val insert: Insert = Insert(headWithNewValue)
     val stmt = Statement.makeSeq(readTuple, groundVar, If(condition, insert))
-    OnInsert(literal = insertedLiteral, updateTarget = rule.head.relation, statement = stmt, ruleId)
+    // Use max.literal as the trigger so the function receives the aggregate parameter as an argument
+    OnInsert(literal = max.literal, updateTarget = rule.head.relation, statement = stmt, ruleId)
   }
 
   def deleteRow(deleteTuple: DeleteTuple): OnStatement = ???

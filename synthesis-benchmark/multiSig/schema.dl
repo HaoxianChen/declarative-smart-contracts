@@ -1,0 +1,51 @@
+// 2-of-2 multisig wallet: both owners must approve before funds can be sent.
+// Source: Gnosis Safe (MultiSigWallet) / Solidity by Example MultiSig
+// https://solidity-by-example.org/app/multi-sig-wallet/
+// Simplified: exactly 2 owners, threshold fixed at 2; calldata execution replaced by amount transfer.
+// Each owner has a dedicated approve function to avoid OR-condition in access-control property.
+
+.decl *owner1(p: address)
+.decl *owner2(p: address)
+.decl *balance(n: int)
+
+.decl constructor(o1: address, o2: address)
+
+// Transactions
+.decl deposit(amount: int)
+.decl recv_deposit(amount: int)
+.decl approveOwner1(txId: int)
+.decl recv_approveOwner1(txId: int)
+.decl approveOwner2(txId: int)
+.decl recv_approveOwner2(txId: int)
+.decl execute(txId: int, to: address, amount: int)
+.decl recv_execute(txId: int, to: address, amount: int)
+
+// Interfaces
+.public recv_deposit
+.public recv_approveOwner1
+.public recv_approveOwner2
+.public recv_execute
+.public balance(0)
+.public owner1(0)
+.public owner2(0)
+
+// Auxiliary
+.decl *approvedBoth(txId: int)
+.decl approvalCount(txId: int, n: int)[0]
+.decl *executed(txId: int)
+.decl *totalDeposit(n: int)
+.decl *totalExecuted(n: int)
+
+// Violations
+.decl negativeBalance(n: int)
+.violation negativeBalance
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+deposit(n) :- recv_deposit(n).
+approveOwner1(txId) :- recv_approveOwner1(txId).
+approveOwner2(txId) :- recv_approveOwner2(txId).
+execute(txId, to, n) :- recv_execute(txId, to, n).
+owner1(p) :- constructor(p, _).
+owner2(p) :- constructor(_, p).

@@ -1,6 +1,6 @@
 package verification
 
-import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntSort, Sort, Status, TupleSort}
+import com.microsoft.z3.{ArithSort, ArrayExpr, ArraySort, BoolExpr, Context, Expr, IntExpr, IntSort, Sort, Status, TupleSort}
 import datalog.{Balance, Constant, Parameter, Program, Relation, ReservedRelation, Rule, Send, SimpleRelation, SingletonRelation, Type, Variable}
 import imp.SolidityTranslator.transactionRelationPrefix
 import imp.Translator.getMaterializedRelations
@@ -9,9 +9,11 @@ import util.Misc.parseProgramFromRawString
 import verification.Prove.{get_vars, prove}
 import verification.RuleZ3Constraints.getVersionedVariableName
 import verification.TransitionSystem.makeStateVar
-import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, simplifyByRenamingConst}
+import verification.Verifier.{_getDefaultConstraints, addBuiltInRules, indicatorConstForTransactionTriggerRelation, simplifyByRenamingConst}
 import verification.Z3Helper.{addressSize, extractEq, functorToZ3, getArraySort, getSort, initValue, literalToConst, makeTupleSort, paramToConst, relToTupleName, typeToSort, uintSize}
 import view.{CountView, JoinView, MaxView, SumView, View}
+
+import scala.collection.mutable.Queue
 
 class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debug: Boolean = false)
   extends AbstractImperativeTranslator(addBuiltInRules(_program), materializedRelations = Set(),
@@ -28,6 +30,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     val violationRules = program.rules.filter(r => program.violations.contains(r.head.relation))
     val readByViolationRules = violationRules.flatMap(r => r.body.map(_.relation))
     (fromStatements++readByViolationRules).filterNot(_.isInstanceOf[ReservedRelation])
+      .filterNot(_.name.startsWith(transactionRelationPrefix))
   }
 
   override val rulesToEvaluate: Set[Rule] = getRulesToEvaluate().filterNot(r => program.violations.contains(r.head.relation))
@@ -72,8 +75,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     case relation: ReservedRelation => List()
   }
 
-  def check(): Unit = {
-    val violationRules: Set[Rule] = program.rules.filter(r => program.violations.contains(r.head.relation))
+  def getTransitionSystem(): TransitionSystem = {
     val tr = TransitionSystem(program.name, ctx)
 
     /** Variable keeps track of the current transaction name. */
@@ -91,8 +93,34 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
 
     val (fullTransitionCondition, transactionConditions) = getTransitionConstraints(transactionThis, transactionNext)
     tr.setTr(fullTransitionCondition, transactionConditions)
+    tr
+  }
 
-    for (vr <- violationRules) {
+  def traverseExpression(): Unit = {
+    val tr = getTransitionSystem()
+    val constraint = tr.getTrs().head
+
+    val queue: Queue[Expr[_]] = Queue()
+    for (arg <- constraint.getArgs) {
+      queue.enqueue(arg)
+    }
+    while (queue.nonEmpty) {
+      val e: Expr[_] = queue.dequeue()
+      if (e.isConst) {
+        println(e,e.getSort)
+      }
+      else {
+        for (a <- e.getArgs) {
+            queue.enqueue(a)
+        }
+      }
+    }
+
+  }
+
+  def check(): Unit = {
+    val tr = getTransitionSystem()
+    for (vr <- program.violationRules) {
       val property = getProperty(ctx, vr)
       println(property)
 
@@ -154,7 +182,7 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     assert(trRes2 == Status.UNSATISFIABLE)
   }
 
-  private def getProperty(ctx: Context, rule: Rule): BoolExpr = {
+  def getProperty(ctx: Context, rule: Rule): BoolExpr = {
     /** Each violation query rule is translated into a property as follows:
      *  ! \E (V), P1 /\ P2 /\ ...
      *  where V is the set of variable appears in the rule body,
@@ -191,6 +219,51 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
     }
   }
 
+  /**
+   * Like getProperty but do NOT add an existential quantifier; instead produce the
+   * (negated) constraint where the rule body variables are created as named
+   * (free) constants using the provided variable prefix. This is useful when the
+   * caller wants concrete variable names instead of quantified variables.
+   *
+   * @param ctx Z3 context
+   * @param rule violation rule
+   * @param varPrefix prefix used to name the variables that appear in the rule body
+   * @return a BoolExpr representing the (negated) property with free vars named by varPrefix
+   */
+  def getViolationCheck(ctx: Context, rule: Rule, varPrefix: String = "kv"): BoolExpr = {
+    val prefix = varPrefix
+    val bodyConstraints = rule.body.map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
+
+    val constraints = {
+      val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)
+      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
+      renamed
+    }
+    // the query for violation
+    constraints.asInstanceOf[BoolExpr]
+  }
+
+  def getTxViolationCheck(ctx: Context, rule: Rule, varPrefix: String): BoolExpr = {
+    val recvLit = {
+      val recvLitOpt = rule.body.find(_.relation.name.startsWith(transactionRelationPrefix))
+      if (recvLitOpt.isEmpty) throw new Exception(s"No transaction interface found: $rule.")
+      recvLitOpt.get
+    }
+
+    val prefix = varPrefix
+    val bodyConstraints = rule.body.diff(Set(recvLit)).map(lit => literalToConst(ctx, lit, getIndices(lit.relation), prefix)).toArray
+    val functorConstraints = rule.functors.map(f => functorToZ3(ctx, f, prefix)).toArray
+
+    val constraints = {
+      val _c = ctx.mkAnd(bodyConstraints ++ functorConstraints: _*)
+      val renamed = simplifyByRenamingConst(_c, constOnly = false).simplify()
+      renamed
+    }
+    // the query for violation
+    constraints.asInstanceOf[BoolExpr]
+  }
+
   private def getTransitionConstraints(transactionThis: Expr[_], transactionNext: Expr[_]): (BoolExpr, Set[BoolExpr]) = {
 
     val triggers: Set[Trigger] = {
@@ -211,8 +284,9 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
         /** Add the "unchanged" constraints */
         val unchangedConstraints: List[BoolExpr] = getUnchangedConstraints(ruleConstraint)
 
-        /** A boolean value indicating which transaction branch gets evaluate to true */
-        val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        /** An Int const indicating which transaction branch gets evaluate to true */
+        // val trConst = ctx.mkIntConst(s"${t.relation.name}$i")
+        val trConst = indicatorConstForTransactionTriggerRelation(ctx, t.relation, i)
         i += 1
 
         /** Indicator for transaction name. */
@@ -410,37 +484,35 @@ class Verifier(_program: Program, impAbsProgram: ImperativeAbstractProgram, debu
                          initRule: Option[Rule],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = initRule match {
     case Some(rule) => {
-      val bodyConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
+      val literalConstraints: Set[BoolExpr] = rule.body.filterNot(_.relation.name==s"constructor").
         map(lit=>literalToConst(ctx,lit,getIndices(lit.relation),""))
+      val functorConstraints = rule.functors.map(f=>functorToZ3(ctx,f,""))
+      val bodyConstraints = literalConstraints ++ functorConstraints
 
       relation match {
         case sr: SimpleRelation => {
-          // val const0 = ctx.mkConst(s"_${const.toString}0", const.getSort)
-          // val (defaultConstraints,_keyConst,_keyTypes) = _getDefaultConstraints(ctx,relation, const0, indices, isQuantified)
+          val const0 = ctx.mkConst(s"_${const.toString}0", const.getSort)
+          val (defaultConstraints,_keyConst,_keyTypes) = _getDefaultConstraints(ctx,relation, const0, indices, isQuantified)
 
-          // val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
-          // val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
-          // val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
-          // val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+          val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+          val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
 
-          // val initValues: Expr[Sort] = if (!valueSort.isInstanceOf[TupleSort]) {
-          //   val _p = rule.head.fields(valueIndices.head)
-          //   paramToConst(ctx,_p,s"")._1
-          // }.asInstanceOf[Expr[Sort]]
-          // else {
-          //   ???
-          //   // val _initValues = valueTypes.map(t => initValue(ctx,t))
-          //   // valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*)
-          // }
-          // val keys = indices(sr).map(i=>rule.head.fields(i))
-          // val keyConstArray: Array[Expr[_]] = keys.map(p=>paramToConst(ctx,p,s"")._1).toArray
-          // val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
-          // val matchConstraint = ctx.mkEq(const,storeConstraint)
+          val initValues: Expr[Sort] = if (!valueSort.isInstanceOf[TupleSort]) {
+            val _p = rule.head.fields(valueIndices.head)
+            paramToConst(ctx,_p,s"")._1
+          }.asInstanceOf[Expr[Sort]]
+          else {
+            val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
+            val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
+            val _initValues = valueTypes.map(t => initValue(ctx,t))
+            valueSort.asInstanceOf[TupleSort].mkDecl().apply(_initValues:_*).asInstanceOf[Expr[Sort]]
+          }
+          val keys = indices(sr).map(i=>rule.head.fields(i))
+          val keyConstArray: Array[Expr[_]] = keys.map(p=>paramToConst(ctx,p,s"")._1).toArray
+          val storeConstraint = ctx.mkStore(const0.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray, initValues)
+          val matchConstraint = ctx.mkEq(const,storeConstraint)
 
-          // (matchConstraint,_keyConst,_keyTypes)
-          /** todo: what to do when array type is initialized by special value?
-           *  */
-          _getDefaultConstraints(ctx,sr,const,indices,isQuantified)
+          (ctx.mkAnd((bodyConstraints + defaultConstraints+ matchConstraint).toSeq:_*),keyConstArray,_keyTypes)
         }
         case SingletonRelation(name, sig, memberNames) => {
           val assignExpr: BoolExpr = if (sig.size == 1) {
@@ -471,7 +543,11 @@ object Verifier {
     def _isTempVar(e: Expr[_]): Boolean = {
       if (e.isApp) {
         if (e.getArgs.length == 0) {
-          e.getSExpr.startsWith("i")
+          val c1 = e.getSExpr.startsWith("i_")
+          // all the temp variable with prefix "i[n]_" except "i0_"
+          val prefixPattern = "^i[1-9]\\d*_".r
+          val c2 = prefixPattern.findPrefixOf(e.getSExpr).isDefined
+          c1 | c2
         }
         else false
       }
@@ -508,7 +584,7 @@ object Verifier {
                          indices: Map[SimpleRelation, List[Int]],
                          isQuantified:Boolean=true): (BoolExpr, Array[Expr[_]], Array[Type]) = relation match {
     case sr: SimpleRelation => {
-      val (arraySort, keySorts, valueSort) = getArraySort(ctx, sr, indices(sr))
+      val (arraySort, keySort, valueSort) = getArraySort(ctx, sr, indices(sr))
       val keyTypes: Array[Type] = indices(sr).map(i=>relation.sig(i)).toArray
       val valueIndices = relation.sig.indices.filterNot(i=>indices(sr).contains(i))
       val valueTypes: Array[Type] = valueIndices.map(i=>sr.sig(i)).toArray
@@ -526,10 +602,8 @@ object Verifier {
       }
 
       val initConstraints = if (isQuantified) {
-        ctx.mkForall(keyConstArray, ctx.mkEq(
-          ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray),
-          initValues),
-          1, null, null, ctx.mkSymbol(s"Q${sr.name}"), ctx.mkSymbol(s"skid${sr.name}"))
+        val constArray =  ctx.mkConstArray(keySort, initValues)
+        ctx.mkEq(const, constArray)
       }
       else {
         ctx.mkEq(ctx.mkSelect(const.asInstanceOf[ArrayExpr[Sort,Sort]], keyConstArray), initValues)
@@ -557,5 +631,11 @@ object Verifier {
   def addBuiltInRules(p: Program): Program = {
      val builtInRules = parseProgramFromRawString(BuiltInRules.ruleStr).rules
      p.addRules(builtInRules)
+  }
+
+  def indicatorConstForTransactionTriggerRelation(ctx: Context, relation: Relation, ruleId: Int): IntExpr = {
+    // Expect those recv_ relations
+    require(relation.name.startsWith(transactionRelationPrefix))
+    ctx.mkIntConst(s"${relation.name}$ruleId")
   }
 }

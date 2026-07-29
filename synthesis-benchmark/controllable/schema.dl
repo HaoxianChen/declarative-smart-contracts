@@ -1,0 +1,92 @@
+// The controllable token contract following ERC 1644 standard.
+
+// parameters
+.decl *owner(p: address)
+.decl *controller(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(p: address)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+
+// ERC 1644 interfaces
+.decl recv_controllerTransfer(from: address, to: address, amount: int)
+.decl controllerTransfer(from: address, to: address, amount: int)
+.decl recv_controllerRedeem(p: address, amount: int)
+.decl controllerRedeem(p: address, amount: int)
+
+// New transactions
+.decl increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int)
+// .decl recv_approve(s: address, n:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+.public controller(0)
+.public owner(0)
+
+.public recv_increaseAllowance
+.public allowance(2)
+.public recv_controllerRedeem
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// New rules
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.public recv_transferFrom
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl illegalRedeem(p: address, n: int)[0]
+.violation illegalRedeem
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+controllerTransfer(s,r,n) :- recv_controllerTransfer(s,r,n).
+controllerRedeem(p,n) :- recv_controllerRedeem(p,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+

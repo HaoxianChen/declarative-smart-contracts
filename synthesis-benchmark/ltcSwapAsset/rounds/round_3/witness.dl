@@ -1,0 +1,5 @@
+// Round 3 witness: burn up to exact balance must be allowed.
+// Without this, burn uses strict n<balance.
+constructor
+mint 1 10 | 0 0
+burn 1 10 | 0 0

@@ -1,0 +1,7 @@
+// Lean starting specification (round 0) — same as current properties.dl
+doubleMint(tokenId, c) :- mintCountPerToken(tokenId, c), c > 1.
+invalidTx() :- recv_mint(_, _), owner(o), msgSender(s), o != s.
+invalidTx() :- recv_transfer(_, _, tokenId), ownerOf(tokenId, o), msgSender(s), o != s.
+invalidTx() :- recv_transferFrom(_, _, tokenId), approved(tokenId, a), msgSender(s), a != s.
+invalidTx() :- recv_approve(_, tokenId), ownerOf(tokenId, o), msgSender(s), o != s.
+invalidTx() :- recv_burn(tokenId), ownerOf(tokenId, o), msgSender(s), o != s.

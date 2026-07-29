@@ -8,6 +8,9 @@ import scala.util.parsing.combinator.JavaTokenParsers
 case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces: Set[Interface],
                           violations: Set[Relation],
                           functions: Set[Relation],
+                         /** An event relation is interpreted as an unique update trigger to a rule.
+                          *   That is, the rule is only triggered by this event relation. */
+                          events: Set[Relation],
                          /** The index of column on which the table is indexed by.
                           *  Assume each row has a unique index value.
                           *  */
@@ -67,6 +70,11 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
     this.copy(violations=violations+relation)
   }
 
+  def addEvent(name: String): ParsingContext = {
+    val relation = relsByName(name)
+    this.copy(events=events+relation)
+  }
+
   def addRule(rule: Rule) = this.copy(rules=rules+rule)
   def getLiteral(relName: String, fieldNames: List[String]): Literal = {
     val relation = relsByName(relName)
@@ -102,7 +110,7 @@ case class ParsingContext(relations: Set[Relation], rules: Set[Rule], interfaces
   }
 }
 object ParsingContext {
-  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Map())
+  def apply(): ParsingContext = ParsingContext(relations = Relation.reservedRelations, Set(), Set(), Set(), Set(), Set(), Map())
 }
 
 class ArithmeticParser extends JavaTokenParsers {
@@ -197,6 +205,13 @@ class Parser extends ArithmeticParser {
       }
     }
 
+  def eventDecl: Parser[ParsingContext => ParsingContext] =
+    (".event" ~> ident) ^^ {
+      case name => {
+        pc => pc.addEvent(name)
+      }
+    }
+
   def literalList: Parser[ParsingContext => List[Literal]] = repsep(literal, ",") ^^ {
     case fs => {
       pc => fs.map(f=>f(pc))
@@ -237,6 +252,7 @@ class Parser extends ArithmeticParser {
         }
       }
   def program: Parser[Program] = (relationDecl | singletonRelationDecl | interfaceDecl | violationDecl
+    | eventDecl
     | functionDecl
     | ruleDecl ).* ^^ {
     fs => {

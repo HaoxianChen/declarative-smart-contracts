@@ -1,0 +1,2 @@
+addVoter(v) :- recv_addVoter(v),owner(o),msgSender(s),o==s.
+vote(v,p) :- isVoter(v,b_1),voted(v,b_0),b_1==true,isVoter(v,isVoter_x1),isVoter_x1==false,b_0!=true,recv_vote(v,p).

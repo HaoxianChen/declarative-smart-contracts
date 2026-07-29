@@ -1,12 +1,13 @@
 package view
 
-import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort}
+import com.microsoft.z3.{ArithExpr, ArithSort, ArraySort, BitVecSort, BoolExpr, Context, Expr, Sort, TupleSort, DatatypeSort}
 import datalog.Arithmetic.updateArithmeticType
 import datalog._
 import imp._
 import verification.RuleZ3Constraints
 import verification.TransitionSystem.makeStateVar
 import verification.Z3Helper.{fieldsToConst, functorExprToZ3, getSort, literalToConst, matchFieldstoTuple, paramToConst, typeToSort}
+import verification.Z3Helper.mkTupleKey
 
 abstract class View {
   def rule: Rule
@@ -98,8 +99,10 @@ abstract class View {
   }
 
   protected def deleteByKeysStatement(literal: Literal, keyIndices: List[Int]): Statement = {
-      val keys = keyIndices.map(i=>literal.fields(i))
-      DeleteByKeys(literal.relation, keys, updateTarget = this.relation)
+      // Filter out wildcard _ parameters — they cannot be used as lookup keys in generated Solidity
+      val keys = keyIndices.map(i=>literal.fields(i)).filterNot(_.name == "_")
+      if (keys.isEmpty) Empty()
+      else DeleteByKeys(literal.relation, keys, updateTarget = this.relation)
   }
 
   protected def updateTargetRelationZ3(ctx: Context, insertedLiteral: Literal, delta: Arithmetic, resultIndex: Int,
@@ -125,10 +128,13 @@ abstract class View {
     val (v_in, v_out) = makeStateVar(ctx, relation.name, sort)
 
     val updateExpr = if (primaryKeyIndices.nonEmpty) {
-      val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
-      val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray)
+      // val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+      val keyConst: Expr[Sort] = mkTupleKey(ctx, sort, keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1))
+      // val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray)
+      val valueConst = ctx.mkSelect(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConst)
       val newValue = ctx.mkAdd(valueConst.asInstanceOf[Expr[ArithSort]], diffConst.asInstanceOf[Expr[ArithSort]])
-      ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray, newValue.asInstanceOf[Expr[Sort]])
+      // ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray, newValue.asInstanceOf[Expr[Sort]])
+      ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConst, newValue.asInstanceOf[Expr[Sort]])
     }
     else {
       assert(this.relation.isInstanceOf[SingletonRelation] || this.relation.isInstanceOf[ReservedRelation])
@@ -146,12 +152,13 @@ abstract class View {
     val newValueExpr = relation match {
       case SimpleRelation(name, sig, memberNames) => {
         val keys = primaryKeyIndices.map(i=>head.fields(i))
-        val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+        // val keyConstArray: Array[Expr[_]] = keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1)
+        val keyConst: Expr[Sort] = mkTupleKey(ctx, sort, keys.toArray.map(f => paramToConst(ctx, f, z3Prefix)._1))
         val valueParams: List[Parameter] = head.fields.filterNot(f => keys.contains(f))
         val valueIndices = sig.indices.filterNot(i=>primaryKeyIndices.contains(i)).toList
         val fieldNames = valueIndices.map(i=>memberNames(i))
         val newValueConst: Expr[_] = fieldsToConst(ctx, relation, valueParams, fieldNames, z3Prefix)._1
-        ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConstArray,
+        ctx.mkStore(v_in.asInstanceOf[Expr[ArraySort[Sort, Sort]]], keyConst,
           newValueConst.asInstanceOf[Expr[Sort]])
       }
       case SingletonRelation(name, sig, memberNames) => {
@@ -202,4 +209,3 @@ object View {
       case _ => ???
     }
 }
-

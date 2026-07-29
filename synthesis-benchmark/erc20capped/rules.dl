@@ -1,0 +1,51 @@
+// ERC20Capped state rules
+owner(s) :- constructor(_), msgSender(s).
+cap(c) :- constructor(c).
+totalSupply(0) :- constructor(_).
+
+// All participants (any address appearing in any balance-relevant event)
+participant(p) :- mint(p, _).
+participant(p) :- burn(p, _).
+participant(p) :- transfer(p, _, _).
+participant(p) :- transfer(_, p, _).
+
+// Entry relations: real facts + sentinel 0 per participant
+// Sentinel ensures the aggregation always fires (sum over {0, ...real...} = real sum)
+mintEntry(p, n) :- mint(p, n).
+mintEntry(p, 0) :- participant(p).
+burnEntry(p, n) :- burn(p, n).
+burnEntry(p, 0) :- participant(p).
+inEntry(p, n)   :- transfer(_, p, n).
+inEntry(p, 0)   :- participant(p).
+outEntry(p, n)  :- transfer(p, _, n).
+outEntry(p, 0)  :- participant(p).
+
+// Always-defined aggregations for all participants
+totalMint(p, s) :- mintEntry(p, _), s = sum n: mintEntry(p, n).
+totalBurn(p, s) :- burnEntry(p, _), s = sum n: burnEntry(p, n).
+totalIn(p, s)   :- inEntry(p, _),   s = sum n: inEntry(p, n).
+totalOut(p, s)  :- outEntry(p, _),  s = sum n: outEntry(p, n).
+
+// balanceOf always defined for all participants
+balanceOf(p, s) :- totalMint(p, m), totalBurn(p, b), totalIn(p, i), totalOut(p, o), s := m+i-b-o.
+
+allMint(s) :- s = sum n: mint(_,n).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+
+// transferFrom reuses transfer
+transfer(o,r,n) :- transferFrom(o,r,_,n).
+
+// Allowance: entry+sentinel pattern (avoids mutual-recursive sentinels)
+allowanceParticipant(o, s) :- increaseAllowance(o, s, _).
+allowanceParticipant(o, s) :- transferFrom(o, _, s, _).
+allowanceEntry(o, s, n) :- increaseAllowance(o, s, n).
+allowanceEntry(o, s, 0) :- allowanceParticipant(o, s).
+spentEntry(o, s, n)     :- transferFrom(o, _, s, n).
+spentEntry(o, s, 0)     :- allowanceParticipant(o, s).
+allowanceTotal(o, s, m) :- allowanceEntry(o, s, _), m = sum n: allowanceEntry(o, s, n).
+spentTotal(o, s, m)     :- spentEntry(o, s, _),     m = sum n: spentEntry(o, s, n).
+allowance(o, s, n) :- allowanceTotal(o, s, m), spentTotal(o, s, l), n := m-l.
+
+totalBalances(0) :- constructor(_).
+totalBalances(s) :- s = sum n: balanceOf(_,n).

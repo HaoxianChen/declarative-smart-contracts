@@ -1,0 +1,46 @@
+// StakingRewards – stake tokens to earn from reward pool; only rewardsDistributor adds rewards.
+// Source: Synthetix StakingRewards.sol
+// https://github.com/Synthetixio/synthetix/blob/master/contracts/StakingRewards.sol
+// Simplified: reward pool added by distributor; users earn proportional to stake; no time model.
+
+.decl *owner(p: address)
+.decl *rewardsDistributor(p: address)
+.decl *totalStaked(n: int)
+.decl *rewardPool(n: int)
+.decl stakedBalance(p: address, n: int)[0]
+
+.decl constructor()
+
+// Transactions
+.decl stake(p: address, amount: int)
+.decl recv_stake(p: address, amount: int)
+.decl unstake(p: address, amount: int)
+.decl recv_unstake(p: address, amount: int)
+.decl addRewards(n: int)
+.decl recv_addRewards(n: int)
+
+// Interfaces
+.public recv_stake
+.public recv_unstake
+.public recv_addRewards
+.public stakedBalance(1)
+.public totalStaked(0)
+.public rewardPool(0)
+
+// Auxiliary
+.decl totalStakeIn(p: address, n: int)[0]
+.decl totalUnstakeOut(p: address, n: int)[0]
+.decl *allStakeIn(n: int)
+.decl *allUnstakeOut(n: int)
+.decl *allRewards(n: int)
+
+// Violations
+.decl negativeStake(p: address, n: int)[0]
+.violation negativeStake
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+stake(p,n) :- recv_stake(p,n).
+unstake(p,n) :- recv_unstake(p,n).
+addRewards(n) :- recv_addRewards(n).

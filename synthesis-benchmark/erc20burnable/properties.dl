@@ -1,0 +1,23 @@
+// ERC20Burnable properties
+// Source: https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/ERC20Burnable.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Only owner can mint
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+
+// Only the token holder can burn their own tokens (self-burn)
+invalidTx() :- recv_burn(p,_), msgSender(s), p!=s.
+
+// burnFrom: spender must be the caller
+invalidTx() :- recv_burnFrom(_,sp,_), msgSender(s), sp!=s.
+
+// burnFrom amount must be positive
+invalidTx() :- recv_burnFrom(_, _, n), n <= 0.

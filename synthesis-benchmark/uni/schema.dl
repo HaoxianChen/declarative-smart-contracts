@@ -1,0 +1,68 @@
+// Uniswap UNI governance token – designated minter mints up to inflation cap.
+// Source: https://github.com/Uniswap/governance/blob/master/contracts/Uni.sol
+// Simplified: single minter address set at construction; annual inflation cap; no burn.
+
+.decl *minter(p: address)
+.decl *mintingAllowedAfter(n: int)
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl allowance(p: address, s: address, n: int)[0,1]
+
+.decl constructor(minter: address, initialSupply: int)
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl setMinter(p: address)
+.decl recv_setMinter(p: address)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address, to: address, amount: int)
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(o: address, s: address, n: int)
+.decl recv_increaseAllowance(o: address, s: address, n: int)
+
+// Interfaces
+.public recv_mint
+.public recv_setMinter
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public balanceOf(1)
+.public totalSupply(0)
+.public minter(0)
+.public allowance(2)
+
+// Auxiliary
+.decl totalMint(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl *allMint(n: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl allowanceTotal(o: address, s: address, m: int)[0,1]
+.decl spentTotal(o: address, s: address, m: int)[0,1]
+.decl *totalBalances(n: int)
+// Entry+sentinel relations (non-recursive; ensure aggregations always fire for all participants)
+.decl participant(p: address)
+.decl mintEntry(p: address, n: int)
+.decl inEntry(p: address, n: int)
+.decl outEntry(p: address, n: int)
+.decl allowanceParticipant(o: address, s: address)
+.decl allowanceEntry(o: address, s: address, n: int)
+.decl spentEntry(o: address, s: address, n: int)
+
+// Violations
+.decl unequalBalance(s: int, n: int)
+.violation unequalBalance
+.decl negativeBalance(p: address, n: int)[0]
+.violation negativeBalance
+.decl negativeAllowance(s: address, p: address, n: int)[0,1]
+.violation negativeAllowance
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+setMinter(p) :- recv_setMinter(p).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

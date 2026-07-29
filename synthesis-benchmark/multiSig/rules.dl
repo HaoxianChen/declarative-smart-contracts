@@ -1,0 +1,12 @@
+owner1(p) :- constructor(p, _).
+owner2(p) :- constructor(_, p).
+
+totalDeposit(n) :- n = sum m: deposit(m).
+totalExecuted(n) :- n = sum m: execute(_, _, m).
+balance(n) :- totalDeposit(d), totalExecuted(e), n := d - e.
+
+// Both owners must have approved for execution to proceed (no counting needed)
+approvedBoth(txId) :- approveOwner1(txId), approveOwner2(txId).
+approvalCount(txId, 2) :- approvedBoth(txId).
+
+executed(txId) :- execute(txId, _, _).

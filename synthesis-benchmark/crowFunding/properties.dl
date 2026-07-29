@@ -1,0 +1,26 @@
+// total balance should be equal to raised amount when crowdfunding is still open
+missingFund(m,r) :- totalBalance(m),raised(r),m!=r,closed(b), b==false.
+
+// cannot both refund and withdraw in the same execution
+refundAndWithdraw() :- onceWithdraw(true), onceRefund(true).
+
+// cannot refund if target is met
+illegalRefund() :- onceRefund(true), raised(r), target(t), r>=t.
+
+// Check that no account has negative balance
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+
+// only owner can close the crowdfunding
+invalidTx() :- recv_close(), owner(o), msgSender(s), o!=s.
+
+// cannot refund if target is met
+invalidTx() :- recv_refund(_,_), raised(r), target(t), r>=t.
+
+// cannot refund if crowdfunding is closed
+invalidTx() :- recv_refund(_,_), closed(b), b==false.
+
+// cannot withdraw if target is not met
+invalidTx() :- recv_withdraw(_,_), raised(r), target(t), r<t.
+
+// only beneficiary can withdraw funds
+invalidTx() :- recv_withdraw(p,_), beneficiary(b), p!=b.

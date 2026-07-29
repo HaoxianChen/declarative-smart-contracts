@@ -1,0 +1,7 @@
+// Round 1 witness: a bidder must be able to withdraw after the auction ends.
+// Without this trace, the synthesizer produces a contradictory withdraw guard
+// (binds auctionEnded twice with conflicting values), blocking all withdrawals.
+constructor 1
+bid 2 100 | 2 0
+endAuction | 0 0
+withdraw 2 100 | 2 0

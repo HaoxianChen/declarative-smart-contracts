@@ -1,0 +1,101 @@
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address,to: address, amount: int)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int)
+// .decl recv_approve(s: address, n:int)
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+// .public recv_approve
+.public recv_increaseAllowance
+.public recv_transferFrom
+.public allowance(2)
+
+// Rules
+
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+// New rules
+                    // balanceOf(o,m), m>=n,
+                    // msgSender(s), allowance(o,s,k), k>=n.
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+///////////////////////////////////////////////////////////
+
+.decl *start(time: uint)
+.decl *end(time: uint)
+.decl *rate(r: int)
+.decl recv_buyToken(p:address, amount: int)
+.public recv_buyToken
+.decl buyToken(p:address, amount: int)
+
+
+.decl recv_finalize()
+.public recv_finalize
+.decl finalize()
+.decl *finalized(b:bool)
+
+
+//property
+// .decl buyAfterFinalization()
+// .violation buyAfterFinalization
+// .decl *onceFinalize(b:bool)
+//
+// .decl endedAfterFinalize()
+// .violation endedAfterFinalize
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+finalize() :- recv_finalize().
+buyToken(p,m) :- recv_buyToken(p,m).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).

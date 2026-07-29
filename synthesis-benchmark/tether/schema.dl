@@ -1,0 +1,87 @@
+// Adopted from Etherscan: https://etherscan.io/token/0xdac17f958d2ee523a2206206994597c13d831ec7#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor(n: int)
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+.decl isBlackListed(p: address, b:bool)[0]
+.public isBlackListed(1)
+
+// Transactions
+.decl issue(p: address, amount: int)
+.decl recv_issue(p: address, amount: int)
+.decl redeem(p: address, amount: int)
+.decl recv_redeem(p: address, amount: int)
+.decl transfer(from: address, to: address, amount: int)
+.decl recv_transfer(from: address,to: address, amount: int)
+
+// New transactions
+.decl recv_transferFrom(from: address, to: address, spender: address, amount: int)
+.decl increaseAllowance(p: address, s: address, n:int)
+.decl recv_increaseAllowance(p: address, s: address, n:int)
+.public recv_increaseAllowance
+
+.decl destroyBlackFund(p:address,n:int)
+.decl recv_destroyBlackFund(p:address, n:int)
+
+// Interfaces
+.public recv_issue
+.public recv_redeem
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+.public recv_transferFrom
+.public allowance(2)
+
+
+.decl recv_addBlackList(p:address)
+.decl addBlackList(p:address)
+.public recv_addBlackList
+
+.decl totalIssue(p: address, n: int)[0]
+.decl totalRedeem(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allIssue(n: int)
+.decl *allRedeem(n: int)
+
+// New rules
+.decl transferFrom(from: address, to: address, spender: address, amount: int)
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+// Properties
+.decl *totalBalances(m: int)
+.decl *unequalBalance(s: int, n: int)
+
+.violation unequalBalance
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+destroyBlackFund(p,n) :- recv_destroyBlackFund(p,n).
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+addBlackList(p) :- recv_addBlackList(p).
+issue(p,n) :- recv_issue(p,n).
+redeem(p,n) :- recv_redeem(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).

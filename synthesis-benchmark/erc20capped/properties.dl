@@ -1,0 +1,24 @@
+// ERC20Capped properties
+// Source: OpenZeppelin Contracts – ERC20Capped.sol
+
+// Total balances must equal total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0.
+
+// Mint must not exceed cap
+invalidTx() :- recv_mint(_, n), totalSupply(s), cap(c), n + s > c.
+
+// Only owner can mint
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+
+// Only owner can burn
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+
+// Transfer and transferFrom amounts must be positive
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.

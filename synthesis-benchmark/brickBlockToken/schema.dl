@@ -1,0 +1,97 @@
+// parameters
+.decl *owner(p: address)
+.decl *paused(p: bool)
+.public paused(0)
+.decl constructor()
+
+// views
+.decl allowed(p: address, p2: address, a: int)[0,1]
+.public allowed(2)
+
+.decl recv_pause()
+.decl pause()
+
+// basicToken
+.decl *totalSupply(a:int)
+.decl balances(p: address, a: int)[0]
+.public balances(1)
+
+
+.decl recv_transfer(from: address, to: address, a: int)
+.decl transfer(from: address, to: address, a:int)
+
+// standardToken
+.decl recv_transferFrom(operator: address, from: address, to: address, a: int)
+.decl recv_increaseAllowance(o: address, s: address, d: int)
+.decl recv_decreaseAllowance(o: address, s: address, d: int)
+.public recv_transfer
+.public recv_transferFrom
+.public recv_increaseAllowance
+.public recv_decreaseAllowance
+
+.decl transferFrom(operator: address, from: address, to: address, a: int)
+
+.decl burn(p:address, n:int)
+.decl mint(p:address, n:int)
+.decl recv_mint(p:address, n:int)
+.public recv_mint
+.decl totalIn(p:address,n:int)[0]
+.decl totalOut(p:address,n:int)[0]
+
+
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+.decl increaseAllowance(o: address, s: address, d: int)
+
+.decl decreaseAllowance(o: address, s:address, d:int)[0,1]
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl decreaseTotal(o:address, s:address, m:int)[0,1]
+
+
+
+// BrickblockToken
+.decl *dead(b:bool)
+.public dead(0)
+.decl *initialSupply(a:int)
+
+.decl *burnTotal(n:int)
+
+.decl unpause()
+.decl recv_unpause()
+.public recv_unpause
+
+.decl recv_upgrade(p: address)
+.public recv_upgrade
+.decl upgrade(p: address)
+
+.decl recv_evacuate(p:address)
+.public recv_evacuate
+.decl evacuate(p:address)
+
+.decl *transferBeforeUnpause()
+.violation transferBeforeUnpause
+.decl *onceUnpaused(b:bool)
+
+.decl *onceUpgrade(b:bool)
+
+.decl *invalidTx()
+.violation invalidTx
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+// Transaction placeholder rules
+pause() :- recv_pause().
+transfer(s,r,n) :- recv_transfer(s,r,n).
+transferFrom(s,f,r,n) :- recv_transferFrom(s,f,r,n).
+mint(p,n) :- recv_mint(p,n).
+evacuate(p) :- recv_evacuate(p).
+upgrade(p) :- recv_upgrade(p).
+unpause() :- recv_unpause().
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d).
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d).

@@ -1,0 +1,14 @@
+// balances should add up to total supply
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// no negative balances or allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// cannot transfer to the contract itself or to address 0
+invalidTx() :- recv_transfer(_,r,_), this(t), r==t.
+invalidTx() :- recv_transfer(_,r,_), r==0.
+
+// only owner can mint or burn tokens
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.

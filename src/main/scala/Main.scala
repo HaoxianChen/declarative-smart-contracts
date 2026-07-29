@@ -1,9 +1,9 @@
 import datalog.{Parser, Program, Relation, TypeChecker}
-import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, SolidityTranslator, Translator}
+import imp.{ImperativeTranslator, ImperativeTranslatorWithUpdateFusion, Inliner, SolidityTranslator, Translator}
+import synthesis.{BoundedModelChecker, Cegis, EvaluatedTrace, InductiveSynthesis, Interpreter, Predicate}
 import util.Misc
+import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames, combineSplitFilesToFile, parseProgramFromSplitDir, parseAllProgramsFromSplitParent}
 import verification.{Prove, TransitionSystem, Verifier}
-import util.Misc.{createDirectory, fileToString, isFileExists, parseProgram, readMaterializedRelationNames}
-
 import java.nio.file.Paths
 import scala.sys.exit
 
@@ -42,6 +42,13 @@ object Main extends App {
       "auction.dl"
     )
 
+  // List of split-directory names (subdirectories of `synthesis-benchmark`) to run in split-mode.
+  // If empty -> run on all subdirectories (default). Modify this list to control which directories run.
+  // When empty, synthesis-all / compile-split process every subdirectory of
+  // synthesis-benchmark automatically — no source change needed for new benchmarks.
+  // Individual runs: java -jar ... synthesis-all <name1> <name2> ...
+  val synthesisSplitDirs: List[String] = List()
+
   def getMaterializedRelations(dl: Program, filepath: String): Set[Relation] = {
     if (isFileExists(filepath)) {
       val materializedRelationNames: Set[String] = {
@@ -59,7 +66,7 @@ object Main extends App {
 
   def run(filepath: String, displayResult: Boolean, outDir: String, isInstrument: Boolean, monitorViolations: Boolean,
           consolidateUpdates: Boolean, materializePath: String = s"", enableProjection:Boolean,
-          arithmeticOptimization: Boolean = true): Unit = {
+          arithmeticOptimization: Boolean = true, externalFunctions: String = ""): Unit = {
     createDirectory(outDir)
     val filename = Misc.getFileNameFromPath(filepath)
     val dl = parseProgram(filepath)
@@ -79,7 +86,7 @@ object Main extends App {
     }
     val imperative = impTranslator.translate()
     val solidity = SolidityTranslator(imperative, dl.interfaces,dl.violations,materializedRelations,
-      isInstrument,monitorViolations, enableProjection).translate()
+      isInstrument,monitorViolations, enableProjection, externalFunctions).translate()
     val outfile = Paths.get(outDir, s"$filename.sol")
     Misc.writeToFile(solidity.toString, outfile.toString)
     if (displayResult) {
@@ -107,6 +114,7 @@ object Main extends App {
     case "--instrument" :: tail => nextArg(map++Map("instrument"->true), tail)
     case "--monitor" :: tail => nextArg(map++Map("monitor"->true), tail)
     case "--out" :: value :: tail => nextArg(map++ Map("out"->value), tail)
+    case "--external-functions" :: value :: tail => nextArg(map++ Map("external-functions"->value), tail)
     case unknown :: _ =>
       println(s"Unknown option: $unknown")
       exit(1)
@@ -136,13 +144,18 @@ object Main extends App {
     // val isInstrument = args(2).toBoolean
     // val _outDir = if(isInstrument) outDirWithInstrumentations else outDir
     val filepath = options("filepath").toString
+    val extFunctions: String = options.get("external-functions") match {
+      case Some(path) => Misc.fileToString(path.toString)
+      case None => ""
+    }
     run(filepath, displayResult = true, outDir=options("out").toString,
       isInstrument = options.getOrElse("instrument",false).toString.toBoolean,
       monitorViolations = options.getOrElse("monitor",false).toString.toBoolean,
       consolidateUpdates = options.getOrElse("fuse",false).toString.toBoolean,
       materializePath = options.getOrElse("materialize","").toString,
       arithmeticOptimization = options.getOrElse("arithmetic-optimization",true).toString.toBoolean,
-      enableProjection = options.getOrElse("projection", true).toString.toBoolean)
+      enableProjection = options.getOrElse("projection", true).toString.toBoolean,
+      externalFunctions = extFunctions)
   }
   else if (args(0) == "compile-all") {
     val options: Map[String, Any] = if (args.length <= 1) {
@@ -216,6 +229,303 @@ object Main extends App {
     }
   }
 
+  else if (args(0) == "synthesis") {
+    /** Input:
+     *    - Datalog: a smart contract in Datalog, without transaction validation rules
+     *    - Temporal properties
+     *
+     *  Output:
+     *    - Fill in the transaction validation rules for the input Datalog file,
+     *      such that it is consistent with the temporal properties.
+     *  */
+    val datalog_filepath = args(1)
+    val program = parseProgram(datalog_filepath)
+    val interpreterContext = synthesis.InterpreterContext.makeContext(program)
+    val enumerator = synthesis.PredicateEnumerator(interpreterContext)
+    val candidates = enumerator.enumeratePredicates(program)
+    println(s"[synthesis] program: ${program.name}")
+    println(s"[synthesis] candidate predicates: ${candidates.size}")
+
+    /** Synthesize by adding validation condition */
+    val synthesizer = InductiveSynthesis(candidates, interpreterContext)
+    val testTrace = EvaluatedTrace.testTrace1(program)
+    val synthesisOutput = synthesizer.synthesize(program, List(testTrace),
+      maxSolutions = 1, disambiguationTraces = Set())
+    // println(synthesisOutput)
+  }
+
+  else if (args(0) == "cegis") {
+    val synthesisBenchmarks: List[String] = List(
+      // "wallet.dl",
+      // "erc20.dl",
+      // "matic.dl",
+      // "controllable.dl",
+      "cappedCrowdSale.dl",
+      // "bnb.dl",
+      // "crowFunding.dl",
+      // "tether.dl",
+      // "brickBlockToken.dl",
+      // "shib.dl",
+      // "tokenPartition.dl",
+      // "wbtc.dl",
+      // "linktoken.dl",
+      // "finalizableCrowdSale.dl",
+      // "ltcSwapAsset.dl",
+      //////////////////////
+      // "voting.dl"
+      // "auction.dl"
+    )
+    val test = true
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    val datalogOutDir = "synthesis-output"
+    val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
+    createDirectory(datalogOutDir)
+    if (!isFileExists(statsFile)) {
+      Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile) // Updated CSV header and stat order
+    }
+    for (p <- synthesisBenchmarks) {
+        println(s"$p")
+        val filenameNoExt = p.stripSuffix(".dl")
+        val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
+        if (!isFileExists(datalogOutfile) || test) {
+          val datalog_filepath = Paths.get(synthesisBenchmarkDir, p).toString
+          val sketch = parseProgram(datalog_filepath)
+
+          val interfaceCount = sketch.interfaces.size
+          val violationRules = sketch.violationRules.size
+          val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
+          val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
+
+          val extFunctionsPathCegis = Paths.get(synthesisBenchmarkDir, filenameNoExt, "functions.sol").toString
+          val extFunctionsCegis = if (isFileExists(extFunctionsPathCegis)) Misc.fileToString(extFunctionsPathCegis) else ""
+          val cegis = Cegis(sketch, extFunctionsCegis)
+          val (program, stat) = cegis.run() // Capture both result and stats
+
+          println(s"Synthesis output:\n${program}")
+
+          createDirectory(datalogOutDir)
+          Misc.writeToFile(program.toString, datalogOutfile)
+
+          // Write associated Solidity file to disk
+          val impTranslator = new ImperativeTranslator(
+            program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
+            enableProjection = true
+          )
+          val imperative = impTranslator.translate()
+          val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
+            Set(), isInstrument = false, monitorViolation = false, enableProjection = true
+          ).translate()
+          val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
+          if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)
+
+          // Record stats using SynthesisStat, convert ms to seconds
+          val synthesisTimeS = stat.synthesisTimeMs / 1000.0
+          val bmcTimeS = stat.bmcTimeMs / 1000.0
+          val statsLine = s"$p,$relationCount,$interfaceCount,$rulesMinusInterfaceAndViolation,$violationRules,$synthesisTimeS,$bmcTimeS,${stat.cegisIterations},${stat.bmcBound}\n"
+          if (!test) Misc.appendToFile(statsLine, statsFile)
+        } else {
+          println(s"Output for $p exists, skipping.")
+        }
+    }
+  }
+
+  // New: run CEGIS over split-program directories (schema/rules/properties parsed in-memory)
+  else if (args(0) == "synthesis-all") {
+    val test = false
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    val datalogOutDir = "synthesis-output"
+    val statsFile = Paths.get(datalogOutDir, "synthesis_stats.csv").toString
+    createDirectory(datalogOutDir)
+    if (!isFileExists(statsFile)) {
+      Misc.writeToFile("benchmark,relations,interfaces,rules_minus_interface_and_violation,violation_rules,synthesis_time_s,bmc_time_s,cegis_iterations,bmc_bound\n", statsFile)
+    }
+
+    // Extra CLI args override synthesisSplitDirs: java -jar ... synthesis-all name1 name2 ...
+    val cliDirs: List[String] = args.drop(1).toList
+    // parse all split-program subdirectories under parent into (name, Program)
+    val dirsToRun = if (cliDirs.nonEmpty) cliDirs else synthesisSplitDirs
+    val programsByName: Seq[(String, Program)] = if (dirsToRun.nonEmpty) {
+      dirsToRun.flatMap { name =>
+        val dir = Paths.get(synthesisBenchmarkDir, name).toString
+        val f = new java.io.File(dir)
+        if (f.exists() && f.isDirectory) {
+          Some((name, parseProgramFromSplitDir(dir)))
+        } else {
+          println(s"Skipping missing split-dir: ${dir}")
+          None
+        }
+      }
+    } else {
+      parseAllProgramsFromSplitParent(synthesisBenchmarkDir)
+    }
+
+    for ((name, sketch) <- programsByName) {
+      val displayName = if (name.endsWith(".dl")) name else s"${name}.dl"
+      println(displayName)
+      val filenameNoExt = if (name.endsWith(".dl")) name.stripSuffix(".dl") else name
+      val datalogOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.dl").toString
+      if (!isFileExists(datalogOutfile) || test) {
+        val interfaceCount = sketch.interfaces.size
+        val violationRules = sketch.violationRules.size
+        val relationCount = sketch.relations.size - interfaceCount - sketch.violations.size
+        val rulesMinusInterfaceAndViolation = sketch.rules.size - interfaceCount - violationRules
+
+        val extFunctionsPathForCegis = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
+        val extFunctionsForCegis = if (isFileExists(extFunctionsPathForCegis)) Misc.fileToString(extFunctionsPathForCegis) else ""
+        val witnessPathForCegis = Paths.get(synthesisBenchmarkDir, name, "witness.dl").toString
+        val cegis = Cegis(sketch, extFunctionsForCegis, witnessPathForCegis)
+        val (program, stat) = cegis.run()
+
+        /** here, only write transaction rules to file. */
+        println(s"Synthesis output (transaction rules only):\n${program.transactionRules().mkString("\n")}")
+
+        createDirectory(datalogOutDir)
+        Misc.writeToFile(program.transactionRules().mkString("\n"), datalogOutfile)
+
+        val impTranslator = new ImperativeTranslator(
+          program, Set(), isInstrument = false, monitorViolations = false, arithmeticOptimization = true,
+          enableProjection = true
+        )
+        val imperative = impTranslator.translate()
+        val extFunctionsPath = Paths.get(synthesisBenchmarkDir, name, "functions.sol").toString
+        val extFunctions = if (isFileExists(extFunctionsPath)) Misc.fileToString(extFunctionsPath) else ""
+        val solidity = SolidityTranslator(imperative, program.interfaces, program.violations,
+          Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+          externalFunctions = extFunctions
+        ).translate()
+        val solidityOutfile = Paths.get(datalogOutDir, s"${filenameNoExt}.sol").toString
+        if (!test) Misc.writeToFile(solidity.toString, solidityOutfile)
+
+        val synthesisTimeS = stat.synthesisTimeMs / 1000.0
+        val bmcTimeS = stat.bmcTimeMs / 1000.0
+        val statsLine = s"${displayName},${relationCount},${interfaceCount},${rulesMinusInterfaceAndViolation},${violationRules},${synthesisTimeS},${bmcTimeS},${stat.cegisIterations},${stat.bmcBound}\n"
+        if (!test) Misc.appendToFile(statsLine, statsFile)
+      } else {
+        println(s"Output for ${displayName} exists, skipping.")
+      }
+    }
+  }
+
+  // New: run synthesis-all over split-program directories
+  else if (args(0) == "synthesis-all-split") {
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    val allParsed: Seq[(String, Program)] = parseAllProgramsFromSplitParent(synthesisBenchmarkDir)
+    val programsToRun: Seq[(String, Program)] = if (synthesisSplitDirs.nonEmpty) {
+      synthesisSplitDirs.flatMap { name =>
+        val dir = Paths.get(synthesisBenchmarkDir, name).toString
+        val f = new java.io.File(dir)
+        if (f.exists() && f.isDirectory) Some((name, parseProgramFromSplitDir(dir)))
+        else { println(s"Skipping missing split-dir: ${dir}"); None }
+      }
+    } else allParsed
+
+    for ((name, sketch) <- programsToRun) {
+      println(s"Running synthesis on (split): ${name}")
+      val cegis = Cegis(sketch)
+      cegis.run()
+    }
+  }
+
+  /** Compile all split-benchmark programs (spec + synthesized rules) to Solidity.
+   *  For each benchmark in synthesisSplitDirs (or all if empty), reads the split
+   *  benchmark dir, strips placeholder transaction rules (body = single recv_ literal),
+   *  appends the synthesized rules from synthesis-output/{name}.dl, and compiles.
+   *  Writes Solidity to synthesis-output/{name}.sol.
+   */
+  else if (args(0) == "compile-split") {
+    val synthesisBenchmarkDir = "synthesis-benchmark"
+    val datalogOutDir = "synthesis-output"
+    val solidityOutDir = "synthesis-output"
+    createDirectory(solidityOutDir)
+
+    // Extra CLI args override synthesisSplitDirs: java -jar ... compile-split name1 name2 ...
+    val cliNames: List[String] = args.drop(1).toList
+    val names: List[String] = if (cliNames.nonEmpty) cliNames
+      else if (synthesisSplitDirs.nonEmpty) synthesisSplitDirs
+      else new java.io.File(synthesisBenchmarkDir).listFiles()
+             .filter(_.isDirectory).map(_.getName).sorted.toList
+
+    // Regex: a placeholder rule has exactly one body literal that is a recv_ relation and no guards.
+    // Pattern: word(args) :- recv_word(args).
+    val placeholderRe = """^\s*\w+\([^)]*\)\s*:-\s*recv_\w+\([^)]*\)\s*\.\s*$""".r
+
+    for (name <- names) {
+      println(s"Compiling $name ...")
+      val dir = Paths.get(synthesisBenchmarkDir, name).toString
+      val synthesizedRulesPath = Paths.get(datalogOutDir, s"$name.dl").toString
+
+      if (!isFileExists(synthesizedRulesPath)) {
+        println(s"  Skipping $name: no synthesis output at $synthesizedRulesPath")
+      } else {
+        try {
+          // Read schema.dl, stripping placeholder rules (lines matching the pattern above)
+          val schemaRaw = fileToString(Paths.get(dir, "schema.dl").toString)
+          val schemaStripped = schemaRaw.linesIterator
+            .filterNot(l => placeholderRe.matches(l))
+            .mkString("\n")
+
+          val rulesStr  = if (isFileExists(Paths.get(dir, "rules.dl").toString))
+                            fileToString(Paths.get(dir, "rules.dl").toString) else ""
+          val funDlStr  = if (isFileExists(Paths.get(dir, "functions.dl").toString))
+                            fileToString(Paths.get(dir, "functions.dl").toString) else ""
+          val propsStr  = if (isFileExists(Paths.get(dir, "properties.dl").toString))
+                            fileToString(Paths.get(dir, "properties.dl").toString) else ""
+          val synthStr  = fileToString(synthesizedRulesPath)
+          val extFunStr = if (isFileExists(Paths.get(dir, "functions.sol").toString))
+                            fileToString(Paths.get(dir, "functions.sol").toString) else ""
+
+          val combined = Seq(schemaStripped, rulesStr, funDlStr, propsStr, synthStr)
+            .filter(_.trim.nonEmpty).mkString("\n")
+
+          val dl = Misc.parseProgramFromRawString(combined).setName(name.capitalize)
+          val impTranslator = new ImperativeTranslator(dl, Set(), isInstrument = false,
+            monitorViolations = false, arithmeticOptimization = true, enableProjection = true)
+          val imperative = impTranslator.translate()
+          val solidity = SolidityTranslator(imperative, dl.interfaces, dl.violations,
+            Set(), isInstrument = false, monitorViolation = false, enableProjection = true,
+            externalFunctions = extFunStr).translate()
+          val solidityOutfile = Paths.get(solidityOutDir, s"$name.sol").toString
+          Misc.writeToFile(solidity.toString, solidityOutfile)
+          println(s"  -> $solidityOutfile (${impTranslator.ruleSize} rules)")
+        } catch {
+          case e: Exception => println(s"  ERROR compiling $name: ${e.getMessage}")
+        }
+      }
+    }
+  }
+
+  else if (args(0) == "test-interpreter") {
+    val datalog_filepath = args(1)
+    val program = parseProgram(datalog_filepath)
+    val interpreterContext = synthesis.InterpreterContext.makeContext(program)
+    val enumerator = synthesis.PredicateEnumerator(interpreterContext)
+    val candidates = enumerator.enumeratePredicates(program)
+    for ((rule, preds) <- candidates) {
+      Interpreter.test2(interpreterContext, rule, preds)
+    }
+  }
+
+  /** Test the bounded model checker. */
+  else if (args(0) == "bmc") {
+    val filepath = args(1)
+    val bound = if (args.length > 2) args(2).toInt else 10 // default bound
+    val dl = parseProgram(filepath)
+    val bmc = BoundedModelChecker()
+    bmc.check(dl, dl.violationRules, bound)
+  }
+
+  else if (args(0) == "dump-expression") {
+    val filepath = args(1)
+    val dl = parseProgram(filepath)
+    val materializedRelations: Set[Relation] = Set()
+    val impTranslator = new ImperativeTranslator(dl, materializedRelations, isInstrument=true, enableProjection=true,
+      monitorViolations = false, arithmeticOptimization = true)
+    val imperative = impTranslator.translate()
+    // println(imperative)
+    val verifier = new Verifier(dl, imperative)
+    verifier.traverseExpression()
+  }
+
   else if (args(0) == "test-invariant-generator") {
     for (p<-invariantGenerationBenchmarks) {
       runVerification(p)
@@ -244,6 +554,87 @@ object Main extends App {
     TransitionSystem.testTS()
     // Prove.testZ3()
     // Prove.testTuple()
+  }
+
+  else if (args(0) == "test-sol-interpreter") {
+    // Read datalog file path from args(1)
+    val filepath = args(1)
+    // Parse the datalog program
+    val dl = parseProgram(filepath)
+    // No materialized relations for this test
+    val materializedRelations: Set[Relation] = Set()
+    // Translate to imperative
+    val impTranslator = new ImperativeTranslator(
+      dl,
+      materializedRelations,
+      isInstrument = false,
+      monitorViolations = false,
+      arithmeticOptimization = true,
+      enableProjection = true
+    )
+    val imperative = impTranslator.translate()
+    // Translate to Solidity
+    val solidity = SolidityTranslator(
+      imperative,
+      dl.interfaces,
+      dl.violations,
+      materializedRelations,
+      isInstrument = false,
+      monitorViolation = false,
+      enableProjection = true
+    ).translate()
+    // Print results
+    println(dl)
+    println(imperative)
+    println(s"Solidity program:\n${solidity}")
+    println(s"${impTranslator.ruleSize} rules.")
+
+    val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
+    val inlinedSol = inliner.run()
+    println(s"inlined Solidity:\n${inlinedSol}")
+  }
+
+  else if (args(0) == "test-inline") {
+    for (p <- allBenchmarks) {
+      println(p)
+      // Read datalog file path from args(1)
+      val filepath = Paths.get(benchmarkDir, p).toString
+
+      // Parse the datalog program
+      val dl = parseProgram(filepath)
+      // No materialized relations for this test
+      val materializedRelations: Set[Relation] = Set()
+      // Translate to imperative
+      val impTranslator = new ImperativeTranslator(
+        dl,
+        materializedRelations,
+        isInstrument = false,
+        monitorViolations = false,
+        arithmeticOptimization = true,
+        enableProjection = true
+      )
+      val imperative = impTranslator.translate()
+      // Translate to Solidity
+      val solidity = SolidityTranslator(
+        imperative,
+        dl.interfaces,
+        dl.violations,
+        materializedRelations,
+        isInstrument = false,
+        monitorViolation = false,
+        enableProjection = true
+      ).translate()
+
+      val inliner = Inliner(solidity, dl.interfaces.map(_.relation))
+      val inlinedSol = inliner.run()
+
+      val outDir = "solidity/inline"
+      createDirectory(outDir)
+      val filename = Misc.getFileNameFromPath(filepath)
+      val outfile = Paths.get(outDir, s"$filename.sol")
+      Misc.writeToFile(inlinedSol.toString, outfile.toString)
+    }
+
   }
 
   else {

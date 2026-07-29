@@ -1,0 +1,6 @@
+// Round 2 witness: outbid bidder can withdraw their losing bid after auction ends.
+constructor 1
+bid 2 50 | 2 0
+bid 3 100 | 3 0
+endAuction | 0 0
+withdraw 2 50 | 2 0

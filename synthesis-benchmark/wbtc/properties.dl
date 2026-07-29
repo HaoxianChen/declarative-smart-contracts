@@ -1,0 +1,21 @@
+// no negative balances or allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can mint, burn, pause, unpause, transferOwnership
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_pause(), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_unpause(), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_transferOwnership(_), owner(o), msgSender(s), o!=s.
+
+// cannot pause if already paused, cannot unpause if not paused
+invalidTx() :- recv_pause(), paused(b), b==true.
+invalidTx() :- recv_unpause(), paused(b), b==false.
+
+// cannot transfer ownership to zero address
+invalidTx() :- recv_transferOwnership(p), p==0.
+invalidTx() :- recv_claimOwnership(p), p==0.
+
+// cannot claim ownership if not pending owner or if pending owner is self
+invalidTx() :- recv_claimOwnership(p), pendingOwner(s), s==p.

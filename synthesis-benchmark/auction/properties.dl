@@ -1,0 +1,17 @@
+// No bidder's balance should go negative
+negativeBalance(p, n) :- balance(p, n), n < 0, p != 0.
+
+// New bid must exceed the current highest bid
+invalidTx() :- recv_bid(_, n), highestBid(m), n <= m.
+
+// Cannot bid after auction has ended
+invalidTx() :- recv_bid(_, _), auctionEnded(b), b == true.
+
+// Cannot withdraw before auction has ended
+invalidTx() :- recv_withdraw(_, _), auctionEnded(b), b != true.
+
+// Cannot end an auction that is already ended
+invalidTx() :- recv_endAuction(), auctionEnded(b), b == true.
+
+// Only the owner can end the auction
+invalidTx() :- recv_endAuction(), owner(o), msgSender(s), o != s.

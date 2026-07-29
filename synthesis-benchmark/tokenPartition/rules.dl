@@ -1,0 +1,23 @@
+// init rules
+owner(s) :- constructor(), msgSender(s).
+totalSupply(0) :- constructor().
+
+// Inference rules
+totalOut(p,q,s) :- transferByPartition(p,_,q,_), s = sum n: transferByPartition(p,_,q,n).
+totalIn(p,q,s) :- transferByPartition(_,p,q,_), s = sum n: transferByPartition(_,p,q,n).
+totalMint(p,q,s) :- issueByPartition(p,q,_), s = sum n: issueByPartition(p,q,n).
+totalBurn(p,q,s) :- redeemByPartition(p,q,_), s = sum n: redeemByPartition(p,q,n).
+balanceOfByPartition(p,q,s) :- totalMint(p,q,n), totalBurn(p,q,m),
+                               totalOut(p,q,o), totalIn(p,q,i), s:=n+i-m-o.
+
+allMint(s) :- s = sum n: issueByPartition(_,_,n).
+allBurn(s) :- s = sum n: redeemByPartition(_,_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m - b.
+
+issueTotalByPartition(q,s) :- issueByPartition(_,q,_), 
+                              s = sum n: issueByPartition(_,q,n).
+redeemTotalByPartition(q,s) :- redeemByPartition(_,q,_), 
+                              s = sum n: redeemByPartition(_,q,n).
+totalSupplyByPartition(q,n) :- issueTotalByPartition(q,i),
+                               redeemTotalByPartition(q,r), n := i-r.
+

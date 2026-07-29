@@ -1,0 +1,3 @@
+stake(p,n) :- recv_stake(p,n),msgSender(s_1),n>0,p==s_1.
+addRewards(n) :- recv_addRewards(n),rewardsDistributor(d),msgSender(s),d==s.
+unstake(p,n) :- n>0,recv_unstake(p,n),msgSender(s_1),n<stakedBalance_x1,stakedBalance(p,stakedBalance_x1),p==s_1.

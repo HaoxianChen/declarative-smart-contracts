@@ -1,0 +1,3 @@
+mint(p,n) :- msgSender(s),recv_mint(p,n),o==s,owner(o),n>=0.
+burn(p,n) :- msgSender(s),n<=balanceOf_x1,balanceOf(p,balanceOf_x1),o==s,owner(o),recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n),balanceOf(s,balanceOf_x1_1),n>0,n<=balanceOf_x1_1.

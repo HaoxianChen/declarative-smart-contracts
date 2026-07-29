@@ -156,6 +156,10 @@ case class FunctionMetaData(publicity: Publicity.Publicity, isView: Boolean, isT
     List(publicityStr, viewStr, modifierStr).mkString(" ")
   }
 }
+object FunctionMetaData {
+  def apply(): FunctionMetaData = FunctionMetaData(Publicity.Public, isView = false, isTransaction = false,
+    modifiers=Set())
+}
 sealed abstract class SolidityStatement extends Statement
 case class Constructor(params: List[Parameter], statement: Statement) extends SolidityStatement {
   override def toString: String = {
@@ -315,13 +319,21 @@ case class Revert(msg: String) extends SolidityStatement {
 }
 case class SendEther(p: Parameter, amount: Parameter) extends SolidityStatement {
   require(p._type == Type.addressType)
-  override def toString: String = s"payable($p).send($amount);"
+  override def toString: String = {
+    // Solidity send() requires uint256; cast int amounts
+    val amountStr = if (amount._type == Type.integerType) s"uint($amount)" else amount.toString
+    s"payable($p).send($amountStr);"
+  }
 }
 case class Emit(event: String, parameters: List[Parameter]) extends SolidityStatement {
   override def toString: String = {
     val paramStr = parameters.mkString(",")
     s"emit $event($paramStr);"
   }
+}
+/** A verbatim chunk of Solidity source code to be embedded as-is in the output contract. */
+case class RawSolidity(code: String) extends SolidityStatement {
+  override def toString: String = code
 }
 
 object Statement {

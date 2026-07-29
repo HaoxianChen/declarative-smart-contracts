@@ -1,0 +1,19 @@
+// cannot finalize when cap not reached
+illegalFinalization() :- onceFinalize(true), raised(r), cap(c), r<c.
+
+// cannot buy tokens after finalize
+buyAfterFinalize() :- recv_buyToken(_,_), onceFinalize(true). // transaction(recv_buyToken).
+
+// no negative balances or allowances
+negativeBalance(p,n) :- balanceOf(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowance(s,p,n), n<0, s!=0, p!=0.
+
+// only owner can mint or burn tokens
+invalidTx() :- recv_mint(_,_), owner(o), msgSender(s), o!=s.
+invalidTx() :- recv_burn(_,_), owner(o), msgSender(s), o!=s.
+
+// buyToken address must be non-zero
+invalidTx() :- recv_buyToken(p,_), p==0.
+
+// cannot buy zero or negative amount
+invalidTx() :- recv_buyToken(_, m), m <= 0.

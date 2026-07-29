@@ -1,0 +1,17 @@
+// cannot transfer after pause
+transferBeforeUnpause() :- recv_transfer(_,_,_), paused(b), b==true.
+
+// should not have negative balance or allowance
+negativeBalance(p,n) :- balances(p,n), n<0, p!=0.
+negativeAllowance(s,p,n) :- allowed(s,p,n), n<0, s!=0, p!=0.
+
+// amounts must be positive
+invalidTx() :- recv_transfer(_, _, n), n <= 0.
+invalidTx() :- recv_transferFrom(_, _, _, n), n <= 0.
+
+// sufficient balance for transfer (s=from)
+invalidTx() :- recv_transfer(s, _, n), balances(s, b), n > b.
+
+// sufficient allowance for transferFrom (s=operator, f=from)
+invalidTx() :- recv_transferFrom(s, f, _, n), allowed(f, s, a), n > a.
+invalidTx() :- recv_transferFrom(_, f, _, n), balances(f, b), n > b.

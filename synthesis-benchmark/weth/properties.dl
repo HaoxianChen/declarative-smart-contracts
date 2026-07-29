@@ -1,0 +1,21 @@
+// WETH9 properties
+// Source: https://github.com/horsefacts/weth-invariant-testing
+
+// Total WETH supply must equal sum of all balances
+unequalBalance(s,n) :- totalBalances(s), totalSupply(n), s!=n.
+
+// No negative balances
+negativeBalance(p,n) :- balanceOf(p,n), n<0.
+
+// No negative allowances
+negativeAllowance(o,s,n) :- allowance(o,s,n), n<0.
+
+// Deposit and withdrawal amounts must be positive
+invalidTx() :- recv_deposit(_, n), n <= 0.
+invalidTx() :- recv_withdraw(_, n), n <= 0.
+
+// Only the sender can withdraw their own WETH
+invalidTx() :- recv_withdraw(p, _), msgSender(s), p != s.
+
+// increaseAllowance delta must be positive
+invalidTx() :- recv_increaseAllowance(_, _, d), d <= 0.

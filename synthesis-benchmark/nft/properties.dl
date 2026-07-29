@@ -1,0 +1,17 @@
+// Each tokenId must be minted at most once
+doubleMint(tokenId, c) :- mintCountPerToken(tokenId, c), c > 1.
+
+// Only the contract owner may mint new tokens
+invalidTx() :- recv_mint(_, _), owner(o), msgSender(s), o != s.
+
+// Only the current token owner may initiate a direct transfer
+invalidTx() :- recv_transfer(_, _, tokenId), ownerOf(tokenId, o), msgSender(s), o != s.
+
+// Only an approved spender may call transferFrom
+invalidTx() :- recv_transferFrom(_, _, tokenId), approved(tokenId, a), msgSender(s), a != s.
+
+// Only the current token owner may approve a spender
+invalidTx() :- recv_approve(_, tokenId), ownerOf(tokenId, o), msgSender(s), o != s.
+
+// Only the current token owner may burn their token
+invalidTx() :- recv_burn(tokenId), ownerOf(tokenId, o), msgSender(s), o != s.

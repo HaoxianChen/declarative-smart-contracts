@@ -1,0 +1,21 @@
+beneficiary(p) :- constructor(_, p).
+totalBalance(0) :- constructor(_,_).
+target(t) :- constructor(t,_).
+owner(p) :- constructor(_,_), msgSender(p).
+raised(0) :- constructor(_,_).
+onceWithdraw(false) :- constructor(_,_).
+onceRefund(false) :- constructor(_,_).
+
+raised(s) :- s = sum m: invest(_, m).
+investTotal(p,s) :- invest(p, _), s = sum m: invest(p,m).
+refundTotal(p,s) :- refund(p, _), s = sum m: refund(p,m).
+balanceOf(p,s) :- investTotal(p,i), refundTotal(p,r), s := i-r.
+
+closed(true) :- close().
+send(p,n) :- refund(p,n).
+send(p,r) :- withdraw(p,r).
+totalBalance(m) :- m = sum n: balanceOf(_,n).
+
+onceWithdraw(true) :- withdraw(_,_).
+onceRefund(true) :- refund(_,_).
+

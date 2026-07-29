@@ -1,0 +1,91 @@
+// Adopted from: https://etherscan.io/token/0x2260fac5e5542a773aa44fbcfedf7c193bc2c599#code
+
+// parameters
+.decl *owner(p: address)
+
+// views
+.decl *totalSupply(n: int)
+.decl balanceOf(p: address, n: int)[0]
+.decl constructor()
+
+// New views
+.decl allowance(p: address, s: address, n:int)[0,1]
+
+// Transactions
+.decl mint(p: address, amount: int)
+.decl recv_mint(p: address, amount: int)
+.decl burn(p: address, amount: int)
+.decl recv_burn(p: address, amount: int)
+.decl transfer(s: address, r: address, n: int)
+.decl recv_transfer(s: address, r: address, n: int)
+
+// New transactions
+.decl transferFrom(o: address, r: address, s: address, n: int)
+.decl recv_transferFrom(o: address, r: address, s: address, n: int)
+.decl increaseApproval(p: address, s: address, n: int)
+.decl decreaseApproval(p: address, s: address, n: int)
+// .decl recv_approve(s: address, n:int)
+.decl recv_increaseApproval(p: address, s: address, n: int)
+.decl recv_decreaseApproval(p: address, s: address, n: int)
+.public recv_increaseApproval
+.public recv_decreaseApproval
+
+// Interfaces
+.public recv_mint
+.public recv_burn
+.public recv_transfer
+.public balanceOf(1)
+.public totalSupply(0)
+
+// New interfaces
+.public recv_transferFrom
+.public allowance(2)
+
+.decl *paused(b: bool)
+.decl *pendingOwner(p: address)
+
+.decl recv_pause()
+.decl recv_unpause()
+
+.decl recv_transferOwnership(p:address)
+.decl transferOwnership(p:address)
+.decl recv_claimOwnership(p:address)
+.decl claimOwnership(p:address)
+
+.public recv_pause
+.public recv_unpause
+.public recv_transferOwnership
+.public recv_claimOwnership
+
+.decl totalMint(p: address, n: int)[0]
+.decl totalBurn(p: address, n: int)[0]
+.decl totalOut(p: address, n: int)[0]
+.decl totalIn(p: address, n: int)[0]
+
+.decl *allMint(n: int)
+.decl *allBurn(n: int)
+
+
+.decl allowanceTotal(o:address, s:address, m:int)[0,1]
+.decl decreaseAllowanceTotal(o:address, s:address, m:int)[0,1]
+.decl spentTotal(o:address, s:address, m:int)[0,1]
+
+
+.decl negativeBalance(p:address,n:int)[0]
+.violation negativeBalance
+
+.decl negativeAllowance(s:address,p:address,n:int)[0,1]
+.violation negativeAllowance
+
+.decl invalidTx()
+.violation invalidTx
+
+// Transaction placeholder rules
+mint(p,n) :- recv_mint(p,n).
+burn(p,n) :- recv_burn(p,n).
+transfer(s,r,n) :- recv_transfer(s,r,n).
+paused(true) :- recv_pause().
+paused(false) :- recv_unpause().
+transferFrom(o,r,s,n) :- recv_transferFrom(o,r,s,n).
+transferOwnership(p) :- recv_transferOwnership(p).
+claimOwnership(p) :- recv_claimOwnership(p).

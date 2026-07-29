@@ -1,0 +1,24 @@
+// ERC20Burnable state rules
+owner(s) :- constructor(), msgSender(s).
+totalSupply(0) :- constructor().
+
+totalMint(p,s) :- mint(p,_), s = sum n: mint(p,n).
+totalBurn(p,s) :- burn(p,_), s = sum n: burn(p,n).
+totalIn(p,s) :- transfer(_,p,_), s = sum n: transfer(_,p,n).
+totalOut(p,s) :- transfer(p,_,_), s = sum n: transfer(p,_,n).
+balanceOf(p,s) :- totalMint(p,m), totalBurn(p,b), totalIn(p,i), totalOut(p,o), s := m+i-b-o.
+
+allMint(s) :- s = sum n: mint(_,n).
+allBurn(s) :- s = sum n: burn(_,n).
+totalSupply(n) :- allMint(m), allBurn(b), n := m-b.
+
+// burnFrom reduces allowance (modeled as extra spend)
+burnFromTotal(from,s,m) :- burnFrom(from,s,_), m = sum n: burnFrom(from,s,n).
+allowanceTotal(o,s,m) :- increaseAllowance(o,s,_), m = sum n: increaseAllowance(o,s,n).
+spentTotal(o,s,m) :- transferFrom(o,_,s,_), m = sum n: transferFrom(o,_,s,n).
+allowance(o,s,n) :- allowanceTotal(o,s,m), spentTotal(o,s,l), burnFromTotal(o,s,bf), n := m-l-bf.
+
+// burnFrom also counts as a burn for balance purposes
+burn(p,n) :- burnFrom(p,_,n).
+
+totalBalances(s) :- s = sum n: balanceOf(_,n).

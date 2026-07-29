@@ -1,0 +1,11 @@
+// Two distinct proposals cannot both be winners
+inconsistency(p1, p2) :- wins(p1, true), wins(p2, true), p1 != p2.
+
+// Only the owner may add voters
+invalidTx() :- recv_addVoter(_), owner(o), msgSender(s), o != s.
+
+// A voter may not vote twice
+invalidTx() :- recv_vote(v, _), voted(v, b), b == true.
+
+// Only registered voters may vote
+invalidTx() :- recv_vote(v, _), isVoter(v, b), b != true.

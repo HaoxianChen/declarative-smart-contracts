@@ -1,0 +1,9 @@
+evacuate(p) :- recv_evacuate(p).
+increaseAllowance(o,s,d) :- recv_increaseAllowance(o,s,d),d>0.
+pause() :- recv_pause().
+mint(p,n) :- recv_mint(p,n),n>=0.
+decreaseAllowance(o,s,d) :- recv_decreaseAllowance(o,s,d),allowed(o,s,allowed_x2),d<=allowed_x2.
+upgrade(p) :- recv_upgrade(p).
+transferFrom(s,f,r,n) :- balances(f,b_2),allowed(f,s,a_1),n<=b_2,n<=a_1,recv_transferFrom(s,f,r,n),n>0.
+transfer(s,r,n) :- paused(b_2),n<=b_1,b_2!=true,balances(s,b_1),recv_transfer(s,r,n),n>0.
+unpause() :- recv_unpause().

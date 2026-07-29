@@ -34,6 +34,8 @@ sealed abstract class Relation {
   def paramList: List[Parameter] = sig.zip(memberNames).map {
     case (t,n) => Variable(t,n)
   }
+
+  def arity: Int = sig.size
 }
 object Relation {
   val reservedRelations: Set[Relation] = Set(
@@ -66,7 +68,8 @@ case class Now() extends ReservedRelation {
 }
 case class Send() extends ReservedRelation {
   def name: String = "send"
-  def sig: List[Type] = List(Type.addressType, Type.uintType)
+  // def sig: List[Type] = List(Type.addressType, Type.uintType)
+  def sig: List[Type] = List(Type.addressType, Type.integerType)
   def memberNames: List[String] = List("p", "amount")
 }
 case class Receive() extends ReservedRelation {
@@ -134,7 +137,9 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
                    functions: Set[Relation],
                    violations: Set[Relation],
                    name: String = "Contract0") {
-  val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation)
+  val relations = rules.flatMap(r => r.body.map(_.relation) + r.head.relation) ++ interfaces.map(_.relation)
+  val violationRules: Set[Rule] = rules.filter(r => violations.contains(r.head.relation))
+
   override def toString: String = {
     var ret: String = s""
     ret += "Interfaces:\n" + interfaces.mkString("\n") + "\n"
@@ -144,7 +149,7 @@ case class Program(rules: Set[Rule], interfaces: Set[Interface], relationIndices
   }
   def setName(newName: String): Program = this.copy(name=newName)
 
-  def transactionRules(): Set[Rule] = rules.filter(_.body.exists(
+  def transactionRules(): Set[Rule] = rules.diff(violationRules).filter(_.body.exists(
                                          _.relation.name.startsWith(transactionRelationPrefix)))
 
   def addRules(newRules: Set[Rule]): Program = this.copy(rules = this.rules++newRules)

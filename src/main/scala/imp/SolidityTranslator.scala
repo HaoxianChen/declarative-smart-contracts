@@ -27,7 +27,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
                               _materializedRelations: Set[Relation],
                               isInstrument: Boolean,
                               monitorViolation: Boolean,
-                              enableProjection: Boolean)
+                              enableProjection: Boolean,
+                              externalFunctions: String = "")
       extends Translator(program, interfaces, violations, monitorViolation) {
   val name: String = program.name
   private val eventHelper = EventHelper(program.rules)
@@ -89,7 +90,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
       Statement.makeSeq(_all.toList:+declModifier:_*)
     }
     else Empty()
-    val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, functions)
+    val externalFunctionsStmt: Statement = if (externalFunctions.nonEmpty) RawSolidity(externalFunctions) else Empty()
+    val definitions = Statement.makeSeq(structDefinitions, declarations, eventDeclarations, interfaces, checkViolations, externalFunctionsStmt, functions)
     val simplified = simplifier.simplify(definitions)
     DeclContract(name, simplified)
   }
@@ -213,6 +215,11 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
   }
 
   private def getCallDependentFunctionsStatement(update: UpdateStatement): Statement = {
+    // DeleteByKeys on a non-materialized relation cannot generate a ReadTuple
+    // (no struct or storage exists for it), so skip cascading for those cases.
+    if (update.isInstanceOf[DeleteByKeys] && !materializedRelations.contains(update.relation)) {
+      return Empty()
+    }
     val dsHelper = dataStructureHelper(update.relation)
     dependentFunctions.get(update.relation) match {
       case Some(dependents) => dsHelper.callDependentFunctions(update, dependents)
@@ -330,4 +337,8 @@ case class SolidityTranslator(program: ImperativeAbstractProgram, interfaces: Se
 
 object SolidityTranslator {
   val transactionRelationPrefix = "recv_"
+
+  def isTransactionTriggerRelation(relation: Relation): Boolean = {
+      relation.name.startsWith(transactionRelationPrefix)
+  }
 }

@@ -167,6 +167,22 @@ object Arithmetic {
   def rename(expr: Expr, mapping: Map[Parameter,Parameter]): Expr = expr match {
     case arithmetic: Arithmetic => rename(arithmetic, mapping)
   }
+
+  def extractParameters(expr: datalog.Expr): Seq[Parameter] = expr match {
+    case arithmetic: Arithmetic => arithmetic match {
+      case Zero(_type) => Seq.empty
+      case One(_type) => Seq.empty
+      case Param(p) => Seq(p)
+      case Negative(e) => extractParameters(e)
+      case operator: BinaryOperator => operator match {
+        case Add(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Sub(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Mul(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Div(a, b) => extractParameters(a) ++ extractParameters(b)
+        case Min(a, b) => extractParameters(a) ++ extractParameters(b)
+      }
+    }
+  }
 }
 
 
@@ -200,8 +216,14 @@ case class Leq(a: Arithmetic, b: Arithmetic) extends ArithOperator {
 case class Unequal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a!=$b"
 }
+object Unequal {
+  def apply(a: Parameter, b: Parameter): Unequal = Unequal(Param(a), Param(b))
+}
 case class Equal(a: Expr, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a==$b"
+}
+object Equal {
+  def apply(a: Parameter, b: Parameter): Equal = Equal(Param(a), Param(b))
 }
 case class Assign(a: Param, b: Expr) extends Functor with BinOp {
   override def toString: String = s"$a := $b"
@@ -212,3 +234,32 @@ case class Assign(a: Param, b: Expr) extends Functor with BinOp {
   }
 }
 
+object Functor {
+  def rename(functor: Functor, mapping: Map[Parameter, Parameter]): Functor = {
+    import Arithmetic.{rename => ra}
+    functor match {
+      case operator: ArithOperator => operator match {
+        case Greater(a, b) => Greater(ra(a, mapping), ra(b, mapping))
+        case Lesser(a, b) => Lesser(ra(a, mapping), ra(b, mapping))
+        case Geq(a, b)    => Geq(ra(a, mapping), ra(b, mapping))
+        case Leq(a, b)    => Leq(ra(a, mapping), ra(b, mapping))
+      }
+      case Unequal(a, b) => Unequal(ra(a, mapping), ra(b, mapping))
+      case Equal(a, b)   => Equal(ra(a, mapping), ra(b, mapping))
+      case Assign(a, b)  => {
+        val p = a.p
+        Assign(Param(mapping.getOrElse(p,p)), ra(b, mapping))
+      }
+    }
+  }
+
+  def negate(functor: Functor): Functor = functor match {
+    case Greater(a, b) => Leq(a, b)
+    case Lesser(a, b)  => Geq(a, b)
+    case Geq(a, b)     => Lesser(a, b)
+    case Leq(a, b)     => Greater(a, b)
+    case Unequal(a, b) => Equal(a, b)
+    case Equal(a, b)   => Unequal(a, b)
+    case Assign(_, _)  => throw new Exception(s"Cannot negate assignment: $functor")
+  }
+}

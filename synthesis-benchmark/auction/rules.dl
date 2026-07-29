@@ -1,0 +1,19 @@
+// Initialization rules
+owner(s) :- constructor(_), msgSender(s).
+beneficiary(p) :- constructor(p).
+
+// Highest bid: maximum bid amount seen so far
+highestBid(n) :- bid(_, _), n = max m: bid(_, m).
+
+// Highest bidder: address whose bid equals the highest bid
+highestBidder(p) :- bid(p, m), highestBid(n), m == n.
+
+// Per-bidder totals
+bidTotal(p, n) :- bid(p, _), n = sum m: bid(p, m).
+withdrawTotal(p, n) :- withdraw(p, _), n = sum m: withdraw(p, m).
+
+// Balance: total deposited minus total withdrawn
+balance(p, n) :- bidTotal(p, b), withdrawTotal(p, w), n := b - w.
+
+// Auction-ended flag
+auctionEnded(true) :- endAuction().
